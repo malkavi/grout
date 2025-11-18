@@ -46,7 +46,7 @@ func (a DownloadArtScreen) Draw() (value interface{}, exitCode int, e error) {
 		})
 
 	if len(artPaths) == 0 {
-		gabagool.ProcessMessage("No art found!",
+		gabagool.ProcessMessage("No art downloaded!",
 			gabagool.ProcessMessageOptions{ShowThemeBackground: true}, func() (interface{}, error) {
 				time.Sleep(time.Millisecond * 1500)
 				return nil, nil
@@ -54,7 +54,7 @@ func (a DownloadArtScreen) Draw() (value interface{}, exitCode int, e error) {
 
 		return nil, 404, nil
 	} else if len(a.Games) > 1 {
-		gabagool.ProcessMessage(fmt.Sprintf("Art found for %d/%d games!", len(artPaths), len(a.Games)),
+		gabagool.ProcessMessage(fmt.Sprintf("Art downloaded for %d/%d games!", len(artPaths), len(a.Games)),
 			gabagool.ProcessMessageOptions{ShowThemeBackground: true}, func() (interface{}, error) {
 				time.Sleep(time.Millisecond * 1500)
 				return nil, nil
@@ -62,10 +62,10 @@ func (a DownloadArtScreen) Draw() (value interface{}, exitCode int, e error) {
 	}
 
 	for _, artPath := range artPaths {
-		result, err := gabagool.ConfirmationMessage("Found This Art!",
+		result, err := gabagool.ConfirmationMessage("Use This Art?",
 			[]gabagool.FooterHelpItem{
-				{ButtonName: "B", HelpText: "I'll Find My Own"},
-				{ButtonName: "A", HelpText: "Use It!"},
+				{ButtonName: "B", HelpText: "No"},
+				{ButtonName: "A", HelpText: "Yes"},
 			},
 			gabagool.MessageOptions{
 				ImagePath: artPath,
