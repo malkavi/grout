@@ -96,6 +96,8 @@ func main() {
 		screen = ui.InitMainMenu(appState.Config.Hosts)
 	}
 
+	screen = ui.InitPlatformMappingScreen(appState.Config.Hosts[0])
+
 	for {
 		res, code, _ := screen.Draw()
 

@@ -102,6 +102,14 @@ func LoadConfig() (*models.Config, error) {
 		_ = SaveConfig(&config)
 	}
 
+	if config.ApiTimeout == 0 {
+		config.ApiTimeout = 30 * time.Minute
+	}
+
+	if config.DownloadTimeout == 0 {
+		config.DownloadTimeout = 60 * time.Minute
+	}
+
 	return &config, nil
 }
 
@@ -216,6 +224,14 @@ func MapPlatforms(host models.Host, directories shared.Items) []models.Platform 
 	}
 
 	return platforms
+}
+
+func RomMSlugToMuOS(slug string) string {
+	if value, ok := muOSPlatforms[slug]; ok {
+		return strings.ToLower(value[0])
+	} else {
+		return strings.ToLower(slug)
+	}
 }
 
 func UnzipGame(platform models.Platform, game shared.Item) ([]string, error) {

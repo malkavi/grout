@@ -2,6 +2,7 @@ package utils
 
 const muOSRomsFolderMMC = "/mnt/mmc/ROMS/"
 const muOSRomsFolderSD = "/mnt/sdcard/ROMS/"
+const muOSRomsFolderUnion = "/mnt/union/ROMS" // TODO see if this has RW
 
 const nextUIRomsFolder = "/mnt/SDCARD/Roms/"
 
