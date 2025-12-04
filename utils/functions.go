@@ -47,10 +47,7 @@ func GetRomDirectory() string {
 
 	switch cfw {
 	case models.MUOS:
-		if FolderExists(muOSRomsFolderSD) {
-			return muOSRomsFolderSD
-		}
-		return muOSRomsFolderMMC
+		return muOSRomsFolderUnion
 	case models.NEXTUI:
 		return nextUIRomsFolder
 	}

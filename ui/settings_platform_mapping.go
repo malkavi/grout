@@ -51,7 +51,7 @@ func (p PlatformMappingScreen) Draw() (interface{}, int, error) {
 	}
 
 	unmapped := gaba.Option{
-		DisplayName: "Unmapped",
+		DisplayName: "Skip",
 		Value:       "",
 	}
 
@@ -73,7 +73,7 @@ func (p PlatformMappingScreen) Draw() (interface{}, int, error) {
 
 		for _, romDirectory := range fb.Items {
 			options = append(options, gaba.Option{
-				DisplayName: fmt.Sprintf("/Roms/%s", filepath.Base(romDirectory.Path)),
+				DisplayName: fmt.Sprintf("/%s", filepath.Base(romDirectory.Path)),
 				Value:       filepath.Base(romDirectory.Path),
 			})
 		}
