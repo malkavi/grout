@@ -1,4 +1,4 @@
-package utils
+package constants
 
 import (
 	"regexp"
@@ -8,19 +8,27 @@ import (
 
 const (
 	ExitCodeEditMappings gaba.ExitCode = 100
-	ExitCodeClearSearch  gaba.ExitCode = 101
+	ExitCodeSearch       gaba.ExitCode = 101
+	ExitCodeClearSearch  gaba.ExitCode = 102
 	ExitCodeNoResults    gaba.ExitCode = 404
 )
 
-const muOSRomsFolderUnion = "/mnt/union/ROMS"
-const nextUIRomsFolder = "/mnt/SDCARD/Roms/"
+const MuOSRomsFolderUnion = "/mnt/union/ROMS"
+const NextUIRomsFolder = "/mnt/SDCARD/Roms/"
 
 var TagRegex = regexp.MustCompile(`\((.*?)\)`)
 var OrderedFolderRegex = regexp.MustCompile(`\d+\)\s`)
 
+type CFW string
+
+const (
+	NEXTUI CFW = "NextUI"
+	MUOS   CFW = "muOS"
+)
+
 // The following maps take a RomM Slug and return a list of folder names / system tags that can be used to map platforms
 
-var muOSPlatforms = map[string][]string{
+var MuOSPlatforms = map[string][]string{
 	"3do":                                {"3do"},
 	"acpc":                               {"cpc", "gx4000"},
 	"amiga":                              {"amiga"},
@@ -115,7 +123,7 @@ var muOSPlatforms = map[string][]string{
 	"zxs":                                {"spectrum"},
 }
 
-var nextUIPlatforms = map[string][]string{
+var NextUIPlatforms = map[string][]string{
 	"3do":                                {},
 	"3ds":                                {"Nintendo 3DS (3DS)"},
 	"acpc":                               {"Amstrad CPC (CPC)"},

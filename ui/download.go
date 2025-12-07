@@ -14,7 +14,6 @@ import (
 	"github.com/brandonkowalski/go-romm"
 )
 
-// DownloadInput contains data needed to render the download screen
 type DownloadInput struct {
 	Config        models.Config
 	Host          models.Host
@@ -24,7 +23,6 @@ type DownloadInput struct {
 	SearchFilter  string
 }
 
-// DownloadOutput contains the result of the download screen
 type DownloadOutput struct {
 	DownloadedGames []romm.DetailedRom
 	Platform        romm.Platform
@@ -32,14 +30,39 @@ type DownloadOutput struct {
 	SearchFilter    string
 }
 
-// DownloadScreen handles downloading selected games
 type DownloadScreen struct{}
 
 func NewDownloadScreen() *DownloadScreen {
 	return &DownloadScreen{}
 }
 
-func (s *DownloadScreen) Draw(input DownloadInput) (gaba.ScreenResult[DownloadOutput], error) {
+func (s *DownloadScreen) Execute(config models.Config, host models.Host, platform romm.Platform, selectedGames []romm.DetailedRom, allGames []romm.DetailedRom, searchFilter string) DownloadOutput {
+	result, err := s.Draw(DownloadInput{
+		Config:        config,
+		Host:          host,
+		Platform:      platform,
+		SelectedGames: selectedGames,
+		AllGames:      allGames,
+		SearchFilter:  searchFilter,
+	})
+
+	if err != nil {
+		gaba.GetLogger().Error("Download failed", "error", err)
+		return DownloadOutput{
+			AllGames:     allGames,
+			Platform:     platform,
+			SearchFilter: searchFilter,
+		}
+	}
+
+	if result.ExitCode == gaba.ExitCodeSuccess && len(result.Value.DownloadedGames) > 0 {
+		gaba.GetLogger().Info("Successfully downloaded games", "count", len(result.Value.DownloadedGames))
+	}
+
+	return result.Value
+}
+
+func (s *DownloadScreen) Draw(input DownloadInput) (ScreenResult[DownloadOutput], error) {
 	logger := gaba.GetLogger()
 
 	output := DownloadOutput{
@@ -66,7 +89,7 @@ func (s *DownloadScreen) Draw(input DownloadInput) (gaba.ScreenResult[DownloadOu
 	res, err := gaba.DownloadManager(downloads, headers, input.Config.DownloadArt)
 	if err != nil {
 		logger.Error("Error downloading", "error", err)
-		return gaba.WithCode(output, gaba.ExitCodeError), err
+		return WithCode(output, gaba.ExitCodeError), err
 	}
 
 	if len(res.Failed) > 0 {
@@ -80,12 +103,10 @@ func (s *DownloadScreen) Draw(input DownloadInput) (gaba.ScreenResult[DownloadOu
 		}
 	}
 
-	// No successful downloads
 	if len(res.Completed) == 0 {
-		return gaba.WithCode(output, gaba.ExitCodeError), nil
+		return WithCode(output, gaba.ExitCodeError), nil
 	}
 
-	// Build list of successfully downloaded games
 	downloadedGames := make([]romm.DetailedRom, 0, len(res.Completed))
 	for _, g := range input.SelectedGames {
 		if slices.ContainsFunc(res.Completed, func(d gaba.Download) bool {
@@ -96,7 +117,7 @@ func (s *DownloadScreen) Draw(input DownloadInput) (gaba.ScreenResult[DownloadOu
 	}
 
 	output.DownloadedGames = downloadedGames
-	return gaba.Success(output), nil
+	return Success(output), nil
 }
 
 func (s *DownloadScreen) buildDownloads(config models.Config, host models.Host, platform romm.Platform, games []romm.DetailedRom) []gaba.Download {

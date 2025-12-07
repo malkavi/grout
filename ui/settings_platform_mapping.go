@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"grout/constants"
 	"grout/models"
 	"grout/utils"
 	"os"
@@ -18,7 +19,7 @@ import (
 type PlatformMappingInput struct {
 	Host           models.Host
 	ApiTimeout     time.Duration
-	CFW            models.CFW
+	CFW            constants.CFW
 	RomDirectory   string // Base ROM directory path
 	AutoSelect     bool   // Auto-select "Create" option when no match found
 	HideBackButton bool   // Hide the back/cancel button
@@ -36,7 +37,7 @@ func NewPlatformMappingScreen() *PlatformMappingScreen {
 	return &PlatformMappingScreen{}
 }
 
-func (s *PlatformMappingScreen) Draw(input PlatformMappingInput) (gaba.ScreenResult[PlatformMappingOutput], error) {
+func (s *PlatformMappingScreen) Draw(input PlatformMappingInput) (ScreenResult[PlatformMappingOutput], error) {
 	logger := gaba.GetLogger()
 	output := PlatformMappingOutput{Mappings: make(map[string]models.DirectoryMapping)}
 
@@ -44,14 +45,14 @@ func (s *PlatformMappingScreen) Draw(input PlatformMappingInput) (gaba.ScreenRes
 	rommPlatforms, err := s.fetchPlatforms(input)
 	if err != nil {
 		logger.Error("Error fetching RomM Platforms", "error", err)
-		return gaba.WithCode(output, gaba.ExitCodeError), err
+		return WithCode(output, gaba.ExitCodeError), err
 	}
 
 	// Get local ROM directories
 	romDirectories, err := s.getRomDirectories(input.RomDirectory)
 	if err != nil {
 		logger.Error("Error fetching ROM directories", "error", err)
-		return gaba.WithCode(output, gaba.ExitCodeBack), err
+		return WithCode(output, gaba.ExitCodeBack), err
 	}
 
 	// Build mapping options
@@ -78,15 +79,15 @@ func (s *PlatformMappingScreen) Draw(input PlatformMappingInput) (gaba.ScreenRes
 
 	if err != nil {
 		if errors.Is(err, gaba.ErrCancelled) {
-			return gaba.Back(PlatformMappingOutput{}), nil
+			return Back(PlatformMappingOutput{}), nil
 		}
-		return gaba.WithCode(PlatformMappingOutput{}, gaba.ExitCodeError), err
+		return WithCode(PlatformMappingOutput{}, gaba.ExitCodeError), err
 	}
 
 	// Build mappings from result
 	output.Mappings = s.buildMappingsFromResult(result.Items)
 
-	return gaba.Success(output), nil
+	return Success(output), nil
 }
 
 func (s *PlatformMappingScreen) fetchPlatforms(input PlatformMappingInput) ([]romm.Platform, error) {
@@ -169,7 +170,7 @@ func (s *PlatformMappingScreen) buildPlatformOptions(
 	for _, romDir := range romDirectories {
 		dirName := romDir.Name()
 		displayName := dirName
-		if input.CFW == models.NEXTUI {
+		if input.CFW == constants.NEXTUI {
 			displayName = utils.ParseTag(dirName)
 		}
 
@@ -195,7 +196,7 @@ func (s *PlatformMappingScreen) buildPlatformOptions(
 func (s *PlatformMappingScreen) findMatchingDirectory(
 	platform romm.Platform,
 	romDirectories []os.DirEntry,
-	cfw models.CFW,
+	cfw constants.CFW,
 ) int {
 	for i, entry := range romDirectories {
 		if s.directoryMatchesPlatform(platform, entry.Name(), cfw) {
@@ -208,22 +209,22 @@ func (s *PlatformMappingScreen) findMatchingDirectory(
 func (s *PlatformMappingScreen) directoryMatchesPlatform(
 	platform romm.Platform,
 	dirName string,
-	cfw models.CFW,
+	cfw constants.CFW,
 ) bool {
 	cfwSlug := utils.RomMSlugToCFW(platform.Slug)
 	romFolderBase := utils.RomFolderBase(dirName)
 
 	switch cfw {
-	case models.NEXTUI:
+	case constants.NEXTUI:
 		return utils.ParseTag(cfwSlug) == romFolderBase
 	default:
 		return cfwSlug == romFolderBase
 	}
 }
 
-func (s *PlatformMappingScreen) getCreateDisplayName(slug string, cfw models.CFW) string {
+func (s *PlatformMappingScreen) getCreateDisplayName(slug string, cfw constants.CFW) string {
 	displayName := utils.RomMSlugToCFW(slug)
-	if cfw == models.NEXTUI {
+	if cfw == constants.NEXTUI {
 		displayName = utils.ParseTag(displayName)
 	}
 	return displayName

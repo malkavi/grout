@@ -2,33 +2,30 @@ package ui
 
 import (
 	"errors"
+	"grout/constants"
 	"grout/models"
 	"time"
 
 	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
 )
 
-// SettingsInput contains data needed to render the settings screen
 type SettingsInput struct {
 	Config *models.Config
-	CFW    models.CFW // Current firmware type for conditional options
+	CFW    constants.CFW
 	Host   models.Host
 }
 
-// SettingsOutput contains the result of the settings screen
 type SettingsOutput struct {
 	Config              *models.Config
-	EditMappingsClicked bool // True if user clicked "Edit Directory Mappings"
+	EditMappingsClicked bool
 }
 
-// SettingsScreen displays application settings
 type SettingsScreen struct{}
 
 func NewSettingsScreen() *SettingsScreen {
 	return &SettingsScreen{}
 }
 
-// Timeout option definitions
 var (
 	apiTimeoutOptions = []struct {
 		Display string
@@ -61,14 +58,14 @@ var (
 	}
 )
 
-func (s *SettingsScreen) Draw(input SettingsInput) (gaba.ScreenResult[SettingsOutput], error) {
+func (s *SettingsScreen) Draw(input SettingsInput) (ScreenResult[SettingsOutput], error) {
 	config := input.Config
 	output := SettingsOutput{Config: config}
 
 	items := s.buildMenuItems(config)
 
 	// Remove art download option for MUOS
-	if input.CFW == models.MUOS {
+	if input.CFW == constants.MUOS {
 		items = append(items[:1], items[2:]...)
 	}
 
@@ -86,22 +83,20 @@ func (s *SettingsScreen) Draw(input SettingsInput) (gaba.ScreenResult[SettingsOu
 
 	if err != nil {
 		if errors.Is(err, gaba.ErrCancelled) {
-			return gaba.Back(SettingsOutput{}), nil
+			return Back(SettingsOutput{}), nil
 		}
-		return gaba.WithCode(SettingsOutput{}, gaba.ExitCodeError), err
+		return WithCode(SettingsOutput{}, gaba.ExitCodeError), err
 	}
 
-	// User clicked "Edit Directory Mappings"
 	if result.Selected == 0 {
 		output.EditMappingsClicked = true
-		return gaba.WithCode(output, gaba.ExitCode(100)), nil // Custom code for sub-screen navigation
+		return WithCode(output, constants.ExitCodeEditMappings), nil
 	}
 
-	// Apply settings from result
 	s.applySettings(config, result.Items, input.CFW)
 
 	output.Config = config
-	return gaba.Success(output), nil
+	return Success(output), nil
 }
 
 func (s *SettingsScreen) buildMenuItems(config *models.Config) []gaba.ItemWithOptions {
@@ -181,10 +176,10 @@ func (s *SettingsScreen) findDownloadTimeoutIndex(timeout time.Duration) int {
 	return 0
 }
 
-func (s *SettingsScreen) applySettings(config *models.Config, items []gaba.ItemWithOptions, cfw models.CFW) {
+func (s *SettingsScreen) applySettings(config *models.Config, items []gaba.ItemWithOptions, cfw constants.CFW) {
 	// Adjust index offset based on whether MUOS removed the art option
 	offset := 0
-	if cfw == models.MUOS {
+	if cfw == constants.MUOS {
 		offset = -1
 	}
 
@@ -213,7 +208,6 @@ func (s *SettingsScreen) applySettings(config *models.Config, items []gaba.ItemW
 	_ = offset // Reserved for future use
 }
 
-// Helper functions
 func boolToIndex(b bool) int {
 	if b {
 		return 1

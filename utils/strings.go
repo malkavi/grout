@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"grout/constants"
 	"path"
 	"path/filepath"
 	"strings"
@@ -9,7 +10,7 @@ import (
 func ParseTag(input string) string {
 	cleaned := filepath.Clean(input)
 
-	tags := TagRegex.FindAllStringSubmatch(cleaned, -1)
+	tags := constants.TagRegex.FindAllStringSubmatch(cleaned, -1)
 
 	var foundTags []string
 	foundTag := ""
@@ -31,7 +32,7 @@ func ParseTag(input string) string {
 func ItemNameCleaner(filename string, stripTag bool) (string, string) {
 	cleaned := filepath.Clean(filename)
 
-	tags := TagRegex.FindAllStringSubmatch(cleaned, -1)
+	tags := constants.TagRegex.FindAllStringSubmatch(cleaned, -1)
 
 	var foundTags []string
 	foundTag := ""
@@ -50,7 +51,7 @@ func ItemNameCleaner(filename string, stripTag bool) (string, string) {
 		}
 	}
 
-	orderedFolderRegex := OrderedFolderRegex.FindStringSubmatch(cleaned)
+	orderedFolderRegex := constants.OrderedFolderRegex.FindStringSubmatch(cleaned)
 
 	if len(orderedFolderRegex) > 0 {
 		cleaned = strings.ReplaceAll(cleaned, orderedFolderRegex[0], "")

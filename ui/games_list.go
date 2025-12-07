@@ -3,8 +3,8 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"grout/constants"
 	"grout/models"
-	"grout/utils"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -14,7 +14,6 @@ import (
 	"github.com/brandonkowalski/go-romm"
 )
 
-// GameListInput contains data needed to render the game list screen
 type GameListInput struct {
 	Config               *models.Config
 	Host                 models.Host
@@ -25,7 +24,6 @@ type GameListInput struct {
 	LastSelectedPosition int
 }
 
-// GameListOutput contains the result of the game list screen
 type GameListOutput struct {
 	SelectedGames        []romm.DetailedRom
 	Platform             romm.Platform
@@ -35,20 +33,19 @@ type GameListOutput struct {
 	LastSelectedPosition int
 }
 
-// GameListScreen displays a list of games for a platform
 type GameListScreen struct{}
 
 func NewGameListScreen() *GameListScreen {
 	return &GameListScreen{}
 }
 
-func (s *GameListScreen) Draw(input GameListInput) (gaba.ScreenResult[GameListOutput], error) {
+func (s *GameListScreen) Draw(input GameListInput) (ScreenResult[GameListOutput], error) {
 	games := input.Games
 
 	if len(games) == 0 {
 		loaded, err := s.loadGames(input.Config, input.Host, input.Platform)
 		if err != nil {
-			return gaba.ScreenResult[GameListOutput]{ExitCode: gaba.ExitCodeError}, err
+			return WithCode(GameListOutput{}, gaba.ExitCodeError), err
 		}
 		games = loaded
 	}
@@ -69,10 +66,9 @@ func (s *GameListScreen) Draw(input GameListInput) (gaba.ScreenResult[GameListOu
 		displayGames = filterList(displayGames, input.SearchFilter)
 	}
 
-	// Handle empty results
 	if len(displayGames) == 0 {
 		s.showEmptyMessage(input.Platform.Name, input.SearchFilter)
-		return gaba.WithCode(output, gaba.ExitCode(404)), nil
+		return WithCode(output, gaba.ExitCode(404)), nil
 	}
 
 	menuItems := make([]gaba.MenuItem, len(displayGames))
@@ -106,11 +102,11 @@ func (s *GameListScreen) Draw(input GameListInput) (gaba.ScreenResult[GameListOu
 				output.SearchFilter = ""
 				output.LastSelectedIndex = 0
 				output.LastSelectedPosition = 0
-				return gaba.WithCode(output, utils.ExitCodeClearSearch), nil
+				return WithCode(output, constants.ExitCodeClearSearch), nil
 			}
-			return gaba.Back(output), nil
+			return Back(output), nil
 		}
-		return gaba.WithCode(output, gaba.ExitCodeError), err
+		return WithCode(output, gaba.ExitCodeError), err
 	}
 
 	switch res.Action {
@@ -122,13 +118,13 @@ func (s *GameListScreen) Draw(input GameListInput) (gaba.ScreenResult[GameListOu
 		output.LastSelectedIndex = res.Selected[0]
 		output.LastSelectedPosition = res.VisiblePosition
 		output.SelectedGames = selectedGames
-		return gaba.Success(output), nil
+		return Success(output), nil
 
 	case gaba.ListActionTriggered:
-		return gaba.WithCode(output, gaba.ExitCodeSearch), nil
+		return WithCode(output, constants.ExitCodeSearch), nil
 	}
 
-	return gaba.Back(output), nil
+	return Back(output), nil
 }
 
 func (s *GameListScreen) loadGames(config *models.Config, host models.Host, platform romm.Platform) ([]romm.DetailedRom, error) {

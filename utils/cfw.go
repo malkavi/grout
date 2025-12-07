@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"grout/constants"
 	"grout/models"
 	"os"
 	"path/filepath"
@@ -10,13 +11,13 @@ import (
 	"github.com/brandonkowalski/go-romm"
 )
 
-func GetCFW() models.CFW {
+func GetCFW() constants.CFW {
 	cfw := strings.ToLower(os.Getenv("CFW"))
 	switch cfw {
 	case "muos":
-		return models.MUOS
+		return constants.MUOS
 	case "nextui":
-		return models.NEXTUI
+		return constants.NEXTUI
 	default:
 		LogStandardFatal(fmt.Sprintf("Unsupported CFW: %s", cfw), nil)
 	}
@@ -31,10 +32,10 @@ func GetRomDirectory() string {
 	cfw := GetCFW()
 
 	switch cfw {
-	case models.MUOS:
-		return muOSRomsFolderUnion
-	case models.NEXTUI:
-		return nextUIRomsFolder
+	case constants.MUOS:
+		return constants.MuOSRomsFolderUnion
+	case constants.NEXTUI:
+		return constants.NextUIRomsFolder
 	}
 
 	return ""
@@ -54,10 +55,10 @@ func RomMSlugToCFW(slug string) string {
 	var cfwPlatformMap map[string][]string
 
 	switch GetCFW() {
-	case models.MUOS:
-		cfwPlatformMap = muOSPlatforms
-	case models.NEXTUI:
-		cfwPlatformMap = nextUIPlatforms
+	case constants.MUOS:
+		cfwPlatformMap = constants.MuOSPlatforms
+	case constants.NEXTUI:
+		cfwPlatformMap = constants.NextUIPlatforms
 	}
 
 	if value, ok := cfwPlatformMap[slug]; ok {
@@ -73,9 +74,9 @@ func RomMSlugToCFW(slug string) string {
 
 func RomFolderBase(path string) string {
 	switch GetCFW() {
-	case models.MUOS:
+	case constants.MUOS:
 		return path
-	case models.NEXTUI:
+	case constants.NEXTUI:
 		_, tag := ItemNameCleaner(path, true)
 		return tag
 	default:

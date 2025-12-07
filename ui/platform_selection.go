@@ -7,7 +7,6 @@ import (
 	"github.com/brandonkowalski/go-romm"
 )
 
-// PlatformSelectionInput contains data needed to render the platform selection screen
 type PlatformSelectionInput struct {
 	Platforms            []romm.Platform
 	QuitOnBack           bool // If true, back button quits the app; if false, it navigates back
@@ -15,21 +14,19 @@ type PlatformSelectionInput struct {
 	LastSelectedPosition int
 }
 
-// PlatformSelectionOutput contains the result of the platform selection screen
 type PlatformSelectionOutput struct {
 	SelectedPlatform     romm.Platform
 	LastSelectedIndex    int
 	LastSelectedPosition int
 }
 
-// PlatformSelectionScreen displays a list of platforms to choose from
 type PlatformSelectionScreen struct{}
 
 func NewPlatformSelectionScreen() *PlatformSelectionScreen {
 	return &PlatformSelectionScreen{}
 }
 
-func (s *PlatformSelectionScreen) Draw(input PlatformSelectionInput) (gaba.ScreenResult[PlatformSelectionOutput], error) {
+func (s *PlatformSelectionScreen) Draw(input PlatformSelectionInput) (ScreenResult[PlatformSelectionOutput], error) {
 	output := PlatformSelectionOutput{
 		LastSelectedIndex:    input.LastSelectedIndex,
 		LastSelectedPosition: input.LastSelectedPosition,
@@ -37,10 +34,9 @@ func (s *PlatformSelectionScreen) Draw(input PlatformSelectionInput) (gaba.Scree
 
 	// Handle empty platforms
 	if len(input.Platforms) == 0 {
-		return gaba.WithCode(output, gaba.ExitCode(404)), nil
+		return WithCode(output, gaba.ExitCode(404)), nil
 	}
 
-	// Build menu items
 	menuItems := make([]gaba.MenuItem, len(input.Platforms))
 	for i, platform := range input.Platforms {
 		menuItems[i] = gaba.MenuItem{
@@ -51,7 +47,6 @@ func (s *PlatformSelectionScreen) Draw(input PlatformSelectionInput) (gaba.Scree
 		}
 	}
 
-	// Configure footer based on navigation mode
 	var footerItems []gaba.FooterHelpItem
 	if input.QuitOnBack {
 		footerItems = []gaba.FooterHelpItem{
@@ -66,7 +61,6 @@ func (s *PlatformSelectionScreen) Draw(input PlatformSelectionInput) (gaba.Scree
 		}
 	}
 
-	// Configure list options
 	options := gaba.DefaultListOptions("Grout", menuItems)
 	options.EnableAction = input.QuitOnBack
 	options.FooterHelpItems = footerItems
@@ -76,9 +70,9 @@ func (s *PlatformSelectionScreen) Draw(input PlatformSelectionInput) (gaba.Scree
 	sel, err := gaba.List(options)
 	if err != nil {
 		if errors.Is(err, gaba.ErrCancelled) {
-			return gaba.Back(output), nil
+			return Back(output), nil
 		}
-		return gaba.WithCode(output, gaba.ExitCodeError), err
+		return WithCode(output, gaba.ExitCodeError), err
 	}
 
 	switch sel.Action {
@@ -87,15 +81,14 @@ func (s *PlatformSelectionScreen) Draw(input PlatformSelectionInput) (gaba.Scree
 		output.SelectedPlatform = platform
 		output.LastSelectedIndex = sel.Selected[0]
 		output.LastSelectedPosition = sel.VisiblePosition
-		return gaba.Success(output), nil
+		return Success(output), nil
 
 	case gaba.ListActionTriggered:
 		// Settings action (X button) - only available when QuitOnBack is true
 		if input.QuitOnBack {
-			return gaba.WithCode(output, gaba.ExitCodeSettings), nil
+			return WithCode(output, gaba.ExitCodeAction), nil
 		}
 	}
 
-	// Back/cancel
-	return gaba.WithCode(output, gaba.ExitCodeBack), nil
+	return WithCode(output, gaba.ExitCodeBack), nil
 }

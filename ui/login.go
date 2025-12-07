@@ -12,25 +12,22 @@ import (
 	"github.com/brandonkowalski/go-romm"
 )
 
-// LoginInput contains data needed to render the login screen
 type LoginInput struct {
 	ExistingHost models.Host
 }
 
-// LoginOutput contains the result of a successful login
 type LoginOutput struct {
 	Host   models.Host
 	Config *models.Config
 }
 
-// LoginScreen handles user authentication to RomM
 type LoginScreen struct{}
 
 func NewLoginScreen() *LoginScreen {
 	return &LoginScreen{}
 }
 
-func (s *LoginScreen) Draw(input LoginInput) (gabagool.ScreenResult[LoginOutput], error) {
+func (s *LoginScreen) Draw(input LoginInput) (ScreenResult[LoginOutput], error) {
 	host := input.ExistingHost
 
 	items := []gabagool.ItemWithOptions{
@@ -132,9 +129,8 @@ func (s *LoginScreen) Draw(input LoginInput) (gabagool.ScreenResult[LoginOutput]
 		items,
 	)
 
-	// User pressed back/quit
 	if err != nil {
-		return gabagool.WithCode(LoginOutput{}, gabagool.ExitCodeCancel), nil
+		return WithCode(LoginOutput{}, gabagool.ExitCodeCancel), nil
 	}
 
 	loginSettings := res.Items
@@ -151,11 +147,9 @@ func (s *LoginScreen) Draw(input LoginInput) (gabagool.ScreenResult[LoginOutput]
 		Password: loginSettings[4].Options[0].Value.(string),
 	}
 
-	return gabagool.Success(LoginOutput{Host: newHost}), nil
+	return Success(LoginOutput{Host: newHost}), nil
 }
 
-// LoginFlow handles the complete login flow including validation and retries
-// This is a higher-level orchestrator that uses LoginScreen
 func LoginFlow(existingHost models.Host) (*models.Config, error) {
 	screen := NewLoginScreen()
 
@@ -207,7 +201,6 @@ func LoginFlow(existingHost models.Host) (*models.Config, error) {
 	}
 }
 
-// loginAttemptResult holds the result of a login attempt
 type loginAttemptResult struct {
 	BadHost        bool
 	BadCredentials bool
