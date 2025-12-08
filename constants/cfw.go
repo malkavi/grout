@@ -1,28 +1,5 @@
 package constants
 
-import (
-	"regexp"
-
-	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
-)
-
-const (
-	ExitCodeEditMappings     gaba.ExitCode = 100
-	ExitCodeSearch           gaba.ExitCode = 200
-	ExitCodeClearSearch      gaba.ExitCode = 201
-	ExitCodeCollections      gaba.ExitCode = 300
-	ExitCodeBackToCollection gaba.ExitCode = 301
-	ExitCodeNoResults        gaba.ExitCode = 404
-)
-
-const MuOSSD1 = "/mnt/mmc"
-const MuOSSD2 = "/mnt/sdcard"
-const MuOSRomsFolderUnion = "/mnt/union/ROMS"
-const NextUIRomsFolder = "/mnt/SDCARD/Roms/"
-
-var TagRegex = regexp.MustCompile(`\((.*?)\)`)
-var OrderedFolderRegex = regexp.MustCompile(`\d+\)\s`)
-
 type CFW string
 
 const (
@@ -30,8 +7,12 @@ const (
 	MUOS   CFW = "muOS"
 )
 
-// The following maps take a RomM Slug and return a list of folder names / system tags that can be used to map platforms
+const MuOSSD1 = "/mnt/mmc"
+const MuOSSD2 = "/mnt/sdcard"
+const MuOSRomsFolderUnion = "/mnt/union/ROMS"
+const NextUIRomsFolder = "/mnt/SDCARD/Roms/"
 
+// The following maps take a RomM Slug and return a list of folder names / system tags that can be used to map platformsI
 var MuOSPlatforms = map[string][]string{
 	"3do":                                {"3do"},
 	"acpc":                               {"cpc", "gx4000"},
@@ -125,6 +106,73 @@ var MuOSPlatforms = map[string][]string{
 	"wonderswan-color":                   {"wsc"},
 	"x1":                                 {"x1"},
 	"zxs":                                {"spectrum"},
+}
+
+var MuOSArtDirectory = map[string]string{
+	"3do":                                "Panasonic 3DO",
+	"acpc":                               "Amstrad CPC",
+	"amiga":                              "Commodore Amiga",
+	"arcade":                             "Arcade",
+	"atari2600":                          "Atari 2600",
+	"atari5200":                          "Atari 5200",
+	"atari7800":                          "Atari 7800",
+	"c64":                                "Commodore 64",
+	"dc":                                 "SEGA Dreamcast",
+	"fairchild-channel-f":                "Fairchild ChannelF",
+	"fds":                                "Nintendo Famicom Disk System",
+	"g-and-w":                            "Nintendo Game & Watch",
+	"gamegear":                           "SEGA Game Gear",
+	"gb":                                 "Nintendo Game Boy",
+	"gba":                                "Nintendo Game Boy Advance",
+	"gbc":                                "Nintendo Game Boy Color",
+	"genesis":                            "SEGA Genesis",
+	"intellivision":                      "Mattel Intellivision",
+	"j2me":                               "Java J2ME-Platform",
+	"jaguar":                             "Atari Jaguar",
+	"lowres":                             "LowRes NX",
+	"lynx":                               "Atari Lynx",
+	"media-player":                       "Internet TV/Radio",
+	"mega-duck-slash-cougar-boy":         "Mega Duck / Cougar Boy",
+	"msx":                                "MSX Computer",
+	"n64":                                "Nintendo 64",
+	"naomi":                              "SEGA Naomi",
+	"nds":                                "Nintendo DS",
+	"neo-geo-cd":                         "SNK Neo Geo CD",
+	"neo-geo-pocket":                     "Neo Geo Pocket",
+	"neo-geo-pocket-color":               "Neo Geo Pocket Color",
+	"neogeoaes":                          "SNK Neo Geo",
+	"neogeomvs":                          "SNK Neo Geo",
+	"nes":                                "Nintendo Entertainment System",
+	"famicom":                            "Nintendo Famicom",
+	"odyssey--1":                         "Magnavox Odyssey - Videopac",
+	"openbor":                            "OpenBOR",
+	"philips-cd-i":                       "Philips CD-i",
+	"pokemon-mini":                       "Nintendo Pokemon Mini",
+	"psp":                                "Sony PlayStation Portable",
+	"psx":                                "Sony PlayStation",
+	"rpg-maker":                          "EasyRPG",
+	"saturn":                             "SEGA Saturn",
+	"scummvm":                            "ScummVM",
+	"sega-master-system":                 "SEGA Master System",
+	"sega32":                             "SEGA 32X",
+	"segacd":                             "SEGA Mega-CD",
+	"sg1000":                             "SEGA SG-1000",
+	"sharp-x68000":                       "Sharp X68000",
+	"sinclair-zx81":                      "Sinclair ZX81",
+	"snes":                               "Nintendo Super Entertainment System",
+	"sfam":                               "SuFami Turbo",
+	"supergrafx":                         "PC Engine SuperGrafx",
+	"tg16":                               "TurboGrafx-16",
+	"tic-80":                             "TIC-80 Tiny Computer",
+	"turbografx-cd":                      "TurboGrafx CD",
+	"vectrex":                            "GCE Vectrex",
+	"virtualboy":                         "Nintendo Virtual Boy",
+	"wasm-4":                             "WASM-4",
+	"watara-slash-quickshot-supervision": "Watara Supervision",
+	"wonderswan":                         "WonderSwan",
+	"wonderswan-color":                   "WonderSwan Color",
+	"x1":                                 "Sharp X1",
+	"zxs":                                "ZX Spectrum",
 }
 
 var NextUIPlatforms = map[string][]string{

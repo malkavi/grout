@@ -2,6 +2,8 @@ github.com/UncleJunVIP/certifiable v1.0.0 h1:g8SMZrGW74qLvli9j0CYO5BvpVcGhqxfvAU
 github.com/UncleJunVIP/certifiable v1.0.0/go.mod h1:paPhCSE8DKzYvBcFcr5NVAYJmmvADq8e5fvkvs95np4=
 github.com/UncleJunVIP/gabagool/v2 v2.0.5 h1:CBgfEkkOacOCS8sPd2+QRn9EApxKzLZfMzQMYDaPhhU=
 github.com/UncleJunVIP/gabagool/v2 v2.0.5/go.mod h1:FgQc2sMVQLBA/A6nE1nfcluMJp9Rn+rP9qWQ1k8UJsA=
+github.com/UncleJunVIP/gabagool/v2 v2.1.0 h1:g0U/ApAaqJAk5FPhq5xdo8brSzPr0KIeHVursb5nl/E=
+github.com/UncleJunVIP/gabagool/v2 v2.1.0/go.mod h1:FgQc2sMVQLBA/A6nE1nfcluMJp9Rn+rP9qWQ1k8UJsA=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/holoplot/go-evdev v0.0.0-20250804134636-ab1d56a1fe83 h1:B+A58zGFuDrvEZpPN+yS6swJA0nzqgZvDzgl/OPyefU=

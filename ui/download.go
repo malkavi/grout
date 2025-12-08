@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"grout/models"
 	"grout/utils"
+	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -34,6 +36,12 @@ type DownloadOutput struct {
 }
 
 type DownloadScreen struct{}
+
+type artDownload struct {
+	URL      string
+	Location string
+	GameName string
+}
 
 func NewDownloadScreen() *DownloadScreen {
 	return &DownloadScreen{}
@@ -74,7 +82,7 @@ func (s *DownloadScreen) Draw(input DownloadInput) (ScreenResult[DownloadOutput]
 		SearchFilter: input.SearchFilter,
 	}
 
-	downloads := s.buildDownloads(input.Config, input.Host, input.Platform, input.SelectedGames)
+	downloads, artDownloads := s.buildDownloads(input.Config, input.Host, input.Platform, input.SelectedGames)
 
 	headers := make(map[string]string)
 	auth := input.Host.Username + ":" + input.Host.Password
@@ -89,13 +97,21 @@ func (s *DownloadScreen) Draw(input DownloadInput) (ScreenResult[DownloadOutput]
 
 	logger.Debug("Starting ROM download", "downloads", downloads)
 
-	res, err := gaba.DownloadManager(downloads, headers, input.Config.DownloadArt)
+	res, err := gaba.DownloadManager(downloads, headers, gaba.DownloadManagerOptions{
+		AutoContinue: input.Config.DownloadArt,
+	})
 	if err != nil {
 		logger.Error("Error downloading", "error", err)
 		return WithCode(output, gaba.ExitCodeError), err
 	}
 
+	logger.Debug("Download results", "completed", len(res.Completed), "failed", len(res.Failed))
+
 	if len(res.Failed) > 0 {
+		for _, f := range res.Failed {
+			logger.Warn("Download failed", "name", f.Download.DisplayName, "url", f.Download.URL, "error", f.Error)
+		}
+
 		for _, g := range downloads {
 			failedMatch := slices.ContainsFunc(res.Failed, func(de gaba.DownloadError) bool {
 				return de.Download.DisplayName == g.DisplayName
@@ -165,7 +181,7 @@ func (s *DownloadScreen) Draw(input DownloadInput) (ScreenResult[DownloadOutput]
 					logger.Warn("Failed to remove temp zip file", "path", tmpZipPath, "error", err)
 				}
 
-				logger.Info("Successfully extracted multi-file ROM", "game", g.Name, "dest", extractDir)
+				logger.Debug("Successfully extracted multi-file ROM", "game", g.Name, "dest", extractDir)
 				return nil, nil
 			},
 		)
@@ -181,15 +197,24 @@ func (s *DownloadScreen) Draw(input DownloadInput) (ScreenResult[DownloadOutput]
 			return d.DisplayName == g.Name
 		}) {
 			downloadedGames = append(downloadedGames, g)
+			logger.Debug("Game marked as downloaded", "game", g.Name)
 		}
+	}
+
+	logger.Debug("Download complete", "successful", len(downloadedGames), "attempted", len(input.SelectedGames))
+
+	// Download art silently in the background for successfully downloaded games
+	if len(artDownloads) > 0 && len(downloadedGames) > 0 {
+		go s.downloadArtInBackground(artDownloads, downloadedGames, headers)
 	}
 
 	output.DownloadedGames = downloadedGames
 	return Success(output), nil
 }
 
-func (s *DownloadScreen) buildDownloads(config models.Config, host models.Host, platform romm.Platform, games []romm.Rom) []gaba.Download {
+func (s *DownloadScreen) buildDownloads(config models.Config, host models.Host, platform romm.Platform, games []romm.Rom) ([]gaba.Download, []artDownload) {
 	downloads := make([]gaba.Download, 0, len(games))
+	artDownloads := make([]artDownload, 0, len(games))
 
 	for _, g := range games {
 		// For collections, use each game's platform info; for platforms, use the passed platform
@@ -225,7 +250,114 @@ func (s *DownloadScreen) buildDownloads(config models.Config, host models.Host, 
 			DisplayName: g.Name,
 			Timeout:     config.DownloadTimeout,
 		})
+
+		// Add art download if enabled and art is available
+		if config.DownloadArt && (g.PathCoverLarge != "" || g.URLCover != "") {
+			artDir := utils.GetArtDirectory(config, gamePlatform)
+			artFileName := g.FsNameNoExt + ".png"
+			artLocation := filepath.Join(artDir, artFileName)
+
+			var coverPath string
+			if g.PathCoverLarge != "" {
+				coverPath = g.PathCoverLarge
+			} else if g.URLCover != "" {
+				coverPath = g.URLCover
+			}
+
+			// Construct and properly encode the URL to handle query params with spaces
+			// RomM sometimes returns URLs with unencoded spaces in timestamps
+			baseURL := host.URL() + coverPath
+			// Replace spaces with %20 to ensure proper URL encoding
+			artURL := strings.ReplaceAll(baseURL, " ", "%20")
+
+			artDownloads = append(artDownloads, artDownload{
+				URL:      artURL,
+				Location: artLocation,
+				GameName: g.Name,
+			})
+		}
 	}
 
-	return downloads
+	return downloads, artDownloads
+}
+
+func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, downloadedGames []romm.Rom, headers map[string]string) {
+	logger := gaba.GetLogger()
+
+	// Create a map of downloaded game names for quick lookup
+	downloadedGameNames := make(map[string]bool)
+	for _, g := range downloadedGames {
+		downloadedGameNames[g.Name] = true
+	}
+
+	successCount := 0
+	failCount := 0
+
+	for _, art := range artDownloads {
+		// Only download art for games that were successfully downloaded
+		if !downloadedGameNames[art.GameName] {
+			continue
+		}
+
+		// Create art directory if it doesn't exist
+		artDir := filepath.Dir(art.Location)
+		if err := os.MkdirAll(artDir, 0755); err != nil {
+			logger.Warn("Failed to create art directory", "dir", artDir, "game", art.GameName, "error", err)
+			failCount++
+			continue
+		}
+
+		// Download the art file
+		req, err := http.NewRequest("GET", art.URL, nil)
+		if err != nil {
+			logger.Warn("Failed to create art request", "game", art.GameName, "error", err)
+			failCount++
+			continue
+		}
+
+		// Add authentication headers
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			logger.Warn("Failed to download art", "game", art.GameName, "url", art.URL, "error", err)
+			failCount++
+			continue
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			logger.Warn("Art download failed with bad status", "game", art.GameName, "url", art.URL, "status", resp.Status)
+			failCount++
+			continue
+		}
+
+		// Save the art file
+		outFile, err := os.Create(art.Location)
+		if err != nil {
+			logger.Warn("Failed to create art file", "game", art.GameName, "location", art.Location, "error", err)
+			failCount++
+			continue
+		}
+
+		_, err = io.Copy(outFile, resp.Body)
+		outFile.Close()
+
+		if err != nil {
+			logger.Warn("Failed to write art file", "game", art.GameName, "location", art.Location, "error", err)
+			os.Remove(art.Location) // Clean up partial file
+			failCount++
+			continue
+		}
+
+		logger.Debug("Art downloaded successfully", "game", art.GameName, "location", art.Location)
+		successCount++
+	}
+
+	if successCount > 0 || failCount > 0 {
+		logger.Debug("Background art download complete", "successful", successCount, "failed", failCount)
+	}
 }

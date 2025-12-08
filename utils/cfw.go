@@ -41,6 +41,16 @@ func GetRomDirectory() string {
 	return ""
 }
 
+// GetMuOSInfoDirectory returns the muOS info directory
+// Checks MUOS_INFO_DIR environment variable first for development/testing
+// Falls back to /mnt/mmc/MUOS/info if not set
+func GetMuOSInfoDirectory() string {
+	if os.Getenv("MUOS_INFO_DIR") != "" {
+		return os.Getenv("MUOS_INFO_DIR")
+	}
+	return filepath.Join(constants.MuOSSD1, "MUOS", "info")
+}
+
 func GetPlatformRomDirectory(config models.Config, platform romm.Platform) string {
 	rp := config.DirectoryMappings[platform.Slug].RelativePath
 
@@ -81,5 +91,26 @@ func RomFolderBase(path string) string {
 		return tag
 	default:
 		return path
+	}
+}
+
+// GetArtDirectory returns the directory where box art should be saved for a given platform
+// For NextUI: {rom_directory}/.media
+// For muOS: {MUOS_INFO_DIR or /mnt/mmc/MUOS/info}/catalogue/{System}/box
+func GetArtDirectory(config models.Config, platform romm.Platform) string {
+	switch GetCFW() {
+	case constants.NEXTUI:
+		romDir := GetPlatformRomDirectory(config, platform)
+		return filepath.Join(romDir, ".media")
+	case constants.MUOS:
+		systemName, exists := constants.MuOSArtDirectory[platform.Slug]
+		if !exists {
+			// Fallback to platform display name if not in map
+			systemName = platform.Name
+		}
+		muosInfoDir := GetMuOSInfoDirectory()
+		return filepath.Join(muosInfoDir, "catalogue", systemName, "box")
+	default:
+		return ""
 	}
 }

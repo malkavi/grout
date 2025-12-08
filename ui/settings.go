@@ -64,11 +64,6 @@ func (s *SettingsScreen) Draw(input SettingsInput) (ScreenResult[SettingsOutput]
 
 	items := s.buildMenuItems(config)
 
-	// Remove art download option for MUOS
-	if input.CFW == constants.MUOS {
-		items = append(items[:1], items[2:]...)
-	}
-
 	result, err := gaba.OptionsList(
 		"Grout Settings",
 		gaba.OptionListSettings{
