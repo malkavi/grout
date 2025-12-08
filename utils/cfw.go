@@ -43,11 +43,17 @@ func GetRomDirectory() string {
 
 // GetMuOSInfoDirectory returns the muOS info directory
 // Checks MUOS_INFO_DIR environment variable first for development/testing
-// Falls back to /mnt/mmc/MUOS/info if not set
+// Then checks if SD2 path exists, falls back to SD1 if not
 func GetMuOSInfoDirectory() string {
 	if os.Getenv("MUOS_INFO_DIR") != "" {
 		return os.Getenv("MUOS_INFO_DIR")
 	}
+
+	sd2Path := filepath.Join(constants.MuOSSD2, "MUOS", "info")
+	if _, err := os.Stat(sd2Path); err == nil {
+		return sd2Path
+	}
+
 	return filepath.Join(constants.MuOSSD1, "MUOS", "info")
 }
 
