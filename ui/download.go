@@ -282,9 +282,25 @@ func (s *DownloadScreen) Draw(input DownloadInput) (ScreenResult[DownloadOutput]
 
 	logger.Debug("Download complete", "successful", len(downloadedGames), "attempted", len(input.SelectedGames))
 
-	// Download art silently in the background for successfully downloaded games
+	// Download art for successfully downloaded games with progress
 	if len(artDownloads) > 0 && len(downloadedGames) > 0 {
-		go s.downloadArtInBackground(artDownloads, downloadedGames, headers)
+		progress := &atomic.Float64{}
+		_, err := gaba.ProcessMessage(
+			"Downloading artwork...",
+			gaba.ProcessMessageOptions{
+				ShowThemeBackground: true,
+				ShowProgressBar:     true,
+				Progress:            progress,
+			},
+			func() (interface{}, error) {
+				s.downloadArtInBackground(artDownloads, downloadedGames, headers, progress)
+				return nil, nil
+			},
+		)
+
+		if err != nil {
+			logger.Warn("Art download process encountered an error", "error", err)
+		}
 	}
 
 	output.DownloadedGames = downloadedGames
@@ -337,10 +353,10 @@ func (s *DownloadScreen) buildDownloads(config utils.Config, host romm.Host, pla
 			artLocation := filepath.Join(artDir, artFileName)
 
 			var coverPath string
-			if g.PathCoverLarge != "" {
-				coverPath = g.PathCoverLarge
-			} else if g.PathCoverSmall != "" {
+			if g.PathCoverSmall != "" {
 				coverPath = g.PathCoverSmall
+			} else if g.PathCoverLarge != "" {
+				coverPath = g.PathCoverLarge
 			} else if g.URLCover != "" {
 				coverPath = g.URLCover
 			}
@@ -362,7 +378,7 @@ func (s *DownloadScreen) buildDownloads(config utils.Config, host romm.Host, pla
 	return downloads, artDownloads
 }
 
-func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, downloadedGames []romm.Rom, headers map[string]string) {
+func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, downloadedGames []romm.Rom, headers map[string]string, progress *atomic.Float64) {
 	logger := gaba.GetLogger()
 
 	// Create a map of downloaded game names for quick lookup
@@ -371,8 +387,17 @@ func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, dow
 		downloadedGameNames[g.Name] = true
 	}
 
+	// Count total art downloads needed
+	totalArt := 0
+	for _, art := range artDownloads {
+		if downloadedGameNames[art.GameName] {
+			totalArt++
+		}
+	}
+
 	successCount := 0
 	failCount := 0
+	processedCount := 0
 
 	for _, art := range artDownloads {
 		// Only download art for games that were successfully downloaded
@@ -385,6 +410,10 @@ func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, dow
 		if err := os.MkdirAll(artDir, 0755); err != nil {
 			logger.Warn("Failed to create art directory", "dir", artDir, "game", art.GameName, "error", err)
 			failCount++
+			processedCount++
+			if totalArt > 0 {
+				progress.Store(float64(processedCount) / float64(totalArt))
+			}
 			continue
 		}
 
@@ -393,6 +422,10 @@ func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, dow
 		if err != nil {
 			logger.Warn("Failed to create art request", "game", art.GameName, "error", err)
 			failCount++
+			processedCount++
+			if totalArt > 0 {
+				progress.Store(float64(processedCount) / float64(totalArt))
+			}
 			continue
 		}
 
@@ -406,6 +439,10 @@ func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, dow
 		if err != nil {
 			logger.Warn("Failed to download art", "game", art.GameName, "url", art.URL, "error", err)
 			failCount++
+			processedCount++
+			if totalArt > 0 {
+				progress.Store(float64(processedCount) / float64(totalArt))
+			}
 			continue
 		}
 		defer resp.Body.Close()
@@ -413,6 +450,10 @@ func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, dow
 		if resp.StatusCode != http.StatusOK {
 			logger.Warn("Art download failed with bad status", "game", art.GameName, "url", art.URL, "status", resp.Status)
 			failCount++
+			processedCount++
+			if totalArt > 0 {
+				progress.Store(float64(processedCount) / float64(totalArt))
+			}
 			continue
 		}
 
@@ -420,6 +461,10 @@ func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, dow
 		if err != nil {
 			logger.Warn("Failed to create art file", "game", art.GameName, "location", art.Location, "error", err)
 			failCount++
+			processedCount++
+			if totalArt > 0 {
+				progress.Store(float64(processedCount) / float64(totalArt))
+			}
 			continue
 		}
 
@@ -430,6 +475,10 @@ func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, dow
 			logger.Warn("Failed to write art file", "game", art.GameName, "location", art.Location, "error", err)
 			os.Remove(art.Location) // Clean up partial file
 			failCount++
+			processedCount++
+			if totalArt > 0 {
+				progress.Store(float64(processedCount) / float64(totalArt))
+			}
 			continue
 		}
 
@@ -440,11 +489,21 @@ func (s *DownloadScreen) downloadArtInBackground(artDownloads []artDownload, dow
 			logger.Warn("Failed to process art image", "game", art.GameName, "location", art.Location, "error", err)
 			os.Remove(art.Location) // Clean up if processing failed
 			failCount++
+			processedCount++
+			if totalArt > 0 {
+				progress.Store(float64(processedCount) / float64(totalArt))
+			}
 			continue
 		}
 
 		logger.Debug("Art processed successfully", "game", art.GameName)
 		successCount++
+
+		// Update progress
+		processedCount++
+		if totalArt > 0 {
+			progress.Store(float64(processedCount) / float64(totalArt))
+		}
 	}
 
 	if successCount > 0 || failCount > 0 {

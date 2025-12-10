@@ -12,6 +12,8 @@ github.com/UncleJunVIP/gabagool/v2 v2.1.4 h1:TxgvFwW31q+/RNM4PmRh77FoLfCkd0orENX
 github.com/UncleJunVIP/gabagool/v2 v2.1.4/go.mod h1:FgQc2sMVQLBA/A6nE1nfcluMJp9Rn+rP9qWQ1k8UJsA=
 github.com/UncleJunVIP/gabagool/v2 v2.1.5 h1:Axlv2m9xYdlNJeT6U9iJO08uLfaXxLuo5WblvFv+NDw=
 github.com/UncleJunVIP/gabagool/v2 v2.1.5/go.mod h1:FgQc2sMVQLBA/A6nE1nfcluMJp9Rn+rP9qWQ1k8UJsA=
+github.com/UncleJunVIP/gabagool/v2 v2.1.6 h1:ExyOinv76ByRs5ExXBAq32ttr6WQQGMU3JfFJDjOP2g=
+github.com/UncleJunVIP/gabagool/v2 v2.1.6/go.mod h1:FgQc2sMVQLBA/A6nE1nfcluMJp9Rn+rP9qWQ1k8UJsA=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
