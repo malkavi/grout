@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/UncleJunVIP/certifiable v1.0.0
-	github.com/UncleJunVIP/gabagool/v2 v2.1.4
+	github.com/UncleJunVIP/gabagool/v2 v2.1.5
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/image v0.34.0
 )

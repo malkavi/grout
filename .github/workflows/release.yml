@@ -20,6 +20,9 @@ jobs:
     runs-on: ubuntu-22.04-arm
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update pak.json files
         run: |
@@ -43,6 +46,19 @@ jobs:
                pak.json > build/Grout.pak/pak.json
           else
             echo "Version is already ${{ inputs.version }}, skipping pak.json update"
+          fi
+
+      - name: Commit pak.json changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet pak.json; then
+            echo "No changes to commit"
+          else
+            git add pak.json
+            git commit -m "Update pak.json to ${{ inputs.version }}"
+            git push
           fi
 
       - name: Install Task

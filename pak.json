@@ -7,7 +7,6 @@
   "repo_url": "https://github.com/rommapp/grout",
   "release_filename": "Grout.pak.zip",
   "changelog": {
-    "v1.1.0": "Built out a platform mapping screen to allow assigning RomM Platforms to CFW Rom Directories.",
     "v1.0.0": "Initial release of Grout!"
   },
   "screenshots": [

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"archive/zip"
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -9,7 +10,25 @@ import (
 	"strings"
 
 	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
+	"go.uber.org/atomic"
 )
+
+// progressWriter wraps a writer and updates progress as bytes are written
+type progressWriter struct {
+	writer         io.Writer
+	totalBytes     uint64
+	extractedBytes *uint64
+	progress       *atomic.Float64
+}
+
+func (pw *progressWriter) Write(p []byte) (int, error) {
+	n, err := pw.writer.Write(p)
+	if n > 0 && pw.progress != nil && pw.totalBytes > 0 {
+		*pw.extractedBytes += uint64(n)
+		pw.progress.Store(float64(*pw.extractedBytes) / float64(pw.totalBytes))
+	}
+	return n, err
+}
 
 func TempDir() string {
 	wd, err := os.Getwd()
@@ -35,7 +54,7 @@ func DeleteFile(path string) bool {
 	}
 }
 
-func Unzip(zipPath string, destDir string) error {
+func Unzip(zipPath string, destDir string, progress *atomic.Float64) error {
 	logger := gaba.GetLogger()
 
 	reader, err := zip.OpenReader(zipPath)
@@ -48,21 +67,46 @@ func Unzip(zipPath string, destDir string) error {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
+	// Pre-allocate a larger buffer for file copying (128KB)
+	// Reusing the same buffer across all files reduces allocations
+	buffer := make([]byte, 128*1024)
+
+	// Track created directories to avoid redundant MkdirAll calls
+	createdDirs := make(map[string]bool)
+	createdDirs[destDir] = true
+
+	// Calculate total uncompressed size for progress tracking (no I/O overhead)
+	var totalBytes uint64
+	for _, file := range reader.File {
+		if !file.FileInfo().IsDir() {
+			totalBytes += file.UncompressedSize64
+		}
+	}
+
+	var extractedBytes uint64
+
 	for _, file := range reader.File {
 		filePath := filepath.Join(destDir, file.Name)
 
 		if file.FileInfo().IsDir() {
-			if err := os.MkdirAll(filePath, file.Mode()); err != nil {
-				return fmt.Errorf("failed to create directory %s: %w", filePath, err)
+			if !createdDirs[filePath] {
+				if err := os.MkdirAll(filePath, file.Mode()); err != nil {
+					return fmt.Errorf("failed to create directory %s: %w", filePath, err)
+				}
+				createdDirs[filePath] = true
 			}
 			continue
 		}
 
-		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-			return fmt.Errorf("failed to create parent directory for %s: %w", filePath, err)
+		parentDir := filepath.Dir(filePath)
+		if !createdDirs[parentDir] {
+			if err := os.MkdirAll(parentDir, 0755); err != nil {
+				return fmt.Errorf("failed to create parent directory for %s: %w", filePath, err)
+			}
+			createdDirs[parentDir] = true
 		}
 
-		if err := extractFile(file, filePath); err != nil {
+		if err := extractFile(file, filePath, buffer, totalBytes, &extractedBytes, progress); err != nil {
 			return fmt.Errorf("failed to extract file %s: %w", file.Name, err)
 		}
 
@@ -72,7 +116,7 @@ func Unzip(zipPath string, destDir string) error {
 	return nil
 }
 
-func extractFile(file *zip.File, destPath string) error {
+func extractFile(file *zip.File, destPath string, buffer []byte, totalBytes uint64, extractedBytes *uint64, progress *atomic.Float64) error {
 	srcFile, err := file.Open()
 	if err != nil {
 		return err
@@ -85,8 +129,26 @@ func extractFile(file *zip.File, destPath string) error {
 	}
 	defer destFile.Close()
 
-	_, err = io.Copy(destFile, srcFile)
-	return err
+	// Use a buffered writer (64KB buffer) to reduce write syscalls
+	bufWriter := bufio.NewWriterSize(destFile, 64*1024)
+	defer bufWriter.Flush()
+
+	// Wrap the buffered writer with progress tracking
+	progressW := &progressWriter{
+		writer:         bufWriter,
+		totalBytes:     totalBytes,
+		extractedBytes: extractedBytes,
+		progress:       progress,
+	}
+
+	// Use the pre-allocated buffer for copying to reduce allocations
+	_, err = io.CopyBuffer(progressW, srcFile, buffer)
+	if err != nil {
+		return err
+	}
+
+	// Ensure all data is flushed to disk
+	return bufWriter.Flush()
 }
 
 // OrganizeMultiFileRomForMuOS reorganizes extracted multi-file ROM contents for muOS

@@ -41,18 +41,23 @@ It allows you to connect to a RomM instance, browse the library, and download RO
 
 ### NextUI Setup
 
+Grout has been tested on the following devices running NextUI.
+
+- TrimUI Devices
+    - Brick
+    - Smart Pro
+
 1. Own a TrimUI Brick or Smart Pro and have a SD Card with NextUI.
 2. Connect your device to a Wi-Fi network.
 3. The preferred Grout installation method is to use the NextUI Pak Store. You can find the Pak Store in the
    `Tools` menu. Once in the Pak Store, Grout can be found under the `ROM Management` category.
-    - Alternatively, download the [latest Grout release](https://github.com/rommapp/grout/releases/latest/download/Grout.pak.zip) for
+    - Alternatively, download
+      the [latest Grout release](https://github.com/rommapp/grout/releases/latest/download/Grout.pak.zip) for
       NextUI
     - For manual downloads, unzip the release zip and place the `Grout.pak` directory into `SD_ROOT/Tools/tg5040`.
 4. Launch `Grout` from the `Tools` menu and enjoy!
 
-**Note:** NextUI is only currently supported on the TrimUI Smart Pro and TrimUI Brick.
-
-These systems will have controls automatically mapped.
+---
 
 ### muOS Setup
 

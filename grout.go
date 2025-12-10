@@ -5,6 +5,7 @@ import (
 	"grout/ui"
 	"grout/utils"
 	"log/slog"
+	"os"
 	"time"
 
 	"grout/romm"
@@ -114,6 +115,9 @@ func setup() *utils.Config {
 }
 
 func cleanup() {
+	if err := os.RemoveAll(".tmp"); err != nil {
+		gaba.GetLogger().Error("Failed to clean .tmp directory", "error", err)
+	}
 	gaba.Close()
 }
 

@@ -89,7 +89,7 @@ func (s *SettingsScreen) Draw(input SettingsInput) (ScreenResult[SettingsOutput]
 		return WithCode(output, constants.ExitCodeEditMappings), nil
 	}
 
-	s.applySettings(config, result.Items, input.CFW)
+	s.applySettings(config, result.Items)
 
 	output.Config = config
 	return Success(output), nil
@@ -180,13 +180,7 @@ func (s *SettingsScreen) findDownloadTimeoutIndex(timeout time.Duration) int {
 	return 0
 }
 
-func (s *SettingsScreen) applySettings(config *utils.Config, items []gaba.ItemWithOptions, cfw constants.CFW) {
-	// Adjust index offset based on whether MuOS removed the art option
-	offset := 0
-	if cfw == constants.MuOS {
-		offset = -1
-	}
-
+func (s *SettingsScreen) applySettings(config *utils.Config, items []gaba.ItemWithOptions) {
 	for _, item := range items {
 		switch item.Item.Text {
 		case "Download Art":
@@ -211,7 +205,6 @@ func (s *SettingsScreen) applySettings(config *utils.Config, items []gaba.ItemWi
 			}
 		}
 	}
-	_ = offset // Reserved for future use
 }
 
 func boolToIndex(b bool) int {

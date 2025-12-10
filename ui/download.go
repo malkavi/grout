@@ -19,6 +19,7 @@ import (
 	"grout/romm"
 
 	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
+	"go.uber.org/atomic"
 )
 
 type DownloadInput struct {
@@ -157,14 +158,19 @@ func (s *DownloadScreen) Draw(input DownloadInput) (ScreenResult[DownloadOutput]
 		romDirectory := utils.GetPlatformRomDirectory(input.Config, gamePlatform)
 		extractDir := filepath.Join(romDirectory, g.DisplayName)
 
+		progress := &atomic.Float64{}
 		_, err := gaba.ProcessMessage(
 			fmt.Sprintf("Extracting %s...", g.DisplayName),
-			gaba.ProcessMessageOptions{ShowThemeBackground: true},
+			gaba.ProcessMessageOptions{
+				ShowThemeBackground: true,
+				ShowProgressBar:     true,
+				Progress:            progress,
+			},
 			func() (interface{}, error) {
 				logger.Debug("Extracting multi-file ROM", "game", g.DisplayName, "dest", extractDir)
 
 				// Extract the zip directly from disk (low memory usage)
-				if err := utils.Unzip(tmpZipPath, extractDir); err != nil {
+				if err := utils.Unzip(tmpZipPath, extractDir, progress); err != nil {
 					logger.Error("Failed to extract multi-file ROM", "game", g.DisplayName, "error", err)
 					// Clean up the temp zip file even on error
 					os.Remove(tmpZipPath)
@@ -227,14 +233,19 @@ func (s *DownloadScreen) Draw(input DownloadInput) (ScreenResult[DownloadOutput]
 				romDirectory := utils.GetPlatformRomDirectory(input.Config, gamePlatform)
 				zipPath := filepath.Join(romDirectory, g.Files[0].FileName)
 
+				progress := &atomic.Float64{}
 				_, err := gaba.ProcessMessage(
 					fmt.Sprintf("Extracting %s...", g.Name),
-					gaba.ProcessMessageOptions{ShowThemeBackground: true},
+					gaba.ProcessMessageOptions{
+						ShowThemeBackground: true,
+						ShowProgressBar:     true,
+						Progress:            progress,
+					},
 					func() (interface{}, error) {
 						logger.Debug("Extracting single-file ROM", "game", g.Name, "file", zipPath)
 
 						// Extract the zip to the platform directory
-						if err := utils.Unzip(zipPath, romDirectory); err != nil {
+						if err := utils.Unzip(zipPath, romDirectory, progress); err != nil {
 							logger.Error("Failed to extract single-file ROM", "game", g.Name, "error", err)
 							return nil, err
 						}
