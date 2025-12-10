@@ -1,6 +1,6 @@
 {
   "name": "Grout",
-  "version": "v1.2.0",
+  "version": "v1.2.1",
   "type": "TOOL",
   "description": "A RomM client for NextUI and muOS",
   "author": "K-Wall",
@@ -8,7 +8,8 @@
   "release_filename": "Grout.pak.zip",
   "changelog": {
     "v1.0.0": "Initial release of Grout!",
-    "v1.2.0": "Platform mapping tweaks, multi-file ROM downloads, bug fixes and more!"
+    "v1.2.0": "Platform mapping tweaks, multi-file ROM downloads, bug fixes and more!",
+    "v1.2.1": "Quick fix for not evaluating all art paths."
   },
   "screenshots": [],
   "platforms": [
