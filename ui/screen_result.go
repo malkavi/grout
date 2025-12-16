@@ -1,6 +1,6 @@
 package ui
 
-import gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
+import gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 
 type ScreenResult[T any] struct {
 	Value    T

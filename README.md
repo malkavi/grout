@@ -100,6 +100,7 @@ Grout has been tested on the following devices running muOS 2508.4 Loose Goose:
 **Anbernic:**
 
 - RG34XX
+- RG35XX-H
 - RG35XXSP
 - RG40XXV
 

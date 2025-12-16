@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
+	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	"go.uber.org/atomic"
 )
 

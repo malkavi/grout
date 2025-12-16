@@ -7,8 +7,9 @@ import (
 	"image/png"
 	"os"
 
-	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
-	"github.com/skip2/go-qrcode"
+	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
+	"github.com/yeqown/go-qrcode/v2"
+	"github.com/yeqown/go-qrcode/writer/standard"
 	"golang.org/x/image/draw"
 )
 
@@ -76,24 +77,27 @@ func ProcessArtImage(inputPath string) error {
 }
 
 func CreateTempQRCode(content string, size int) (string, error) {
-	qr, err := qrcode.New(content, qrcode.Medium)
-
+	qr, err := qrcode.New(content)
 	if err != nil {
 		return "", err
 	}
 
-	qr.BackgroundColor = color.Black
-	qr.ForegroundColor = color.White
-	qr.DisableBorder = true
-
-	tempFile, err := os.CreateTemp("", "qrcode-*")
-
-	err = qr.Write(size, tempFile)
-
+	tempFile, err := os.CreateTemp("", "qrcode-*.png")
 	if err != nil {
 		return "", err
 	}
 	defer tempFile.Close()
 
-	return tempFile.Name(), err
+	w := standard.NewWithWriter(tempFile,
+		standard.WithQRWidth(uint8(size/10)),
+		standard.WithBgColor(color.Black),
+		standard.WithFgColor(color.White),
+		standard.WithBorderWidth(0),
+	)
+
+	if err := qr.Save(w); err != nil {
+		return "", err
+	}
+
+	return tempFile.Name(), nil
 }

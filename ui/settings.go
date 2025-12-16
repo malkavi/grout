@@ -7,18 +7,20 @@ import (
 	"grout/utils"
 	"time"
 
-	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
+	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
 
 type SettingsInput struct {
-	Config *utils.Config
-	CFW    constants.CFW
-	Host   romm.Host
+	Config            *utils.Config
+	CFW               constants.CFW
+	Host              romm.Host
+	LastSelectedIndex int
 }
 
 type SettingsOutput struct {
 	Config              *utils.Config
 	EditMappingsClicked bool
+	LastSelectedIndex   int
 }
 
 type SettingsScreen struct{}
@@ -66,13 +68,14 @@ func (s *SettingsScreen) Draw(input SettingsInput) (ScreenResult[SettingsOutput]
 	items := s.buildMenuItems(config)
 
 	result, err := gaba.OptionsList(
-		"Grout Settings",
+		"Settings",
 		gaba.OptionListSettings{
 			FooterHelpItems: []gaba.FooterHelpItem{
 				{ButtonName: "B", HelpText: "Cancel"},
 				{ButtonName: "←→", HelpText: "Cycle"},
 				{ButtonName: "Start", HelpText: "Save"},
 			},
+			InitialSelectedIndex: input.LastSelectedIndex,
 		},
 		items,
 	)
@@ -84,48 +87,15 @@ func (s *SettingsScreen) Draw(input SettingsInput) (ScreenResult[SettingsOutput]
 		return withCode(SettingsOutput{}, gaba.ExitCodeError), err
 	}
 
+	output.LastSelectedIndex = result.Selected
+
 	if result.Selected == 0 {
 		output.EditMappingsClicked = true
 		return withCode(output, constants.ExitCodeEditMappings), nil
 	}
 
 	if result.Selected == 1 {
-		syncResults, _ := gaba.ProcessMessage("Syncing Saves...", gaba.ProcessMessageOptions{}, func() (interface{}, error) {
-			syncs, err := utils.FindSaveSyncs(config.Hosts[0])
-			if err != nil {
-				gaba.GetLogger().Error("Unable to sync saves!", "error", err)
-				return nil, nil
-			}
-
-			results := make([]utils.SyncResult, 0, len(syncs))
-			for _, s := range syncs {
-				gaba.GetLogger().Debug("Syncing save file", "save_info", s)
-				result := s.Execute(config.Hosts[0])
-				results = append(results, result)
-				if !result.Success {
-					gaba.GetLogger().Error("Unable to sync save!", "game", s.GameBase, "error", result.Error)
-				} else {
-					gaba.GetLogger().Debug("Save synced!", "save_info", s)
-				}
-			}
-
-			return results, nil
-		})
-
-		if syncResults != nil {
-			if results, ok := syncResults.([]utils.SyncResult); ok && len(results) > 0 {
-				reportScreen := newSyncReportScreen()
-				_, err := reportScreen.draw(syncReportInput{Results: results})
-				if err != nil {
-					gaba.GetLogger().Error("Error showing sync report", "error", err)
-				}
-			}
-		} else {
-			gaba.ProcessMessage("Everything is up to date!", gaba.ProcessMessageOptions{}, func() (interface{}, error) {
-				time.Sleep(time.Second * 1)
-				return nil, nil
-			})
-		}
+		return withCode(output, constants.ExitCodeSaveSync), nil
 	}
 
 	s.applySettings(config, result.Items)

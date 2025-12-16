@@ -6,7 +6,7 @@ import (
 	"grout/utils"
 	"path/filepath"
 
-	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
+	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
 
 type syncReportInput struct {
@@ -76,11 +76,27 @@ func (s *SyncReportScreen) buildSections(results []utils.SyncResult) []gaba.Sect
 
 	summary := []gaba.MetadataItem{
 		{Label: "Total Processed", Value: fmt.Sprintf("%d", len(results))},
-		{Label: "Downloaded", Value: fmt.Sprintf("%d", downloadedCount)},
-		{Label: "Uploaded", Value: fmt.Sprintf("%d", uploadedCount)},
-		{Label: "Skipped", Value: fmt.Sprintf("%d", skippedCount)},
-		{Label: "Failed", Value: fmt.Sprintf("%d", failedCount)},
 	}
+
+	if downloadedCount > 0 {
+		summary = append(summary, gaba.MetadataItem{Label: "Downloaded", Value: fmt.Sprintf("%d", downloadedCount)})
+	}
+
+	if uploadedCount > 0 {
+		summary = append(summary, gaba.MetadataItem{
+			Label: "Uploaded", Value: fmt.Sprintf("%d", uploadedCount)})
+	}
+
+	if skippedCount > 0 {
+		summary = append(summary, gaba.MetadataItem{
+			Label: "Skipped", Value: fmt.Sprintf("%d", skippedCount)})
+	}
+
+	if failedCount > 0 {
+		summary = append(summary, gaba.MetadataItem{
+			Label: "Failed", Value: fmt.Sprintf("%d", failedCount)})
+	}
+
 	sections = append(sections, gaba.NewInfoSection("Summary", summary))
 
 	if downloadedCount > 0 {

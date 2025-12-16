@@ -10,19 +10,20 @@ import (
 
 	"grout/romm"
 
+	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	_ "github.com/UncleJunVIP/certifiable"
-	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
 )
 
 const (
-	platformSelection           = "platform_selection"
-	gameList                    = "game_list"
-	gameDetails                 = "game_details"
-	collectionList              = "collection_list"
-	collectionPlatformSelection = "collection_platform_selection"
-	search                      = "search"
-	settings                    = "settings"
-	settingsPlatformMapping     = "platform_mapping"
+	platformSelection           gaba.StateName = "platform_selection"
+	gameList                                   = "game_list"
+	gameDetails                                = "game_details"
+	collectionList                             = "collection_list"
+	collectionPlatformSelection                = "collection_platform_selection"
+	search                                     = "search"
+	settings                                   = "settings"
+	settingsPlatformMapping                    = "platform_mapping"
+	saveSync                                   = "save_sync"
 )
 
 type (
@@ -51,6 +52,10 @@ type (
 	collectionPlatformListPosition struct {
 		Index int
 		Pos   int
+	}
+
+	settingsPosition struct {
+		Index int
 	}
 
 	cachedCollectionGames []romm.Rom
@@ -423,17 +428,21 @@ func buildFSM(config *utils.Config, cfw constants.CFW, platforms []romm.Platform
 		config, _ := gaba.Get[*utils.Config](ctx)
 		cfw, _ := gaba.Get[constants.CFW](ctx)
 		host, _ := gaba.Get[romm.Host](ctx)
+		pos, _ := gaba.Get[settingsPosition](ctx)
 
 		screen := ui.NewSettingsScreen()
 		result, err := screen.Draw(ui.SettingsInput{
-			Config: config,
-			CFW:    cfw,
-			Host:   host,
+			Config:            config,
+			CFW:               cfw,
+			Host:              host,
+			LastSelectedIndex: pos.Index,
 		})
 
 		if err != nil {
 			return ui.SettingsOutput{}, gaba.ExitCodeError
 		}
+
+		gaba.Set(ctx, settingsPosition{Index: result.Value.LastSelectedIndex})
 
 		return result.Value, result.ExitCode
 	}).
@@ -441,10 +450,15 @@ func buildFSM(config *utils.Config, cfw constants.CFW, platforms []romm.Platform
 			output, _ := gaba.Get[ui.SettingsOutput](ctx)
 			utils.SaveConfig(output.Config)
 			gaba.Set(ctx, output.Config)
+			gaba.Set(ctx, settingsPosition{Index: 0})
 			return nil
 		}).
 		On(constants.ExitCodeEditMappings, settingsPlatformMapping).
-		On(gaba.ExitCodeBack, platformSelection)
+		On(constants.ExitCodeSaveSync, saveSync).
+		OnWithHook(gaba.ExitCodeBack, platformSelection, func(ctx *gaba.Context) error {
+			gaba.Set(ctx, settingsPosition{Index: 0})
+			return nil
+		})
 
 	gaba.AddState(fsm, settingsPlatformMapping, func(ctx *gaba.Context) (ui.PlatformMappingOutput, gaba.ExitCode) {
 		host, _ := gaba.Get[romm.Host](ctx)
@@ -478,6 +492,24 @@ func buildFSM(config *utils.Config, cfw constants.CFW, platforms []romm.Platform
 			gaba.Set(ctx, utils.GetMappedPlatforms(host, output.Mappings))
 			return nil
 		}).
+		On(gaba.ExitCodeBack, settings)
+
+	gaba.AddState(fsm, saveSync, func(ctx *gaba.Context) (ui.SaveSyncOutput, gaba.ExitCode) {
+		config, _ := gaba.Get[*utils.Config](ctx)
+		host, _ := gaba.Get[romm.Host](ctx)
+
+		screen := ui.NewSaveSyncScreen()
+		result, err := screen.Draw(ui.SaveSyncInput{
+			Config: config,
+			Host:   host,
+		})
+
+		if err != nil {
+			return ui.SaveSyncOutput{}, gaba.ExitCodeError
+		}
+
+		return result.Value, result.ExitCode
+	}).
 		On(gaba.ExitCodeBack, settings)
 
 	return fsm.Start(platformSelection)

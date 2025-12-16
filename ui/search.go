@@ -3,7 +3,7 @@ package ui
 import (
 	"errors"
 
-	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
+	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
 
 type SearchInput struct {

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	gaba "github.com/UncleJunVIP/gabagool/v2/pkg/gabagool"
-	"github.com/UncleJunVIP/gabagool/v2/pkg/gabagool/constants"
+	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
+	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/constants"
 )
 
 type GameDetailsInput struct {
