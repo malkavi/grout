@@ -188,7 +188,7 @@ Check all the ones you want, then press start to confirm your selections.
 
 Press X from any game list to search.
 
-![Grout preview, search](.github/resources/user_guide/games_list.png "Grout preview, search")
+![Grout preview, search](.github/resources/user_guide/search.png "Grout preview, search")
 
 Type your search term using the on-screen keyboard and confirm. The game list will filter to show only matching titles.
 The search is case-insensitive and matches anywhere in the game name.
