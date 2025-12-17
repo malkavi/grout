@@ -90,7 +90,7 @@ This tells Grout where to put the games that you download.
 
 ![Grout preview, platform mapping](.github/resources/user_guide/platform_mapping.png "Grout preview, platform mapping")
 
-You'll see a list of all platforms from your RomM instance. For each one, you can:
+You'll see a list of all platforms from your RomM instance. For each one, you can select:
 
 - **Skip** – Don't map this platform. Games from this platform won't be available to download.
 - **Create {Directory Name}** – Create a new directory for this platform. Grout will automatically suggest directory
