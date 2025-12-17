@@ -284,7 +284,7 @@ Use left/right to cycle through options. Press Start to save your changes, or B 
 
 ---
 
-### Save Sync
+### Save Sync (RomM Version 4.5.0 Required)
 
 Save Sync is one of Grout's standout features. It lets you keep your game saves synchronized between your RomM server
 and your handheld device.
