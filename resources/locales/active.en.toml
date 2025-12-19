@@ -56,7 +56,7 @@ other = "Settings"
 
 [collection_platform_no_mapped]
 description = "No mapped platforms message"
-other = "No platforms with mapped games in {{.Name}}"
+other = "No platforms with mapped games in\n{{.Name}}"
 
 [collection_platform_title]
 description = "Collection platform selection title"
@@ -326,9 +326,17 @@ other = "Español"
 description = "Log level option"
 other = "Log Level"
 
+[settings_show_collections]
+description = "Show collections option"
+other = "Show Collections"
+
 [settings_show_game_details]
 description = "Show game details option"
 other = "Show Game Details"
+
+[settings_show_virtual_collections]
+description = "Show virtual collections option"
+other = "Show Virtual Collections"
 
 [settings_sync_saves]
 description = "Sync saves option"

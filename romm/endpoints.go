@@ -11,12 +11,10 @@ const (
 	endpointRomsDownload = "/api/roms/download"
 	endpointRomsByHash   = "/api/roms/by-hash"
 
-	endpointCollections           = "/api/collections"
-	endpointCollectionByID        = "/api/collections/%d"
-	endpointSmartCollections      = "/api/collections/smart"
-	endpointSmartCollectionByID   = "/api/collections/smart/%d"
-	endpointVirtualCollections    = "/api/collections/virtual"
-	endpointVirtualCollectionByID = "/api/collections/virtual/%d"
+	endpointCollections        = "/api/collections"
+	endpointCollectionByID     = "/api/collections/%d"
+	endpointSmartCollections   = "/api/collections/smart"
+	endpointVirtualCollections = "/api/collections/virtual"
 
 	endpointFirmware = "/api/firmware"
 

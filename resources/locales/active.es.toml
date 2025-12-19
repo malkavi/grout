@@ -71,7 +71,7 @@ other = "Configuración"
 [collection_platform_no_mapped]
 description = "No mapped platforms message"
 hash = "sha1-dcc78ca555b07c1ec46de15b86ae30fb5a93259b"
-other = "No hay plataformas con juegos mapeados en {{.Name}}"
+other = "No hay plataformas con juegos mapeados en\n{{.Name}}"
 
 [collection_platform_title]
 description = "Collection platform selection title"
@@ -408,10 +408,20 @@ description = "Log level option"
 hash = "sha1-d4b9f81b67c0923ee427be359a66fdfa670bb6da"
 other = "Nivel de Log"
 
+[settings_show_collections]
+description = "Show collections option"
+hash = "sha1-a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b1"
+other = "Mostrar Colecciones"
+
 [settings_show_game_details]
 description = "Show game details option"
 hash = "sha1-497138b5c11902c4ce86469b37a653906f8b22d3"
 other = "Mostrar Detalles de Juego"
+
+[settings_show_virtual_collections]
+description = "Show virtual collections option"
+hash = "sha1-b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c1"
+other = "Mostrar Colecciones Virtuales"
 
 [settings_sync_saves]
 description = "Sync saves option"

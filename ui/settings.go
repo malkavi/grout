@@ -124,6 +124,22 @@ func (s *SettingsScreen) buildMenuItems(config *utils.Config) []gaba.ItemWithOpt
 			},
 			SelectedOption: boolToIndex(!config.ShowGameDetails),
 		},
+		{
+			Item: gaba.MenuItem{Text: i18n.GetString("settings_show_collections")},
+			Options: []gaba.Option{
+				{DisplayName: i18n.GetString("common_true"), Value: true},
+				{DisplayName: i18n.GetString("common_false"), Value: false},
+			},
+			SelectedOption: boolToIndex(!config.ShowCollections),
+		},
+		{
+			Item: gaba.MenuItem{Text: i18n.GetString("settings_show_virtual_collections")},
+			Options: []gaba.Option{
+				{DisplayName: i18n.GetString("common_true"), Value: true},
+				{DisplayName: i18n.GetString("common_false"), Value: false},
+			},
+			SelectedOption: boolToIndex(!config.ShowVirtualCollections),
+		},
 
 		// TODO Enable Later
 		//{
@@ -225,6 +241,10 @@ func (s *SettingsScreen) applySettings(config *utils.Config, items []gaba.ItemWi
 			config.UnzipDownloads = item.SelectedOption == 0
 		case i18n.GetString("settings_show_game_details"):
 			config.ShowGameDetails = item.SelectedOption == 0
+		case i18n.GetString("settings_show_collections"):
+			config.ShowCollections = item.SelectedOption == 0
+		case i18n.GetString("settings_show_virtual_collections"):
+			config.ShowVirtualCollections = item.SelectedOption == 0
 		case i18n.GetString("settings_api_timeout"):
 			idx := item.SelectedOption
 			if idx < len(apiTimeoutOptions) {

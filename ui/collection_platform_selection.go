@@ -55,8 +55,16 @@ func (s *CollectionPlatformSelectionScreen) Draw(input CollectionPlatformSelecti
 			func() (interface{}, error) {
 				rc := utils.GetRommClient(input.Host)
 				opt := romm.GetRomsQuery{
-					Limit:        10000,
-					CollectionID: input.Collection.ID,
+					Limit: 10000,
+				}
+
+				// Use appropriate ID based on collection type
+				if input.Collection.IsVirtual {
+					opt.VirtualCollectionID = input.Collection.VirtualID
+				} else if input.Collection.IsSmart {
+					opt.SmartCollectionID = input.Collection.ID
+				} else {
+					opt.CollectionID = input.Collection.ID
 				}
 
 				res, err := rc.GetRoms(opt)

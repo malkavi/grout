@@ -104,17 +104,19 @@ type RomFile struct {
 }
 
 type GetRomsQuery struct {
-	Page         int    `qs:"page,omitempty"`
-	Limit        int    `qs:"limit,omitempty"`
-	PlatformID   int    `qs:"platform_id,omitempty"`
-	CollectionID int    `qs:"collection_id,omitempty"`
-	Search       string `qs:"search,omitempty"`
-	OrderBy      string `qs:"order_by,omitempty"`
-	OrderDir     string `qs:"order_dir,omitempty"`
+	Page                int    `qs:"page,omitempty"`
+	Limit               int    `qs:"limit,omitempty"`
+	PlatformID          int    `qs:"platform_id,omitempty"`
+	CollectionID        int    `qs:"collection_id,omitempty"`
+	SmartCollectionID   int    `qs:"smart_collection_id,omitempty"`
+	VirtualCollectionID string `qs:"virtual_collection_id,omitempty"`
+	Search              string `qs:"search,omitempty"`
+	OrderBy             string `qs:"order_by,omitempty"`
+	OrderDir            string `qs:"order_dir,omitempty"`
 }
 
 func (q GetRomsQuery) Valid() bool {
-	return q.Page > 0 || q.Limit > 0 || q.PlatformID > 0 || q.CollectionID > 0 || q.Search != "" || q.OrderBy != "" || q.OrderDir != ""
+	return q.Page > 0 || q.Limit > 0 || q.PlatformID > 0 || q.CollectionID > 0 || q.SmartCollectionID > 0 || q.VirtualCollectionID != "" || q.Search != "" || q.OrderBy != "" || q.OrderDir != ""
 }
 
 func (c *Client) GetRoms(query GetRomsQuery) (PaginatedRoms, error) {

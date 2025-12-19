@@ -12,16 +12,18 @@ import (
 )
 
 type Config struct {
-	Hosts             []romm.Host                 `json:"hosts,omitempty"`
-	DirectoryMappings map[string]DirectoryMapping `json:"directory_mappings,omitempty"`
-	ShowGameDetails   bool                        `json:"show_game_details"`
-	AutoSyncSaves     bool                        `json:"auto_sync_saves"`
-	DownloadArt       bool                        `json:"download_art,omitempty"`
-	UnzipDownloads    bool                        `json:"unzip_downloads,omitempty"`
-	ApiTimeout        time.Duration               `json:"api_timeout"`
-	DownloadTimeout   time.Duration               `json:"download_timeout"`
-	LogLevel          string                      `json:"log_level,omitempty"`
-	Language          string                      `json:"language,omitempty"`
+	Hosts                  []romm.Host                 `json:"hosts,omitempty"`
+	DirectoryMappings      map[string]DirectoryMapping `json:"directory_mappings,omitempty"`
+	ShowGameDetails        bool                        `json:"show_game_details"`
+	AutoSyncSaves          bool                        `json:"auto_sync_saves"`
+	DownloadArt            bool                        `json:"download_art,omitempty"`
+	UnzipDownloads         bool                        `json:"unzip_downloads,omitempty"`
+	ShowCollections        bool                        `json:"show_collections"`
+	ShowVirtualCollections bool                        `json:"show_virtual_collections"`
+	ApiTimeout             time.Duration               `json:"api_timeout"`
+	DownloadTimeout        time.Duration               `json:"download_timeout"`
+	LogLevel               string                      `json:"log_level,omitempty"`
+	Language               string                      `json:"language,omitempty"`
 }
 
 type DirectoryMapping struct {
@@ -36,14 +38,16 @@ func (c Config) ToLoggable() any {
 	}
 
 	return map[string]any{
-		"hosts":              safeHosts,
-		"directory_mappings": c.DirectoryMappings,
-		"api_timeout":        c.ApiTimeout,
-		"download_timeout":   c.DownloadTimeout,
-		"unzip_downloads":    c.UnzipDownloads,
-		"download_art":       c.DownloadArt,
-		"show_game_details":  c.ShowGameDetails,
-		"log_level":          c.LogLevel,
+		"hosts":                    safeHosts,
+		"directory_mappings":       c.DirectoryMappings,
+		"api_timeout":              c.ApiTimeout,
+		"download_timeout":         c.DownloadTimeout,
+		"unzip_downloads":          c.UnzipDownloads,
+		"download_art":             c.DownloadArt,
+		"show_game_details":        c.ShowGameDetails,
+		"show_collections":         c.ShowCollections,
+		"show_virtual_collections": c.ShowVirtualCollections,
+		"log_level":                c.LogLevel,
 	}
 }
 

@@ -149,7 +149,7 @@ func main() {
 
 	quitOnBack := len(config.Hosts) == 1
 	platforms := utils.GetMappedPlatforms(config.Hosts[0], config.DirectoryMappings)
-	showCollections := utils.ShowCollections(config.Hosts[0])
+	showCollections := utils.ShowCollections(config, config.Hosts[0])
 
 	fsm := buildFSM(config, cfw, platforms, quitOnBack, showCollections)
 
@@ -213,11 +213,13 @@ func buildFSM(config *utils.Config, cfw constants.CFW, platforms []romm.Platform
 		Exit(gaba.ExitCodeQuit)
 
 	gaba.AddState(fsm, collectionList, func(ctx *gaba.Context) (ui.CollectionSelectionOutput, gaba.ExitCode) {
+		config, _ := gaba.Get[*utils.Config](ctx)
 		host, _ := gaba.Get[romm.Host](ctx)
 		colPos, _ := gaba.Get[collectionListPosition](ctx)
 
 		screen := ui.NewCollectionSelectionScreen()
 		result, err := screen.Draw(ui.CollectionSelectionInput{
+			Config:               config,
 			Host:                 host,
 			LastSelectedIndex:    colPos.Index,
 			LastSelectedPosition: colPos.Pos,
@@ -459,9 +461,14 @@ func buildFSM(config *utils.Config, cfw constants.CFW, platforms []romm.Platform
 	}).
 		OnWithHook(gaba.ExitCodeSuccess, platformSelection, func(ctx *gaba.Context) error {
 			output, _ := gaba.Get[ui.SettingsOutput](ctx)
+			host, _ := gaba.Get[romm.Host](ctx)
 			utils.SaveConfig(output.Config)
 			gaba.Set(ctx, output.Config)
 			gaba.Set(ctx, settingsPosition{Index: 0})
+
+			// Update showCollections based on new settings
+			showCollections := utils.ShowCollections(output.Config, host)
+			gaba.Set(ctx, showCollectionsBool(showCollections))
 			return nil
 		}).
 		On(constants.ExitCodeEditMappings, settingsPlatformMapping).

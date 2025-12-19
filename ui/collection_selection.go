@@ -4,12 +4,15 @@ import (
 	"errors"
 	"grout/romm"
 	"grout/utils"
+	"slices"
+	"strings"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/i18n"
 )
 
 type CollectionSelectionInput struct {
+	Config               *utils.Config
 	Host                 romm.Host
 	LastSelectedIndex    int
 	LastSelectedPosition int
@@ -34,10 +37,36 @@ func (s *CollectionSelectionScreen) Draw(input CollectionSelectionInput) (Screen
 	}
 
 	rc := utils.GetRommClient(input.Host)
-	collections, err := rc.GetCollections()
-	if err != nil {
-		return withCode(output, gaba.ExitCodeError), err
+	var collections []romm.Collection
+
+	// Fetch enabled collection types
+	if input.Config.ShowCollections {
+		regularCollections, err := rc.GetCollections()
+		if err == nil {
+			collections = append(collections, regularCollections...)
+		}
+
+		smartCollections, err := rc.GetSmartCollections()
+		if err == nil {
+			for _, sc := range smartCollections {
+				sc.IsSmart = true
+				collections = append(collections, sc)
+			}
+		}
 	}
+
+	if input.Config.ShowVirtualCollections {
+		virtualCollections, err := rc.GetVirtualCollections()
+		if err == nil {
+			for _, vc := range virtualCollections {
+				collections = append(collections, vc.ToCollection())
+			}
+		}
+	}
+
+	slices.SortFunc(collections, func(a, b romm.Collection) int {
+		return strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+	})
 
 	if len(collections) == 0 {
 		return withCode(output, gaba.ExitCode(404)), nil
