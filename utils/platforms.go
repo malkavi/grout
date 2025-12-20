@@ -6,12 +6,12 @@ import (
 	"grout/romm"
 )
 
-func GetMappedPlatforms(host romm.Host, mappings map[string]DirectoryMapping) []romm.Platform {
+func GetMappedPlatforms(host romm.Host, mappings map[string]DirectoryMapping) ([]romm.Platform, error) {
 	c := GetRommClient(host)
 
 	rommPlatforms, err := c.GetPlatforms()
 	if err != nil {
-		LogStandardFatal(fmt.Sprintf("Failed to get platforms from RomM: %s", err), nil)
+		return nil, fmt.Errorf("failed to get platforms from RomM: %w", err)
 	}
 
 	var platforms []romm.Platform
@@ -27,5 +27,5 @@ func GetMappedPlatforms(host romm.Host, mappings map[string]DirectoryMapping) []
 		}
 	}
 
-	return platforms
+	return platforms, nil
 }

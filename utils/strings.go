@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"grout/constants"
 	"grout/romm"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 )
+
+const Downloaded = "↓"
 
 func ParseTag(input string) string {
 	cleaned := filepath.Clean(input)
@@ -69,7 +72,7 @@ func nameCleaner(name string, stripTag bool) (string, string) {
 	return cleaned, foundTag
 }
 
-func PrepareRomNames(games []romm.Rom) []romm.Rom {
+func PrepareRomNames(games []romm.Rom, config Config) []romm.Rom {
 	for i := range games {
 		regions := strings.Join(games[i].Regions, ", ")
 
@@ -81,6 +84,10 @@ func PrepareRomNames(games []romm.Rom) []romm.Rom {
 			games[i].DisplayName = dn
 		}
 
+		if config.DownloadedGamesDisplayOption == "mark" && IsGameDownloadedLocally(games[i], config) {
+			games[i].DisplayName = fmt.Sprintf("%s %s", Downloaded, games[i].DisplayName)
+		}
+
 	}
 
 	slices.SortFunc(games, func(a, b romm.Rom) int {
@@ -88,6 +95,39 @@ func PrepareRomNames(games []romm.Rom) []romm.Rom {
 	})
 
 	return games
+}
+
+func IsGameDownloadedLocally(game romm.Rom, config Config) bool {
+	// Need platform info to get ROM directory
+	if game.PlatformSlug == "" {
+		return false
+	}
+
+	platform := romm.Platform{
+		ID:   game.PlatformID,
+		Slug: game.PlatformSlug,
+		Name: game.PlatformDisplayName,
+	}
+
+	romDirectory := GetPlatformRomDirectory(config, platform)
+
+	if game.Multi {
+		// For multi-file ROMs, check if the directory exists
+		// Use the display name (before we added the checkmark)
+		cleanedName, _ := nameCleaner(game.Name, true)
+		multiDir := filepath.Join(romDirectory, cleanedName)
+		if _, err := os.Stat(multiDir); err == nil {
+			return true
+		}
+	} else if len(game.Files) > 0 {
+		// For single-file ROMs, check if the file exists based on filename
+		romPath := filepath.Join(romDirectory, game.Files[0].FileName)
+		if _, err := os.Stat(romPath); err == nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 func FormatBytes(bytes int) string {

@@ -33,10 +33,18 @@ description = "Download button"
 hash = "sha1-d91cc87f172330513439f1e1896f36d0279e383e"
 other = "Descargar"
 
+[button_help]
+description = "Help button"
+other = "Ayuda"
+
 [button_login]
 description = "Login button"
 hash = "sha1-a2ecd2a462562e91fda00d2c1a3afbe2aefa5fc7"
 other = "Iniciar sesión"
+
+[button_menu]
+description = "Menu button"
+other = "Menú"
 
 [button_multi]
 description = "Multi select button"
@@ -208,6 +216,23 @@ description = "Search prefix in title"
 hash = "sha1-538a7cda06f5dec7cadd858ea7afc4205bae8371"
 other = "[Search: \"{{.Query}}\"]"
 
+[games_list_help_title]
+description = "Games list help screen title"
+other = "Ayuda de Lista de Juegos"
+
+[games_list_help_body]
+description = "Games list help screen body text"
+other = """A - Seleccionar un juego
+B - Volver a la pantalla anterior
+X - Buscar juegos por nombre
+Seleccionar - Activar modo multi-selección
+  En modo multi-selección:
+  - Usa D-Pad para navegar
+  - Presiona A para alternar selección
+  - Presiona Inicio para confirmar selecciones
+Menú - Mostrar esta pantalla de ayuda
+D-Pad - Navegar la lista de juegos"""
+
 [log_level_debug]
 description = "Debug log level"
 hash = "sha1-7b25054507859fc71900d3a3720f8b92dbbe85cc"
@@ -232,6 +257,10 @@ other = "Nombre de usuario o contraseña inválidos."
 description = "Unexpected error message"
 hash = "sha1-bbe54d32ae1098fce3b3b803b12eaaec4dc5be73"
 other = "Something unexpected happened!\nCheck the logs for more info."
+
+[error_loading_platforms]
+description = "Error loading platforms from RomM"
+other = "¡Error al cargar las plataformas de RomM!\nPor favor, verifique su conexión e intente nuevamente."
 
 [login_hostname]
 description = "Hostname field label"
@@ -383,6 +412,10 @@ description = "Download timeout option"
 hash = "sha1-5859619d51d182c0c1164f95eedb59132de7c090"
 other = "Tiempo de Espera de Descarga"
 
+[settings_downloaded_games]
+description = "Downloaded games option"
+other = "Juegos Descargados"
+
 [settings_edit_mappings]
 description = "Edit directory mappings option"
 hash = "sha1-20f27e7ddbb59e668d6c538ac1cc33228abd74a6"
@@ -527,3 +560,15 @@ other = "90 Minutos"
 description = "90 seconds"
 hash = "sha1-cd78e99bd717a3c94f31ad76b298204dc66771af"
 other = "90 Segundos"
+
+[downloaded_games_do_nothing]
+description = "Do nothing option for downloaded games"
+other = "No Hacer Nada"
+
+[downloaded_games_mark]
+description = "Mark option for downloaded games"
+other = "Marcar"
+
+[downloaded_games_filter]
+description = "Filter option for downloaded games"
+other = "Filtrar"

@@ -26,9 +26,17 @@ other = "Cycle"
 description = "Download button"
 other = "Download"
 
+[button_help]
+description = "Help button"
+other = "Help"
+
 [button_login]
 description = "Login button"
 other = "Login"
+
+[button_menu]
+description = "Menu button"
+other = "Menu"
 
 [button_multi]
 description = "Multi select button"
@@ -166,6 +174,23 @@ other = "No results found for \"{{.Query}}\""
 description = "Search prefix in title"
 other = "[Search: \"{{.Query}}\"]"
 
+[games_list_help_title]
+description = "Games list help screen title"
+other = "Games List Help"
+
+[games_list_help_body]
+description = "Games list help screen body text"
+other = """A - Select a game
+B - Go back to the previous screen
+X - Search for games by name
+Select - Toggle multi-select mode
+  In multi-select mode:
+  - Use D-Pad to navigate
+  - Press A to toggle selection
+  - Press Start to confirm selections
+Menu - Show this help screen
+D-Pad - Navigate the game list"""
+
 [log_level_debug]
 description = "Debug log level"
 other = "Debug"
@@ -185,6 +210,10 @@ other = "Invalid Username or Password."
 [login_error_unexpected]
 description = "Unexpected error message"
 other = "Something unexpected happened!\nCheck the logs for more info."
+
+[error_loading_platforms]
+description = "Error loading platforms from RomM"
+other = "Failed to load platforms from RomM!\nPlease check your connection and try again."
 
 [login_hostname]
 description = "Hostname field label"
@@ -306,6 +335,10 @@ other = "Download Art"
 description = "Download timeout option"
 other = "Download Timeout"
 
+[settings_downloaded_games]
+description = "Downloaded games option"
+other = "Downloaded Games"
+
 [settings_edit_mappings]
 description = "Edit directory mappings option"
 other = "Edit Directory Mappings"
@@ -421,3 +454,15 @@ other = "90 Minutes"
 [time_90_seconds]
 description = "90 seconds"
 other = "90 Seconds"
+
+[downloaded_games_do_nothing]
+description = "Do nothing option for downloaded games"
+other = "Do Nothing"
+
+[downloaded_games_mark]
+description = "Mark option for downloaded games"
+other = "Mark"
+
+[downloaded_games_filter]
+description = "Filter option for downloaded games"
+other = "Filter"

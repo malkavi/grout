@@ -148,7 +148,16 @@ func main() {
 	cfw := utils.GetCFW()
 
 	quitOnBack := len(config.Hosts) == 1
-	platforms := utils.GetMappedPlatforms(config.Hosts[0], config.DirectoryMappings)
+	platforms, err := utils.GetMappedPlatforms(config.Hosts[0], config.DirectoryMappings)
+	if err != nil {
+		gaba.ConfirmationMessage(i18n.GetString("error_loading_platforms"),
+			[]gaba.FooterHelpItem{
+				{ButtonName: "A", HelpText: i18n.GetString("button_continue")},
+			},
+			gaba.MessageOptions{})
+		gaba.GetLogger().Error("Failed to load platforms", "error", err)
+		os.Exit(1)
+	}
 	showCollections := utils.ShowCollections(config, config.Hosts[0])
 
 	fsm := buildFSM(config, cfw, platforms, quitOnBack, showCollections)
@@ -507,7 +516,13 @@ func buildFSM(config *utils.Config, cfw constants.CFW, platforms []romm.Platform
 			config.DirectoryMappings = output.Mappings
 			utils.SaveConfig(config)
 			gaba.Set(ctx, config)
-			gaba.Set(ctx, utils.GetMappedPlatforms(host, output.Mappings))
+
+			platforms, err := utils.GetMappedPlatforms(host, output.Mappings)
+			if err != nil {
+				gaba.GetLogger().Error("Failed to load platforms", "error", err)
+				return err
+			}
+			gaba.Set(ctx, platforms)
 			return nil
 		}).
 		On(gaba.ExitCodeBack, settings)

@@ -212,6 +212,15 @@ func attemptLogin(host romm.Host) loginAttemptResult {
 	result, _ := gabagool.ProcessMessage(i18n.GetString("login_logging_in"), gabagool.ProcessMessageOptions{}, func() (interface{}, error) {
 		lr := rc.Login(host.Username, host.Password)
 		if lr != nil {
+			// Check if the error is a connection error (host unreachable)
+			// Connection errors contain "failed to login:" or "failed to execute request"
+			// Auth errors contain "login failed with status"
+			errorMsg := lr.Error()
+			if strings.Contains(errorMsg, "failed to login:") ||
+				strings.Contains(errorMsg, "failed to execute request") ||
+				strings.Contains(errorMsg, "failed to create") {
+				return loginAttemptResult{BadHost: true}, nil
+			}
 			return loginAttemptResult{BadCredentials: true}, nil
 		}
 		return loginAttemptResult{}, nil

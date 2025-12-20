@@ -12,18 +12,19 @@ import (
 )
 
 type Config struct {
-	Hosts                  []romm.Host                 `json:"hosts,omitempty"`
-	DirectoryMappings      map[string]DirectoryMapping `json:"directory_mappings,omitempty"`
-	ShowGameDetails        bool                        `json:"show_game_details"`
-	AutoSyncSaves          bool                        `json:"auto_sync_saves"`
-	DownloadArt            bool                        `json:"download_art,omitempty"`
-	UnzipDownloads         bool                        `json:"unzip_downloads,omitempty"`
-	ShowCollections        bool                        `json:"show_collections"`
-	ShowVirtualCollections bool                        `json:"show_virtual_collections"`
-	ApiTimeout             time.Duration               `json:"api_timeout"`
-	DownloadTimeout        time.Duration               `json:"download_timeout"`
-	LogLevel               string                      `json:"log_level,omitempty"`
-	Language               string                      `json:"language,omitempty"`
+	Hosts                        []romm.Host                 `json:"hosts,omitempty"`
+	DirectoryMappings            map[string]DirectoryMapping `json:"directory_mappings,omitempty"`
+	ShowGameDetails              bool                        `json:"show_game_details"`
+	AutoSyncSaves                bool                        `json:"auto_sync_saves"`
+	DownloadArt                  bool                        `json:"download_art,omitempty"`
+	UnzipDownloads               bool                        `json:"unzip_downloads,omitempty"`
+	ShowCollections              bool                        `json:"show_collections"`
+	ShowVirtualCollections       bool                        `json:"show_virtual_collections"`
+	DownloadedGamesDisplayOption string                      `json:"downloaded_games_display_option,omitempty"`
+	ApiTimeout                   time.Duration               `json:"api_timeout"`
+	DownloadTimeout              time.Duration               `json:"download_timeout"`
+	LogLevel                     string                      `json:"log_level,omitempty"`
+	Language                     string                      `json:"language,omitempty"`
 }
 
 type DirectoryMapping struct {
@@ -47,6 +48,7 @@ func (c Config) ToLoggable() any {
 		"show_game_details":        c.ShowGameDetails,
 		"show_collections":         c.ShowCollections,
 		"show_virtual_collections": c.ShowVirtualCollections,
+		"downloaded_games_action":  c.DownloadedGamesDisplayOption,
 		"log_level":                c.LogLevel,
 	}
 }
@@ -74,6 +76,10 @@ func LoadConfig() (*Config, error) {
 		config.Language = "en"
 	}
 
+	if config.DownloadedGamesDisplayOption == "" {
+		config.DownloadedGamesDisplayOption = "do_nothing"
+	}
+
 	return &config, nil
 }
 
@@ -84,6 +90,10 @@ func SaveConfig(config *Config) error {
 
 	if config.Language == "" {
 		config.Language = "en"
+	}
+
+	if config.DownloadedGamesDisplayOption == "" {
+		config.DownloadedGamesDisplayOption = "do_nothing"
 	}
 
 	gaba.SetRawLogLevel(config.LogLevel)

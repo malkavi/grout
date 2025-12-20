@@ -140,6 +140,15 @@ func (s *SettingsScreen) buildMenuItems(config *utils.Config) []gaba.ItemWithOpt
 			},
 			SelectedOption: boolToIndex(!config.ShowVirtualCollections),
 		},
+		{
+			Item: gaba.MenuItem{Text: i18n.GetString("settings_downloaded_games")},
+			Options: []gaba.Option{
+				{DisplayName: i18n.GetString("downloaded_games_do_nothing"), Value: "do_nothing"},
+				{DisplayName: i18n.GetString("downloaded_games_mark"), Value: "mark"},
+				{DisplayName: i18n.GetString("downloaded_games_filter"), Value: "filter"},
+			},
+			SelectedOption: s.downloadedGamesActionToIndex(config.DownloadedGamesDisplayOption),
+		},
 
 		// TODO Enable Later
 		//{
@@ -263,6 +272,10 @@ func (s *SettingsScreen) applySettings(config *utils.Config, items []gaba.ItemWi
 			if val, ok := item.Options[item.SelectedOption].Value.(string); ok {
 				config.Language = val
 			}
+		case i18n.GetString("settings_downloaded_games"):
+			if val, ok := item.Options[item.SelectedOption].Value.(string); ok {
+				config.DownloadedGamesDisplayOption = val
+			}
 		}
 	}
 }
@@ -291,6 +304,19 @@ func languageToIndex(lang string) int {
 		return 0
 	case "es":
 		return 1
+	default:
+		return 0
+	}
+}
+
+func (s *SettingsScreen) downloadedGamesActionToIndex(action string) int {
+	switch action {
+	case "do_nothing":
+		return 0
+	case "mark":
+		return 1
+	case "filter":
+		return 2
 	default:
 		return 0
 	}

@@ -68,7 +68,18 @@ func (s *GameListScreen) Draw(input GameListInput) (ScreenResult[GameListOutput]
 		LastSelectedPosition: input.LastSelectedPosition,
 	}
 
-	displayGames := utils.PrepareRomNames(games)
+	displayGames := utils.PrepareRomNames(games, *input.Config)
+
+	// Filter out downloaded games if configured to do so
+	if input.Config.DownloadedGamesDisplayOption == "filter" {
+		filteredGames := make([]romm.Rom, 0, len(displayGames))
+		for _, game := range displayGames {
+			if !utils.IsGameDownloadedLocally(game, *input.Config) {
+				filteredGames = append(filteredGames, game)
+			}
+		}
+		displayGames = filteredGames
+	}
 
 	displayName := input.Platform.Name
 	allGamesFilteredOut := false
@@ -132,10 +143,15 @@ func (s *GameListScreen) Draw(input GameListInput) (ScreenResult[GameListOutput]
 	options.SmallTitle = true
 	options.EnableAction = true
 	options.EnableMultiSelect = true
+	options.EnableHelp = true
+
+	options.HelpTitle = i18n.GetString("games_list_help_title")
+	options.HelpText = strings.Split(i18n.GetString("games_list_help_body"), "\n")
+
 	options.FooterHelpItems = []gaba.FooterHelpItem{
 		{ButtonName: "B", HelpText: i18n.GetString("button_back")},
+		{ButtonName: i18n.GetString("button_menu"), HelpText: i18n.GetString("button_help")},
 		{ButtonName: "X", HelpText: i18n.GetString("button_search")},
-		{ButtonName: "Select", HelpText: i18n.GetString("button_multi")},
 		{ButtonName: "A", HelpText: i18n.GetString("button_select")},
 	}
 
