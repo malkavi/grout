@@ -190,6 +190,7 @@ func (s *SettingsScreen) buildMenuItems(config *utils.Config) []gaba.ItemWithOpt
 			Options: []gaba.Option{
 				{DisplayName: i18n.GetString("settings_language_english"), Value: "en"},
 				{DisplayName: i18n.GetString("settings_language_spanish"), Value: "es"},
+				{DisplayName: i18n.GetString("settings_language_french"), Value: "fr"},
 			},
 			SelectedOption: languageToIndex(config.Language),
 		},
