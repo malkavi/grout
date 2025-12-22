@@ -175,213 +175,219 @@ description = "Préfixe de recherche des jeux"
 other = "Recherche: {{.Query}}"
 
 [games_list_help_title]
-description = "Games list help screen title"
-other = "Games List Help"
+description = "Titre de l'aide de la liste des jeux"
+other = "Aide - Liste des Jeux"
 
 [games_list_help_body]
-description = "Games list help screen body text"
-other = """A - Select a game
-B - Go back to the previous screen
-X - Search for games by name
-Select - Toggle multi-select mode
-  In multi-select mode:
-  - Use D-Pad to navigate
-  - Press A to toggle selection
-  - Press Start to confirm selections
-Menu - Show this help screen
-D-Pad - Navigate the game list"""
+description = "Contenu de l'aide de la liste des jeux"
+other="""A - Sélectionner un jeu
+B - Retourner à l'écran précédent
+X - Rechercher des jeux par nom
+Select - Activer/désactiver le mode sélection multiple
+    En mode sélection multiple :
+    - Utilisez la croix directionnelle pour naviguer
+    - Appuyez sur A pour activer/désactiver la sélection
+    - Appuyez sur Start pour confirmer les sélections
+Menu - Afficher cet écran d'aide
+Croix directionnelle - Naviguer dans la liste des jeux"""
 
 [log_level_debug]
-description = "Debug log level"
+description = "Niveau de log debug"
 other = "Debug"
 
 [log_level_error]
-description = "Error log level"
-other = "Error"
+description = "Niveau de log erreur"
+other = "Erreur"
 
 [login_error_connection]
-description = "Connection error message"
-other = "Could not connect to RomM!\nPlease check the hostname and port."
+description = "Message d'erreur de connexion"
+other = "Impossible de se connecter à RomM!\nVeuillez vérifier le domaine et le port."
 
 [login_error_credentials]
-description = "Invalid credentials error"
-other = "Invalid Username or Password."
+description = "Erreur d'identifiants de connexion"
+other = "Nom de compte ou mot de passe incorrect."
 
 [login_error_unexpected]
-description = "Unexpected error message"
-other = "Something unexpected happened!\nCheck the logs for more info."
+description = "Message d'erreur inattendu"
+other = "Erreur inattendue.\nRegardez les logs pour plus d'informations."
 
 [error_loading_platforms]
-description = "Error loading platforms from RomM"
-other = "Failed to load platforms from RomM!\nPlease check your connection and try again."
+description = "Erreur lors du chargement des plateformes depuis RomM"
+other = "Erreur lors du chargement des plateformes depuis RomM.\nVeuillez vérifier la connexion."
 
 [login_hostname]
-description = "Hostname field label"
-other = "Hostname"
+description = "Label du champ nom de domaine"
+other = "Nom de Domaine"
 
 [login_logging_in]
-description = "Logging in progress message"
-other = "Logging in..."
+description = "Message de connexion"
+other = "Connexion en cours..."
 
 [login_password]
-description = "Password field label"
-other = "Password"
+description = "Label du champ mot de passe"
+other = "Mot de Passe"
 
 [login_port]
-description = "Port field label"
-other = "Port (optional)"
+description = "Label du champ port"
+other = "Port (optionnel)"
 
 [login_protocol]
-description = "Protocol field label"
-other = "Protocol"
+description = "Label du champ protocole"
+other = "Protocole"
 
 [login_protocol_http]
-description = "HTTP protocol option"
+description = "Option de protocole HTTP"
 other = "HTTP"
 
 [login_protocol_https]
-description = "HTTPS protocol option"
+description = "Option de protocole HTTPS"
 other = "HTTPS"
 
 [login_title]
-description = "Login screen title"
-other = "Login to RomM"
+description = "Titre de l'écran de connexion"
+other = "Connexion à RomM"
 
 [login_username]
-description = "Username field label"
-other = "Username"
+description = "Label du champ nom de compte"
+other = "Nom de compte"
 
 [platform_mapping_create]
-description = "Create directory option"
-other = "Create '{{.Name}}'"
+description = "Option de création da la platforme"
+other = "Créer '{{.Name}}'"
 
 [platform_mapping_directory_not_found]
-description = "ROM directory not found error"
-other = "ROM Directory Could Not Be Found!"
+description = "Erreur de dossier ROM introuvable"
+other = "Dossier de ROM introuvable!"
 
 [platform_mapping_path_prefix]
-description = "Directory path prefix"
+description = "Préfixe du chemin du dossier"
 other = "/{{.Name}}"
 
 [platform_mapping_title]
-description = "Platform mapping screen title"
-other = "Rom Directory Mapping"
+#description = "Platform mapping screen title"
+#other = "Rom Directory Mapping"
+description = "Titre association de la plateforme"
+other = "Association du dossier de la rom" # TODO: not sure about these ones
 
 [platform_selection_collections]
-description = "Collections menu item"
+description = "Élément de menu des collections"
 other = "Collections"
 
 [save_sync_downloaded]
-description = "Downloaded label"
-other = "Downloaded"
+description = "Label téléchargé"
+other = "Téléchargé"
 
 [save_sync_failed]
-description = "Failed label"
-other = "Failed"
+description = "Label échoué"
+other = "Échoué"
 
 [save_sync_rom_not_found]
-description = "ROM not found message"
-other = "{{.Name}} (ROM not found in RomM)"
+description = "Message ROM introuvable"
+other = "{{.Name}} (ROM introuvable dans RomM)"
 
 [save_sync_scanning]
-description = "Scanning save files message"
-other = "Scanning save files..."
+description = "Message d'analyse des fichiers de sauvegarde"
+other = "Analyse des fichiers de sauvegarde..."
 
 [save_sync_skipped]
-description = "Skipped label"
-other = "Skipped"
+description = "Label ignoré"
+other = "Ignoré"
 
 [save_sync_summary]
-description = "Save sync summary title"
-other = "Save Sync Summary"
+description = "Titre du résumé de la synchronisation des sauvegardes"
+other = "Résumé de la synchro des sauvegardes"
 
 [save_sync_summary_section]
-description = "Summary section title"
-other = "Summary"
+description = "Titre de la section résumé"
+other = "Résumé"
 
 [save_sync_total_processed]
-description = "Total processed label"
-other = "Total Processed"
+description = "Total des traités"
+other = "Total traité"
 
 [save_sync_unknown_error]
-description = "Unknown error message"
-other = "Unknown error"
+description = "Message d'erreur inconnue"
+other = "Erreur inconnue"
 
 [save_sync_unmatched_saves]
-description = "Unmatched saves section title"
-other = "Unmatched Saves"
+description = "Message de sauvegardes sans correspondance"
+other = "Sauvegardes sans correspondance" # TODO: Not sure about this one
 
 [save_sync_up_to_date]
-description = "Everything up to date message"
-other = "Everything is up to date!\nGo play some games!"
+description = "Message tout est à jour"
+other = "Tout est à jour!\nLancez un jeu!" # TODO: Find better translation for `go play some games!`
 
 [save_sync_uploaded]
-description = "Uploaded label"
-other = "Uploaded"
+description = "Label téléversé"
+other = "Téléversé"
 
 [settings_api_timeout]
-description = "API timeout option"
-other = "API Timeout"
+description = "Option de délai d'attente de l'API"
+other = "Délai d'attente de l'API"
 
 [settings_auto_sync_saves]
-description = "Auto sync saves option"
-other = "Auto Sync Saves"
+description = "Option de synchronisation des sauvegardes"
+other = "Synchronisation auto des sauvegardes" # TODO: Not too long ?
 
 [settings_download_art]
-description = "Download art option"
-other = "Download Art"
+description = "Option de téléchargement des illustrations"
+other = "Télécharger les illustrations"
 
 [settings_download_timeout]
-description = "Download timeout option"
-other = "Download Timeout"
+description = "Option de délai d'attente de téléchargement"
+other = "Délai d'attente de téléchargement"
 
 [settings_downloaded_games]
-description = "Downloaded games option"
-other = "Downloaded Games"
+description = "Option des jeux téléchargés"
+other = "Jeux téléchargés"
 
 [settings_edit_mappings]
-description = "Edit directory mappings option"
-other = "Edit Directory Mappings"
+description = "Option d'édition des associations de dossiers"
+other = "Éditer les associations de dossiers"
 
 [settings_language]
-description = "Language option"
-other = "Language"
+description = "Option de langue"
+other = "Langue"
 
 [settings_language_english]
-description = "English language option"
+description = "Option de langue anglaise"
 other = "English"
 
 [settings_language_spanish]
-description = "Spanish language option"
+description = "Option de langue espagnole"
 other = "Español"
 
+[settings_language_french]
+description = "Option de langue française"
+other = "Français"
+
 [settings_log_level]
-description = "Log level option"
-other = "Log Level"
+description = "Option du niveau de log"
+other = "Niveau de log"
 
 [settings_show_collections]
-description = "Show collections option"
-other = "Show Collections"
+description = "Option d'affichage des collections"
+other = "Afficher les Collections"
 
 [settings_show_game_details]
-description = "Show game details option"
-other = "Show Game Details"
+description = "Option d'affichage des détails du jeu"
+other = "Afficher les détails du jeu"
 
 [settings_show_virtual_collections]
-description = "Show virtual collections option"
-other = "Show Virtual Collections"
+description = "Option d'affichage des collections virtuelles"
+other = "Afficher les Collections Virtuelles"
 
 [settings_sync_saves]
-description = "Sync saves option"
-other = "Sync Saves"
+description = "Option de synchronisation des sauvegardes"
+other = "Synchroniser les sauvegardes"
 
 [settings_title]
-description = "Settings screen title"
-other = "Settings"
+description = "Titre des paramètres"
+other = "Paramètres"
 
 [settings_unzip_downloads]
-description = "Unzip downloads option"
-other = "Unzip Downloads"
+description = "Option d'extraction des téléchargements"
+other = "Extraire les téléchargements"
 
 [time_105_minutes]
 description = "105 minutes"
@@ -400,69 +406,69 @@ description = "15 minutes"
 other = "15 Minutes"
 
 [time_15_seconds]
-description = "15 seconds"
-other = "15 Seconds"
+description = "15 secondes"
+other = "15 Secondes"
 
 [time_180_seconds]
-description = "180 seconds"
-other = "180 Seconds"
+description = "180 secondes"
+other = "180 Secondes"
 
 [time_240_seconds]
-description = "240 seconds"
-other = "240 Seconds"
+description = "240 secondes"
+other = "240 Secondes"
 
 [time_300_seconds]
-description = "300 seconds"
-other = "300 Seconds"
+description = "300 secondes"
+other = "300 Secondes"
 
 [time_30_minutes]
 description = "30 minutes"
 other = "30 Minutes"
 
 [time_30_seconds]
-description = "30 seconds"
-other = "30 Seconds"
+description = "30 secondes"
+other = "30 Secondes"
 
 [time_45_minutes]
 description = "45 minutes"
 other = "45 Minutes"
 
 [time_45_seconds]
-description = "45 seconds"
-other = "45 Seconds"
+description = "45 secondes"
+other = "45 Secondes"
 
 [time_60_minutes]
 description = "60 minutes"
 other = "60 Minutes"
 
 [time_60_seconds]
-description = "60 seconds"
-other = "60 Seconds"
+description = "60 secondes"
+other = "60 Secondes"
 
 [time_75_minutes]
 description = "75 minutes"
 other = "75 Minutes"
 
 [time_75_seconds]
-description = "75 seconds"
-other = "75 Seconds"
+description = "75 secondes"
+other = "75 Secondes"
 
 [time_90_minutes]
 description = "90 minutes"
 other = "90 Minutes"
 
 [time_90_seconds]
-description = "90 seconds"
-other = "90 Seconds"
+description = "90 secondes"
+other = "90 Secondes"
 
 [downloaded_games_do_nothing]
-description = "Do nothing option for downloaded games"
-other = "Do Nothing"
+description = "Option ne rien faire pour les jeux téléchargés"
+other = "Ne Rien Faire"
 
 [downloaded_games_mark]
-description = "Mark option for downloaded games"
-other = "Mark"
+description = "Option marquer les jeux téléchargés"
+other = "Marquer"
 
 [downloaded_games_filter]
-description = "Filter option for downloaded games"
-other = "Filter"
+description = "Option filtrer les jeux téléchargés"
+other = "Filtrer"
