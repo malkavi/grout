@@ -1,0 +1,472 @@
+[app_title]
+description = "Titre de l'application"
+other = "Grout"
+
+[button_back]
+description = "Bouton retour"
+other = "Retour"
+
+[button_cancel]
+description = "Bouton annuler"
+other = "Annuler"
+
+[button_close]
+description = "Bouton fermer"
+other = "Fermer"
+
+[button_continue]
+description = "Bouton continuer"
+other = "Continuer"
+
+[button_cycle]
+description = "Bouton de défilement"
+other = "Défiler"
+
+[button_download]
+description = "Bouton télécharger"
+other = "Télécharger"
+
+[button_help]
+description = "Bouton d'aide"
+other = "Aide"
+
+[button_login]
+description = "Bouton de connexion"
+other = "Connexion"
+
+[button_menu]
+description = "Bouton menu"
+other = "Menu"
+
+[button_multi]
+description = "Bouton sélection multiple"
+other = "Multi"
+
+[button_quit]
+description = "Bouton quitter"
+other = "Quitter"
+
+[button_save]
+description = "Bouton sauvegarder"
+other = "Sauvegarder"
+
+[button_search]
+description = "Bouton rechercher"
+other = "Rechercher"
+
+[button_select]
+description = "Bouton sélectionner"
+other = "Sélectionner"
+
+[button_settings]
+description = "Bouton paramètres"
+other = "Paramètres"
+
+[collection_platform_no_mapped]
+description = "Aucune plateforme associée"
+other = "Aucune plateforme ne possède de jeux associés dans in\n{{.Name}}"
+
+[collection_platform_title]
+description = "Titre de selection des collections de plateforme"
+other = "{{.Name}} - Platformes"
+
+[common_false]
+description = "Valeur fausse"
+other = "Faux"
+
+[common_skip]
+description = "Valeur passer"
+other = "Passer"
+
+[common_true]
+description = "Valeur vraie"
+other = "Vrai"
+
+[download_artwork]
+description = "Téléchargement de l'illustration"
+other = "Téléchargement de l'illustration..."
+
+[download_extracting]
+description = "Message d'extraction de la ROM"
+other = "Extraction de {{.Name}}..."
+
+[emulator_default]
+description = "Suffixe d'émulateur par défaut"
+other = " (Défaut)"
+
+[emulator_saves_count]
+description = "Suffixe du nombre de sauvegardes de l'émulateur"
+other = " ({{.Count}} sauvegardes)"
+
+[emulator_selection_title]
+description = "Titre de sélection de l'émulateur"
+other = "Sélection de l'émulateur {{.Platform}}"
+
+[game_details_average_rating]
+description = "Label de la note moyenne"
+other = "Note Moyenne"
+
+[game_details_companies]
+description = "Label des entreprises"
+other = "Entreprises"
+
+[game_details_file_size]
+description = "Label de la taille du fichier"
+other = "Taille du Fichier"
+
+[game_details_game]
+description = "Label du jeu"
+other = "Jeu"
+
+[game_details_game_modes]
+description = "Label des modes de jeu"
+other = "Modes de Jeu"
+
+[game_details_genres]
+description = "Label des genres"
+other = "Genres"
+
+[game_details_languages]
+description = "Label des langues"
+other = "Langues"
+
+[game_details_multi_file_rom]
+description = "Label de la ROM multi-fichiers"
+other = "ROM Multi-Fichiers"
+
+[game_details_platform]
+description = "Label de la plateforme"
+other = "Plateforme"
+
+[game_details_qr_section]
+description = "QR code section title"
+other = "Lien du jeu sur RomM"
+
+[game_details_regions]
+description = "Label des régions"
+other = "Régions"
+
+[game_details_release_date]
+description = "Label de la date de sortie"
+other = "Date de Sortie"
+
+[game_details_type]
+description = "Label du type"
+other = "Type"
+
+[games_list_filtered_out]
+description = "Message lorsque les jeux sont filtrés"
+other = "Aucun jeu dans {{.Name}} ne correspond à vos plateformes"
+
+[games_list_loading]
+description = "Message de chargement des jeux"
+other = "Chargement de {{.Name}}..."
+
+[games_list_no_games]
+description = "Message lorsqu'aucun jeu n'est trouvé"
+other = "Aucun jeu trouvé dans {{.Name}}"
+
+[games_list_no_results]
+description = "Message lorsqu'aucun résultat de recherche n'est trouvé"
+other = "Aucun jeu trouvé pour \"{{.Query}}\""
+
+[games_list_search_prefix]
+description = "Préfixe de recherche des jeux"
+other = "Recherche: {{.Query}}"
+
+[games_list_help_title]
+description = "Titre de l'aide de la liste des jeux"
+other = "Aide - Liste des Jeux"
+
+[games_list_help_body]
+description = "Contenu de l'aide de la liste des jeux"
+other="""A - Sélectionner un jeu
+B - Retourner à l'écran précédent
+X - Rechercher des jeux par nom
+Select - Activer/désactiver le mode sélection multiple
+    En mode sélection multiple :
+    - Utilisez la croix directionnelle pour naviguer
+    - Appuyez sur A pour activer/désactiver la sélection
+    - Appuyez sur Start pour confirmer les sélections
+Menu - Afficher cet écran d'aide
+Croix directionnelle - Naviguer dans la liste des jeux"""
+
+[log_level_debug]
+description = "Niveau de log debug"
+other = "Debug"
+
+[log_level_error]
+description = "Niveau de log erreur"
+other = "Erreur"
+
+[login_error_connection]
+description = "Message d'erreur de connexion"
+other = "Impossible de se connecter à RomM!\nVeuillez vérifier le domaine et le port."
+
+[login_error_credentials]
+description = "Erreur d'identifiants de connexion"
+other = "Nom de compte ou mot de passe incorrect."
+
+[login_error_unexpected]
+description = "Message d'erreur inattendu"
+other = "Erreur inattendue.\nRegardez les logs pour plus d'informations."
+
+[error_loading_platforms]
+description = "Erreur lors du chargement des plateformes depuis RomM"
+other = "Erreur lors du chargement des plateformes depuis RomM.\nVeuillez vérifier la connexion."
+
+[login_hostname]
+description = "Label du champ nom de domaine"
+other = "Nom de Domaine"
+
+[login_logging_in]
+description = "Message de connexion"
+other = "Connexion en cours..."
+
+[login_password]
+description = "Label du champ mot de passe"
+other = "Mot de Passe"
+
+[login_port]
+description = "Label du champ port"
+other = "Port (optionnel)"
+
+[login_protocol]
+description = "Label du champ protocole"
+other = "Protocole"
+
+[login_protocol_http]
+description = "Option de protocole HTTP"
+other = "HTTP"
+
+[login_protocol_https]
+description = "Option de protocole HTTPS"
+other = "HTTPS"
+
+[login_title]
+description = "Titre de l'écran de connexion"
+other = "Connexion à RomM"
+
+[login_username]
+description = "Label du champ nom de compte"
+other = "Nom de compte"
+
+[platform_mapping_create]
+description = "Option de création da la platforme"
+other = "Créer '{{.Name}}'"
+
+[platform_mapping_directory_not_found]
+description = "Erreur de dossier ROM introuvable"
+other = "Dossier de ROM introuvable!"
+
+[platform_mapping_path_prefix]
+description = "Préfixe du chemin du dossier"
+other = "/{{.Name}}"
+
+[platform_mapping_title]
+description = "Titre association de la plateforme"
+other = "Association des Dossiers de ROM"
+
+[platform_selection_collections]
+description = "Élément de menu des collections"
+other = "Collections"
+
+[save_sync_downloaded]
+description = "Label téléchargé"
+other = "Téléchargé"
+
+[save_sync_failed]
+description = "Label échoué"
+other = "Échoué"
+
+[save_sync_rom_not_found]
+description = "Message ROM introuvable"
+other = "{{.Name}} (ROM introuvable dans RomM)"
+
+[save_sync_scanning]
+description = "Message d'analyse des fichiers de sauvegarde"
+other = "Analyse des fichiers de sauvegarde..."
+
+[save_sync_skipped]
+description = "Label ignoré"
+other = "Ignoré"
+
+[save_sync_summary]
+description = "Titre du résumé de la synchronisation des sauvegardes"
+other = "Résumé de la synchro des sauvegardes"
+
+[save_sync_summary_section]
+description = "Titre de la section résumé"
+other = "Résumé"
+
+[save_sync_total_processed]
+description = "Total des traités"
+other = "Total traité"
+
+[save_sync_unknown_error]
+description = "Message d'erreur inconnue"
+other = "Erreur inconnue"
+
+[save_sync_unmatched_saves]
+description = "Message de sauvegardes sans correspondance"
+other = "Sauvegardes sans correspondance"
+
+[save_sync_up_to_date]
+description = "Message tout est à jour"
+other = "Tout est à jour!\nPlace au jeu!"
+
+[save_sync_uploaded]
+description = "Label téléversé"
+other = "Téléversé"
+
+[settings_api_timeout]
+description = "Option de délai d'attente de l'API"
+other = "Délai d'attente de l'API"
+
+[settings_auto_sync_saves]
+description = "Option de synchronisation des sauvegardes"
+other = "Synchronisation auto des sauvegardes"
+
+[settings_download_art]
+description = "Option de téléchargement des illustrations"
+other = "Télécharger les illustrations"
+
+[settings_download_timeout]
+description = "Option de délai d'attente de téléchargement"
+other = "Délai d'attente de téléchargement"
+
+[settings_downloaded_games]
+description = "Option des jeux téléchargés"
+other = "Jeux téléchargés"
+
+[settings_edit_mappings]
+description = "Option d'édition des associations de dossiers"
+other = "Éditer les associations de dossiers"
+
+[settings_language]
+description = "Option de langue"
+other = "Langue"
+
+[settings_language_english]
+description = "Option de langue anglaise"
+other = "English"
+
+[settings_language_spanish]
+description = "Option de langue espagnole"
+other = "Español"
+
+[settings_language_french]
+description = "Option de langue française"
+other = "Français"
+
+[settings_log_level]
+description = "Option du niveau de log"
+other = "Niveau de log"
+
+[settings_show_collections]
+description = "Option d'affichage des collections"
+other = "Afficher les Collections"
+
+[settings_show_game_details]
+description = "Option d'affichage des détails du jeu"
+other = "Afficher les détails du jeu"
+
+[settings_show_virtual_collections]
+description = "Option d'affichage des collections virtuelles"
+other = "Afficher les Collections Virtuelles"
+
+[settings_sync_saves]
+description = "Option de synchronisation des sauvegardes"
+other = "Synchroniser les sauvegardes"
+
+[settings_title]
+description = "Titre des paramètres"
+other = "Paramètres"
+
+[settings_unzip_downloads]
+description = "Option d'extraction des téléchargements"
+other = "Extraire les téléchargements"
+
+[time_105_minutes]
+description = "105 minutes"
+other = "105 Minutes"
+
+[time_120_minutes]
+description = "120 minutes"
+other = "120 Minutes"
+
+[time_120_seconds]
+description = "120 seconds"
+other = "120 Seconds"
+
+[time_15_minutes]
+description = "15 minutes"
+other = "15 Minutes"
+
+[time_15_seconds]
+description = "15 secondes"
+other = "15 Secondes"
+
+[time_180_seconds]
+description = "180 secondes"
+other = "180 Secondes"
+
+[time_240_seconds]
+description = "240 secondes"
+other = "240 Secondes"
+
+[time_300_seconds]
+description = "300 secondes"
+other = "300 Secondes"
+
+[time_30_minutes]
+description = "30 minutes"
+other = "30 Minutes"
+
+[time_30_seconds]
+description = "30 secondes"
+other = "30 Secondes"
+
+[time_45_minutes]
+description = "45 minutes"
+other = "45 Minutes"
+
+[time_45_seconds]
+description = "45 secondes"
+other = "45 Secondes"
+
+[time_60_minutes]
+description = "60 minutes"
+other = "60 Minutes"
+
+[time_60_seconds]
+description = "60 secondes"
+other = "60 Secondes"
+
+[time_75_minutes]
+description = "75 minutes"
+other = "75 Minutes"
+
+[time_75_seconds]
+description = "75 secondes"
+other = "75 Secondes"
+
+[time_90_minutes]
+description = "90 minutes"
+other = "90 Minutes"
+
+[time_90_seconds]
+description = "90 secondes"
+other = "90 Secondes"
+
+[downloaded_games_do_nothing]
+description = "Option ne rien faire pour les jeux téléchargés"
+other = "Ne Rien Faire"
+
+[downloaded_games_mark]
+description = "Option marquer les jeux téléchargés"
+other = "Marquer"
+
+[downloaded_games_filter]
+description = "Option filtrer les jeux téléchargés"
+other = "Filtrer"

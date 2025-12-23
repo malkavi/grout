@@ -112,7 +112,8 @@ func (s *GameListScreen) Draw(input GameListInput) (ScreenResult[GameListOutput]
 
 	title := displayName
 	if input.SearchFilter != "" {
-		title = fmt.Sprintf("[Search: \"%s\"] | %s", input.SearchFilter, displayName)
+		message := i18n.GetStringWithData("games_list_search_prefix", map[string]interface{}{"Query": input.SearchFilter})
+		title = fmt.Sprintf("[%s] | %s", message, displayName)
 		displayGames = filterList(displayGames, input.SearchFilter)
 	}
 

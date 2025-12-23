@@ -355,6 +355,10 @@ other = "English"
 description = "Spanish language option"
 other = "Español"
 
+[settings_language_french]
+description = "French language option"
+other = "Français"
+
 [settings_log_level]
 description = "Log level option"
 other = "Log Level"

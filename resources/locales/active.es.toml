@@ -436,6 +436,10 @@ description = "Spanish language option"
 hash = "sha1-c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0"
 other = "Español"
 
+[settings_language_french]
+description = "French language option"
+other = "Français"
+
 [settings_log_level]
 description = "Log level option"
 hash = "sha1-d4b9f81b67c0923ee427be359a66fdfa670bb6da"

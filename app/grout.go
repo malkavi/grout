@@ -78,7 +78,7 @@ func setup() *utils.Config {
 		LogFilename:          "grout.log",
 	})
 
-	if err := i18n.InitI18N([]string{"resources/locales/active.en.toml", "resources/locales/active.es.toml"}); err != nil {
+	if err := i18n.InitI18N([]string{"resources/locales/active.en.toml", "resources/locales/active.es.toml", "resources/locales/active.fr.toml"}); err != nil {
 		utils.LogStandardFatal("Failed to initialize i18n", err)
 	}
 
