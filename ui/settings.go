@@ -154,8 +154,8 @@ func (s *SettingsScreen) buildMenuItems(config *utils.Config) []gaba.ItemWithOpt
 		//{
 		//	Item: gaba.MenuItem{Text: "Auto Sync Saves"},
 		//	Options: []gaba.Option{
-		//		{DisplayName: "True", Value: true},
-		//		{DisplayName: "False", Value: false},
+		//		{DisplayName: i18n.GetString("common_true"), Value: true},
+		//		{DisplayName: i18n.GetString("common_false"), Value: false},
 		//	},
 		//	SelectedOption: boolToIndex(!config.AutoSyncSaves),
 		//},
@@ -305,6 +305,8 @@ func languageToIndex(lang string) int {
 		return 0
 	case "es":
 		return 1
+	case "fr":
+		return 2
 	default:
 		return 0
 	}
