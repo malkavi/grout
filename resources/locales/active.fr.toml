@@ -40,7 +40,7 @@ other = "Menu"
 
 [button_multi]
 description = "Bouton sélection multiple"
-other = "Multi" # TODO: Find better translation ?
+other = "Multi"
 
 [button_quit]
 description = "Bouton quitter"
@@ -67,7 +67,7 @@ description = "Aucune plateforme associée"
 other = "Aucune plateforme ne possède de jeux associés dans in\n{{.Name}}"
 
 [collection_platform_title]
-description = "Collection platform selection title" # TODO: Translate
+description = "Titre de selection des collections de plateforme"
 other = "{{.Name}} - Platformes"
 
 [common_false]
@@ -264,10 +264,8 @@ description = "Préfixe du chemin du dossier"
 other = "/{{.Name}}"
 
 [platform_mapping_title]
-#description = "Platform mapping screen title"
-#other = "Rom Directory Mapping"
 description = "Titre association de la plateforme"
-other = "Association du dossier de la rom" # TODO: not sure about these ones
+other = "Association du dossier de la rom"
 
 [platform_selection_collections]
 description = "Élément de menu des collections"
@@ -311,11 +309,11 @@ other = "Erreur inconnue"
 
 [save_sync_unmatched_saves]
 description = "Message de sauvegardes sans correspondance"
-other = "Sauvegardes sans correspondance" # TODO: Not sure about this one
+other = "Sauvegardes sans correspondance"
 
 [save_sync_up_to_date]
 description = "Message tout est à jour"
-other = "Tout est à jour!\nLancez un jeu!" # TODO: Find better translation for `go play some games!`
+other = "Tout est à jour!\nPlace au jeu!"
 
 [save_sync_uploaded]
 description = "Label téléversé"
@@ -327,7 +325,7 @@ other = "Délai d'attente de l'API"
 
 [settings_auto_sync_saves]
 description = "Option de synchronisation des sauvegardes"
-other = "Synchronisation auto des sauvegardes" # TODO: Not too long ?
+other = "Synchronisation auto des sauvegardes"
 
 [settings_download_art]
 description = "Option de téléchargement des illustrations"
