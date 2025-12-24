@@ -119,7 +119,7 @@ platforms – NES, SNES, PlayStation, whatever you've got.
 **Navigation:**
 
 - `Up/Down` to scroll through platforms
-- `A` to select a platform
+- `A` to select a platform or collection
 - `X` to open Settings
 - `Y` to open the Save Sync menu
 - `Select` to enter reordering mode
@@ -127,16 +127,14 @@ platforms – NES, SNES, PlayStation, whatever you've got.
 
 **Reordering Platforms:**
 
-Press `Select` to enter reordering mode. You'll see a ↕ indicator next to the currently selected platform. Use the D-pad to move platforms up and down:
+![Grout preview, reordering platforms](.github/resources/user_guide/reordering_platforms.png "Grout preview, reordering")
+
+Press `Select` to enter reordering mode. You'll see a ↕ indicator next to the currently selected platform. Use the D-pad to this platform up and down:
 
 - `Up/Down` to move the platform one position
 - `Left/Right` to move the platform one page at a time
 
-Press any button to exit reordering mode. Your custom platform order is automatically saved to the config and will persist across sessions. New platforms you add to RomM later will appear alphabetically at the end of your custom order.
-
-Selecting a platform will take you to the game list for that platform.
-
-Selecting Collections will show you your RomM collections.
+Press `A` to place the selected platform into its new position. Your custom platform order is automatically saved to the config and will persist across sessions. New platforms you add to RomM later will appear alphabetically at the end of your custom order.
 
 ---
 
