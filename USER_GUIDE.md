@@ -37,7 +37,9 @@ Press `Start` to login. If your credentials are correct and Grout can reach your
 to the next step. If something goes wrong, you'll get a message telling you what happened, and you can try again.
 
 > [!NOTE]
-> **OIDC Users:** If your RomM instance uses OIDC authentication, you can still use Grout by setting a password for your user account. Grout will support API Keys once they are available in RomM. For more details, see [this GitHub issue](https://github.com/rommapp/romm/issues/1767#issuecomment-2744215262).
+> **OIDC Users:** If your RomM instance uses OIDC authentication, you can still use Grout by setting a password for your
+> user account. Grout will support API Keys once they are available in RomM. For more details,
+> see [this GitHub issue](https://github.com/rommapp/romm/issues/1767#issuecomment-2744215262).
 
 ---
 
@@ -88,12 +90,15 @@ platforms – NES, SNES, PlayStation, whatever you've got.
 
 ![Grout preview, reordering platforms](.github/resources/user_guide/reordering_platforms.png "Grout preview, reordering")
 
-Press `Select` to enter reordering mode. You'll see a ↕ indicator next to the currently selected platform. Use the D-pad to this platform up and down:
+Press `Select` to enter reordering mode. You'll see a ↕ indicator next to the currently selected platform. Use the D-pad
+to this platform up and down:
 
 - `Up/Down` to move the platform one position
 - `Left/Right` to move the platform one page at a time
 
-Press `A` to place the selected platform into its new position. Your custom platform order is automatically saved to the config and will persist across sessions. New platforms you add to RomM later will appear alphabetically at the end of your custom order.
+Press `A` to place the selected platform into its new position. Your custom platform order is automatically saved to the
+config and will persist across sessions. New platforms you add to RomM later will appear alphabetically at the end of
+your custom order.
 
 ---
 
@@ -214,24 +219,18 @@ ready to play.
 
 ## BIOS Files
 
-Many emulators require BIOS files to function properly. Grout can download these files directly from your RomM server to the correct location on your device.
+Many emulators require BIOS files to function properly. Grout can download these files directly from your RomM server to
+the correct location on your device.
 
 ![Grout preview, BIOS download](.github/resources/user_guide/bios_download.png "Grout preview, BIOS download")
 
 ### Accessing BIOS Downloads
 
-From the main platform menu, press `A` on a platform that requires BIOS files. If BIOS files are available for that platform in your RomM library, you'll see a "BIOS" option in the platform submenu.
+From the main platform menu, press `A` on a platform that requires BIOS files. If BIOS files are available for that
+platform in your RomM library, you'll see a "BIOS" option in the platform submenu.
 
-### BIOS File Status
-
-When you select the BIOS option, you'll see a list of all required BIOS files for that platform with status indicators:
-
-- **✓ Ready** – BIOS file is installed and verified (MD5 hash matches)
-- **⚠ Wrong Version** – BIOS file exists but the hash doesn't match the expected version
-- **? Installed (Unverified)** – BIOS file is installed but no hash is available to verify it
-- **✗ Not Installed** – BIOS file is missing
-
-Files marked as **(Optional)** are not required for the emulator to function but may enable additional features.
+> [!NOTE]
+> Files marked as **(Optional)** are not required for the emulator to function but may enable additional features.
 
 ### Important Notes
 
@@ -260,15 +259,18 @@ immediately starts the download. If you know what you want and just want to grab
 **Show Virtual Collections** - When enabled, Grout displays virtual collections in the main menu.
 
 **Downloaded Games** - Controls how already-downloaded games appear in game lists:
+
 - **Do Nothing** – No special treatment for downloaded games
 - **Mark** – Downloaded games are marked with a checkmark indicator
 - **Filter** – Downloaded games are hidden from the list entirely
 
 **Save Sync** - Controls save synchronization behavior:
+
 - **Off** – Save sync is completely disabled
 - **Manual** – Save sync is available via the `Y` button from the platform menu
 
-**Show BIOS** - When enabled, adds a BIOS download option to the platform menu, allowing you to download required BIOS files for emulators directly from your RomM server.
+**Show BIOS** - When enabled, adds a BIOS download option to the platform menu, allowing you to download required BIOS
+files for emulators directly from your RomM server.
 
 **Download Art** – When enabled, Grout downloads box art for games after downloading the ROMs. The art goes into your
 artwork directory so your frontend can display it.
@@ -282,7 +284,8 @@ slow connections. Options range from 15 to 120 minutes.
 **API Timeout** – How long Grout waits for responses from your RomM server before giving up. If you have a slow
 connection or are a completionist with a heavily loaded server, increase this. Options range from 15 to 300 seconds.
 
-**Language** – Grout is localized! Choose between English, Spanish, and French. If you notice an issue with a translation or want to help by translating please let
+**Language** – Grout is localized! Choose between English, Spanish, and French. If you notice an issue with a
+translation or want to help by translating please let
 us know!
 
 **Log Level** – Set to Debug if you're troubleshooting issues and want detailed logs. Otherwise, Error is fine.

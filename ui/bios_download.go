@@ -118,20 +118,15 @@ func (s *BIOSDownloadScreen) draw(input BIOSDownloadInput) (ScreenResult[BIOSDow
 		status := utils.CheckBIOSFileStatus(biosFile, input.Platform.Slug)
 		biosStatusMap[biosFile.FileName] = status
 
-		var statusIndicator string
 		var statusText string
 		switch status.Status {
 		case utils.BIOSStatusValid:
-			statusIndicator = "✓"
 			statusText = i18n.GetString("bios_status_ready")
 		case utils.BIOSStatusInvalidHash:
-			statusIndicator = "⚠"
 			statusText = i18n.GetString("bios_status_wrong_version")
 		case utils.BIOSStatusNoHashToVerify:
-			statusIndicator = "?"
 			statusText = i18n.GetString("bios_status_unverified")
 		case utils.BIOSStatusMissing:
-			statusIndicator = "✗"
 			statusText = i18n.GetString("bios_status_not_installed")
 		}
 
@@ -140,7 +135,7 @@ func (s *BIOSDownloadScreen) draw(input BIOSDownloadInput) (ScreenResult[BIOSDow
 			optionalText = " (Optional)"
 		}
 
-		displayText := fmt.Sprintf("%s %s%s - %s", statusIndicator, biosFile.FileName, optionalText, statusText)
+		displayText := fmt.Sprintf("%s%s - %s", biosFile.FileName, optionalText, statusText)
 
 		menuItems = append(menuItems, gaba.MenuItem{
 			Text:     displayText,
