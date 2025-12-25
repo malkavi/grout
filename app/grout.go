@@ -602,6 +602,7 @@ func buildFSM(config *utils.Config, cfw constants.CFW, platforms []romm.Platform
 			host, _ := gaba.Get[romm.Host](ctx)
 
 			config.DirectoryMappings = output.Mappings
+			config.PlatformOrder = utils.PrunePlatformOrder(config.PlatformOrder, output.Mappings)
 			utils.SaveConfig(config)
 			gaba.Set(ctx, config)
 

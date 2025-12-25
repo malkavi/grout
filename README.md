@@ -23,7 +23,7 @@ A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.o
 
 ---
 
-## High-level Features
+## Features at a Glance
 
 - Download games wirelessly from your RomM instance
 - Download box art

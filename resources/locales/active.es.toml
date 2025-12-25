@@ -453,6 +453,18 @@ other = "Servidor"
 description = "Active user label"
 other = "Usuario"
 
+[info_commit]
+description = "Git commit hash label"
+other = "Commit"
+
+[info_build_date]
+description = "Build date/time label"
+other = "Fecha de compilación"
+
+[info_build_type]
+description = "Build type label (Dev/Release)"
+other = "Tipo de compilación"
+
 [info_repository]
 description = "Repository QR code label"
 other = "Repositorio de GitHub"

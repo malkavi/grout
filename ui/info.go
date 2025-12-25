@@ -5,6 +5,7 @@ import (
 	"grout/constants"
 	"grout/romm"
 	"grout/utils"
+	"grout/version"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	buttons "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/constants"
@@ -61,6 +62,17 @@ func (s *InfoScreen) Draw(input InfoInput) (ScreenResult[InfoOutput], error) {
 func (s *InfoScreen) buildSections(input InfoInput) []gaba.Section {
 	sections := make([]gaba.Section, 0)
 
+	// Version Information Section
+	versionInfo := version.Get()
+	versionMetadata := []gaba.MetadataItem{
+		{Label: i18n.GetString("info_version"), Value: versionInfo.Version},
+		{Label: i18n.GetString("info_commit"), Value: versionInfo.GitCommit},
+		{Label: i18n.GetString("info_build_date"), Value: versionInfo.BuildDate},
+		{Label: i18n.GetString("info_build_type"), Value: versionInfo.BuildType},
+	}
+	sections = append(sections, gaba.NewInfoSection("Grout", versionMetadata))
+
+	// RomM server metadata
 	metadata := []gaba.MetadataItem{
 		{
 			Label: i18n.GetString("info_server"),

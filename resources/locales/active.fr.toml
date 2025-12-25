@@ -375,6 +375,18 @@ other = "Serveur"
 description = "Étiquette de l'utilisateur actif"
 other = "Utilisateur"
 
+[info_commit]
+description = "Git commit hash label"
+other = "Commit"
+
+[info_build_date]
+description = "Build date/time label"
+other = "Date de compilation"
+
+[info_build_type]
+description = "Build type label (Dev/Release)"
+other = "Type de build"
+
 [info_repository]
 description = "Étiquette du code QR du référentiel"
 other = "Dépôt GitHub"

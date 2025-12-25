@@ -5,7 +5,7 @@ tasks:
     desc: Build for ARM64 using remote gabagool
     cmds:
       - rm -rf build
-      - docker buildx build --platform=linux/arm64 -t retro-console-arm64 -f Dockerfile .
+      - docker buildx build --platform=linux/arm64 --build-arg GITHUB_ACTIONS=false -t retro-console-arm64 -f Dockerfile .
     silent: true
 
   build-local:
@@ -13,7 +13,7 @@ tasks:
     cmds:
       - rm -rf build
       - echo "Building with local gabagool workspace..."
-      - cd .. && docker buildx build --platform=linux/arm64 --build-arg USE_LOCAL_GABAGOOL=true -f grout/Dockerfile -t retro-console-arm64 .
+      - cd .. && docker buildx build --platform=linux/arm64 --build-arg USE_LOCAL_GABAGOOL=true --build-arg GITHUB_ACTIONS=false -f grout/Dockerfile -t retro-console-arm64 .
     silent: true
 
   all:

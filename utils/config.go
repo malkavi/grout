@@ -174,3 +174,20 @@ func SortPlatformsAlphabetically(platforms []romm.Platform) []romm.Platform {
 
 	return sorted
 }
+
+// PrunePlatformOrder removes platform slugs from the order that are no longer in the directory mappings.
+// This ensures the platform order stays synchronized with available platforms.
+func PrunePlatformOrder(order []string, mappings map[string]DirectoryMapping) []string {
+	if len(order) == 0 {
+		return order
+	}
+
+	pruned := make([]string, 0, len(order))
+	for _, slug := range order {
+		if _, exists := mappings[slug]; exists {
+			pruned = append(pruned, slug)
+		}
+	}
+
+	return pruned
+}

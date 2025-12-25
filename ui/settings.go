@@ -91,12 +91,12 @@ func (s *SettingsScreen) Draw(input SettingsInput) (ScreenResult[SettingsOutput]
 
 	output.LastSelectedIndex = result.Selected
 
-	if result.Selected == 0 {
+	if result.Action == gaba.ListActionSelected && result.Selected == 0 {
 		output.EditMappingsClicked = true
 		return withCode(output, constants.ExitCodeEditMappings), nil
 	}
 
-	if result.Selected == len(items)-1 {
+	if result.Action == gaba.ListActionSelected && result.Selected == len(items)-1 {
 		output.InfoClicked = true
 		return withCode(output, constants.ExitCodeInfo), nil
 	}

@@ -4,7 +4,8 @@ RUN apt-get update && apt-get install -y \
     libsdl2-dev \
     libsdl2-ttf-dev \
     libsdl2-image-dev \
-    libsdl2-gfx-dev
+    libsdl2-gfx-dev \
+    jq
 
 WORKDIR /build
 
@@ -41,10 +42,21 @@ RUN if [ "$USE_LOCAL_GABAGOOL" = "true" ]; then \
         GOWORK=off go mod download; \
     fi
 
-RUN if [ "$USE_LOCAL_GABAGOOL" = "true" ]; then \
-        go build -gcflags="all=-N -l" -v -o grout app/grout.go; \
+ARG GITHUB_ACTIONS=false
+
+RUN BUILD_TYPE="Dev"; \
+    if [ "$GITHUB_ACTIONS" = "true" ]; then BUILD_TYPE="Release"; fi; \
+    VERSION=$(jq -r '.version // "dev"' pak.json 2>/dev/null || echo "dev"); \
+    GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+    BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ); \
+    LDFLAGS="-X 'grout/version.Version=$VERSION' \
+             -X 'grout/version.GitCommit=$GIT_COMMIT' \
+             -X 'grout/version.BuildDate=$BUILD_DATE' \
+             -X 'grout/version.BuildType=$BUILD_TYPE'"; \
+    if [ "$USE_LOCAL_GABAGOOL" = "true" ]; then \
+        go build -gcflags="all=-N -l" -ldflags "$LDFLAGS" -v -o grout app/grout.go; \
     else \
-        GOWORK=off go build -gcflags="all=-N -l" -v -o grout app/grout; \
+        GOWORK=off go build -gcflags="all=-N -l" -ldflags "$LDFLAGS" -v -o grout app/grout; \
     fi
 
 CMD ["/bin/bash"]
