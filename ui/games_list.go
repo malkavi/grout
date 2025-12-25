@@ -6,7 +6,6 @@ import (
 	"grout/constants"
 	"grout/romm"
 	"grout/utils"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -295,13 +294,7 @@ func (s *GameListScreen) showFilteredOutMessage(collectionName string) {
 }
 
 func (s *GameListScreen) hasBIOSFilesInRomM(config utils.Config, host romm.Host, platform romm.Platform) bool {
-	// Get theoretical BIOS files for this platform
-	biosFiles := utils.GetBIOSFilesForPlatform(platform.Slug)
-	if len(biosFiles) == 0 {
-		return false
-	}
-
-	// Fetch firmware list from RomM
+	// Check if RomM has any firmware for this platform
 	client := utils.GetRommClient(host, config.ApiTimeout)
 	firmwareList, err := client.GetFirmware(platform.ID)
 	if err != nil {
@@ -309,56 +302,8 @@ func (s *GameListScreen) hasBIOSFilesInRomM(config utils.Config, host romm.Host,
 		return false
 	}
 
-	// Build firmware lookup maps (same logic as BIOS download screen)
-	firmwareByFileName := make(map[string]romm.Firmware)
-	firmwareByFilePath := make(map[string]romm.Firmware)
-	firmwareByBaseName := make(map[string]romm.Firmware)
-
-	for _, fw := range firmwareList {
-		firmwareByFileName[fw.FileName] = fw
-		firmwareByFilePath[fw.FilePath] = fw
-		baseName := filepath.Base(fw.FilePath)
-		firmwareByBaseName[baseName] = fw
-	}
-
-	// Check if any BIOS files exist in RomM
-	for _, biosFile := range biosFiles {
-		if s.firmwareExistsInRomM(biosFile, firmwareByFileName, firmwareByFilePath, firmwareByBaseName) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (s *GameListScreen) firmwareExistsInRomM(
-	biosFile constants.BIOSFile,
-	firmwareByFileName map[string]romm.Firmware,
-	firmwareByFilePath map[string]romm.Firmware,
-	firmwareByBaseName map[string]romm.Firmware,
-) bool {
-	// Try exact filename match
-	if _, found := firmwareByFileName[biosFile.FileName]; found {
-		return true
-	}
-
-	// Try relative path match
-	if _, found := firmwareByFilePath[biosFile.RelativePath]; found {
-		return true
-	}
-
-	// Try basename from filename
-	if _, found := firmwareByBaseName[biosFile.FileName]; found {
-		return true
-	}
-
-	// Try basename from relative path
-	baseName := filepath.Base(biosFile.RelativePath)
-	if _, found := firmwareByBaseName[baseName]; found {
-		return true
-	}
-
-	return false
+	// Show BIOS button if RomM has any firmware files for this platform
+	return len(firmwareList) > 0
 }
 
 func fetchList(config *utils.Config, host romm.Host, queryID int, fetchType fetchType) ([]romm.Rom, error) {

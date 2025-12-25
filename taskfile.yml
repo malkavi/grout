@@ -137,25 +137,3 @@ tasks:
           sips -Z 1024 "$img" --out "$img"
         done
         echo "All user guide images resized to 1024px width"
-
-  generate-bios-maps:
-    desc: Generate BIOS mappings from Libretro info files
-    cmds:
-      - go generate ./constants/bios.go
-    silent: false
-
-  update-bios-maps:
-    desc: Update BIOS mappings from latest Libretro info files
-    cmds:
-      - rm -f constants/bios_generated.go
-      - task: generate-bios-maps
-      - go fmt ./constants/bios_generated.go
-      - echo "BIOS mappings updated successfully"
-    silent: false
-
-  verify-bios-maps:
-    desc: Verify BIOS generated code compiles
-    cmds:
-      - go build ./constants/...
-      - echo "BIOS mappings verified"
-    silent: false
