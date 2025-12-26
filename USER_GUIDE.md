@@ -1,6 +1,6 @@
 # Grout User Guide
 
-This guide walks you through using Grout's interface to download games from your RomM instance.
+This guide walks you through using Grout to download games from your RomM instance.
 
 ## Table of Contents
 
@@ -44,7 +44,7 @@ to the next step. If something goes wrong, you'll get a message telling you what
 
 ## Platform Directory Mapping
 
-On this screen you map your RomM platforms to directories on your device.
+On this screen, you map your RomM platforms to directories on your device.
 This tells Grout where to put the games that you download.
 
 ![Grout preview, platform mapping](.github/resources/user_guide/platform_mapping.png "Grout preview, platform mapping")
@@ -119,7 +119,7 @@ shown as prefixes (e.g., `[nes] Tetris`, `[snes] Tetris Battle Gaiden`)
 > If you skipped a platform in the mapping screen, you won't see games for that platform in your collections.
 
 > [!TIP]
-> Regular collections, smart collections, and virtual collections can be toggled on / off in settings.
+> Regular collections, smart collections, and virtual collections can be toggled on/off in settings.
 
 ---
 
@@ -128,9 +128,6 @@ shown as prefixes (e.g., `[nes] Tetris`, `[snes] Tetris Battle Gaiden`)
 ![Grout preview, games list](.github/resources/user_guide/games_list.png "Grout preview, games list")
 
 The title bar shows you where you are – either a platform name or a collection name.
-
-> [!TIP]
-> Box art must be enabled in settings for it to appear.
 
 If you entered a search query, you'll see `[Search: "your search term"] | Platform / Collection Name`.
 
@@ -154,6 +151,9 @@ Check all the ones you want, then press `Start` to confirm your selections.
 
 ![Grout preview, games multi select](.github/resources/user_guide/multi_select.png "Grout preview, games multi select")
 
+> [!TIP]
+> Box art must be enabled in settings for it to appear.
+
 ---
 
 ## Search
@@ -165,7 +165,7 @@ Press `X` from any game list to search.
 Type your search term using the on-screen keyboard and confirm. The game list will filter to show only matching titles.
 The search is case-insensitive and matches anywhere in the game name.
 
-To clear a search, press `B` to go back to the full results.
+To clear a search and return to the full list, press `B`.
 
 ---
 
@@ -202,16 +202,16 @@ appropriate directory on your device. Press `Y` to cancel the download.
 
 **What Happens During Download:**
 
-1. **ROM files download** – The game files download to the correct platform directory you mapped earlier.
+1. **ROM files are downloaded** – The game files are saved to the correct platform directory you mapped earlier.
 
-2. **Multi-file games get special treatment** – If you're downloading a multi-disc game, Grout downloads a zip file,
-   extracts it, and creates an M3U playlist file so your emulator can handle disc switching.
+2. **Multi-file games are extracted automatically** – If you're downloading a multi-disc game, Grout downloads a zip
+   file, extracts it, and creates an M3U playlist file so your emulator can handle disc switching.
 
-3. **Artwork downloads** – If "Download Art" is enabled in Settings, Grout downloads box art for each game to your
+3. **Artwork is downloaded** – If "Download Art" is enabled in Settings, Grout downloads box art for each game to your
    artwork directory after the ROMs finish.
 
-4. **Automatic unzipping** – If "Unzip Downloads" is enabled in Settings, Grout automatically extracts any zipped ROMs
-   and deletes the zip file.
+4. **Zipped files are extracted automatically** – If "Unzip Downloads" is enabled in Settings, Grout extracts any
+   zipped ROMs and deletes the zip file.
 
 If a download fails, Grout will show you which games had problems. Successfully downloaded games stay on your device,
 failed downloads get cleaned up.
@@ -222,6 +222,10 @@ ready to play.
 ---
 
 ## BIOS Files
+
+> [!TIP]
+> This menu will only appear if BIOS Downloads are enabled in settings and if there are BIOS files present in RomM for
+> the selected platform.
 
 Many emulators require BIOS files to function properly. Grout can download these files directly from your RomM server to
 the correct location on your device.
@@ -252,7 +256,8 @@ Press `X` from the main platform menu to access Settings.
 **Game Details** - When set to show, selecting a game shows the details screen first. When set to hide, selecting a game
 immediately starts the download. If you know what you want and just want to grab it fast, set this to hide.
 
-**Collections Settings** - Opens a sub-menu for configuring collection display options. See [Collections Settings](#collections-settings) below.
+**Collections Settings** - Opens a sub-menu for configuring collection display options.
+See [Collections Settings](#collections-settings) below.
 
 **Downloaded Games** - Controls how already-downloaded games appear in game lists:
 
@@ -271,15 +276,19 @@ required BIOS files for emulators directly from your RomM server.
 **Download Art** – When enabled, Grout downloads box art for games after downloading the ROMs. The art goes into your
 artwork directory so your frontend can display it.
 
-**Box Art** - When set to show, Grout displays cover art thumbnails next to game names in the game list. Artwork is automatically cached in the background as you browse. This provides a visual preview similar to your frontend's game library view.
+**Box Art** - When set to show, Grout displays cover art thumbnails next to game names in the game list. Artwork is
+automatically cached in the background as you browse. This provides a visual preview similar to your frontend's game
+library view.
 
-**Sync Artwork** - Click this option to manually sync artwork for all games across all mapped platforms. Grout will scan your platforms, identify games that don't have cached artwork, and download cover art from RomM. Useful for pre-caching artwork or updating your library after adding new games.
+**Sync Artwork** - Select this option to manually sync artwork for all games across all mapped platforms. Grout will scan
+your platforms, identify games that don't have cached artwork, and download cover art from RomM. Useful for pre-caching
+artwork or updating your library after adding new games.
 
 **Unzip Downloads** - When enabled, Grout automatically extracts zipped ROMs after downloading. The zip file is deleted
 after extraction. Useful if you prefer keeping ROMs uncompressed.
 
 **Language** – Grout is localized! Choose between English, Spanish, and French. If you notice an issue with a
-translation or want to help by translating please let us know!
+translation or want to help by translating, please let us know!
 
 **Advanced** - Opens a sub-menu for advanced configuration options. See [Advanced Settings](#advanced-settings) below.
 
@@ -315,7 +324,8 @@ connection or are a completionist with a heavily loaded server, increase this. O
 
 **Log Level** – Set to Debug if you're troubleshooting issues and want detailed logs. Otherwise, Error is fine.
 
-**Clear Cache** - Clears all cached artwork from your device. This will free up storage space but artwork will need to be re-downloaded as you browse. You'll be prompted to confirm before the cache is cleared.
+**Clear Cache** - Clears all cached artwork from your device. This will free up storage space but artwork will need to
+be re-downloaded as you browse. You'll be prompted to confirm before the cache is cleared.
 
 **Info** – View version information, build details, server connection info, and the GitHub repository QR code.
 
@@ -357,7 +367,7 @@ For each save file found on your device, Grout determines what action to take:
 
 **When both exist:**
 
-- The newer save (based on last modified time) determines the action
+- The newer save (based on last modified time) determines the action.
 - If the local save is newer, it is uploaded to RomM with the last modified timestamp appended to the filename
 - If the RomM save is newer
     - The current local save is backed up to `.backup/` within the platform's save directory
