@@ -4,13 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number (e.g., v1.2.0)'
+        description: 'Version number (e.g., v1.2.0 or v1.2.0-beta.1)'
         required: true
         type: string
       changelog:
         description: 'Changelog message for this release'
         required: true
         type: string
+      beta:
+        description: 'Beta release (skips pak.json commit, marks as prerelease)'
+        required: false
+        type: boolean
+        default: false
+      branch:
+        description: 'Branch to build from'
+        required: false
+        type: string
+        default: 'main'
 
 permissions:
   contents: write
@@ -21,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ inputs.branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update pak.json files
@@ -49,6 +59,7 @@ jobs:
           fi
 
       - name: Commit pak.json changes
+        if: ${{ inputs.beta == false }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -91,10 +102,15 @@ jobs:
         with:
           tag_name: ${{ inputs.version }}
           name: ${{ inputs.version }}
-          body: ${{ inputs.changelog }}
+          body: |
+            ${{ inputs.beta && '⚠️ **This is a beta release.** It may contain bugs or incomplete features.' || '' }}
+
+            ${{ inputs.changelog }}
+
+            ${{ inputs.beta && format('Built from branch: `{0}`', inputs.branch) || '' }}
           files: |
             build/Grout.pak.zip
             build/Grout.muxapp
             build/Grout-Knulli.zip
           draft: false
-          prerelease: false
+          prerelease: ${{ inputs.beta }}
