@@ -16,3 +16,6 @@
 /app/app
 
 /translations_todo/
+
+go.work
+go.work.sum
