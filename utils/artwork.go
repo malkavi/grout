@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"grout/romm"
+	"image/png"
 	"io"
 	"net/http"
 	"os"
@@ -25,13 +26,22 @@ func GetArtworkCacheDir() string {
 func ClearArtworkCache() error {
 	cacheDir := GetArtworkCacheDir()
 
-	// Check if cache directory exists
 	if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
 		return nil // Nothing to clear
 	}
 
-	// Remove the entire cache directory
 	return os.RemoveAll(cacheDir)
+}
+
+func HasArtworkCache() bool {
+	cacheDir := GetArtworkCacheDir()
+
+	entries, err := os.ReadDir(cacheDir)
+	if err != nil {
+		return false
+	}
+
+	return len(entries) > 0
 }
 
 func GetArtworkCachePath(platformSlug string, romID int) string {
@@ -44,8 +54,52 @@ func ArtworkExists(platformSlug string, romID int) bool {
 	return err == nil
 }
 
-func GetCachedArtworkForRom(rom romm.Rom) string {
-	return GetArtworkCachePath(rom.PlatformSlug, rom.ID)
+func ValidateArtworkCache() {
+	go func() {
+		logger := gaba.GetLogger()
+		cacheDir := GetArtworkCacheDir()
+
+		platformDirs, err := os.ReadDir(cacheDir)
+		if err != nil {
+			return
+		}
+
+		removed := 0
+		for _, platformDir := range platformDirs {
+			if !platformDir.IsDir() {
+				continue
+			}
+
+			platformPath := filepath.Join(cacheDir, platformDir.Name())
+			files, err := os.ReadDir(platformPath)
+			if err != nil {
+				continue
+			}
+
+			for _, file := range files {
+				if file.IsDir() || filepath.Ext(file.Name()) != ".png" {
+					continue
+				}
+
+				path := filepath.Join(platformPath, file.Name())
+				f, err := os.Open(path)
+				if err != nil {
+					continue
+				}
+
+				_, err = png.DecodeConfig(f)
+				f.Close()
+				if err != nil {
+					os.Remove(path)
+					removed++
+				}
+			}
+		}
+
+		if removed > 0 {
+			logger.Debug("Removed corrupted artwork files", "count", removed)
+		}
+	}()
 }
 
 func GetMissingArtwork(roms []romm.Rom) []romm.Rom {
@@ -61,7 +115,6 @@ func GetMissingArtwork(roms []romm.Rom) []romm.Rom {
 	return missing
 }
 
-// CheckRemoteLastModified performs a HEAD request to get the Last-Modified time for a remote artwork URL
 func CheckRemoteLastModified(url string, authHeader string) (time.Time, error) {
 	req, err := http.NewRequest("HEAD", url, nil)
 	if err != nil {
@@ -90,11 +143,9 @@ func CheckRemoteLastModified(url string, authHeader string) (time.Time, error) {
 	return http.ParseTime(lastModified)
 }
 
-// ArtworkNeedsUpdate checks if artwork needs to be downloaded based on Last-Modified time
 func ArtworkNeedsUpdate(rom romm.Rom, host romm.Host) bool {
 	cachePath := GetArtworkCachePath(rom.PlatformSlug, rom.ID)
 
-	// If artwork doesn't exist locally, it needs to be downloaded
 	localInfo, err := os.Stat(cachePath)
 	if err != nil {
 		return true
@@ -113,11 +164,9 @@ func ArtworkNeedsUpdate(rom romm.Rom, host romm.Host) bool {
 		return false // On error or no Last-Modified header, skip re-download
 	}
 
-	// Re-download if remote is newer than local
 	return remoteModTime.After(localInfo.ModTime())
 }
 
-// GetOutdatedArtwork returns ROMs whose artwork exists but has changed on server
 func GetOutdatedArtwork(roms []romm.Rom, host romm.Host) []romm.Rom {
 	var outdated []romm.Rom
 	for _, rom := range roms {
@@ -202,6 +251,17 @@ func DownloadAndCacheArtwork(rom romm.Rom, host romm.Host) error {
 		return fmt.Errorf("failed to process artwork: %w", err)
 	}
 
+	file, err := os.Open(cachePath)
+	if err != nil {
+		return fmt.Errorf("failed to open processed artwork: %w", err)
+	}
+	_, err = png.DecodeConfig(file)
+	file.Close()
+	if err != nil {
+		os.Remove(cachePath)
+		return fmt.Errorf("processed artwork is not a valid PNG: %w", err)
+	}
+
 	return nil
 }
 
@@ -210,22 +270,12 @@ func SyncArtworkInBackground(host romm.Host, games []romm.Rom) {
 
 	missing := GetMissingArtwork(games)
 	if len(missing) == 0 {
-		logger.Debug("All artwork already cached")
 		return
 	}
 
-	logger.Debug("Starting background artwork sync", "missing", len(missing))
-
-	successful := 0
-	failed := 0
 	for _, rom := range missing {
 		if err := DownloadAndCacheArtwork(rom, host); err != nil {
 			logger.Debug("Failed to download artwork", "rom", rom.Name, "error", err)
-			failed++
-		} else {
-			successful++
 		}
 	}
-
-	logger.Debug("Background artwork sync complete", "successful", successful, "failed", failed)
 }

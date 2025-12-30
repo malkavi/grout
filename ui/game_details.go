@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,9 +27,10 @@ type GameDetailsInput struct {
 }
 
 type GameDetailsOutput struct {
-	DownloadRequested bool
-	Game              romm.Rom
-	Platform          romm.Platform
+	DownloadRequested  bool
+	GameOptionsClicked bool
+	Game               romm.Rom
+	Platform           romm.Platform
 }
 
 type GameDetailsScreen struct{}
@@ -52,9 +52,12 @@ func (s *GameDetailsScreen) Draw(input GameDetailsInput) (ScreenResult[GameDetai
 	options.Sections = sections
 	options.ShowThemeBackground = false
 	options.ShowScrollbar = true
+	options.ActionButton = constants.VirtualButtonX
+	options.EnableAction = true
 
 	result, err := gaba.DetailScreen(input.Game.Name, options, []gaba.FooterHelpItem{
 		{ButtonName: "B", HelpText: i18n.Localize(&goi18n.Message{ID: "button_back", Other: "Back"}, nil)},
+		{ButtonName: "X", HelpText: i18n.Localize(&goi18n.Message{ID: "button_options", Other: "Options"}, nil)},
 		{ButtonName: "A", HelpText: i18n.Localize(&goi18n.Message{ID: "button_download", Other: "Download"}, nil)},
 	})
 
@@ -71,6 +74,11 @@ func (s *GameDetailsScreen) Draw(input GameDetailsInput) (ScreenResult[GameDetai
 		return success(output), nil
 	}
 
+	if result.Action == gaba.DetailActionTriggered {
+		output.GameOptionsClicked = true
+		return withCode(output, groutConstants.ExitCodeGameOptions), nil
+	}
+
 	return back(output), nil
 }
 
@@ -79,26 +87,11 @@ func (s *GameDetailsScreen) buildSections(input GameDetailsInput) []gaba.Section
 	game := input.Game
 	logger := gaba.GetLogger()
 
-	coverImageData := s.fetchCoverImage(input.Host, game)
-	if coverImageData != nil {
-		detailsDir := filepath.Join(utils.TempDir(), "details")
-		tempImagePath := filepath.Join(detailsDir, fmt.Sprintf("grout_cover_%d.jpg", game.ID))
-
-		if err := os.MkdirAll(detailsDir, 0755); err != nil {
-			logger.Warn("Failed to create details directory", "error", err)
-		} else {
-			if err := os.Chmod(detailsDir, 0755); err != nil {
-				logger.Warn("Failed to set directory permissions", "error", err)
-			}
-
-			err := os.WriteFile(tempImagePath, coverImageData, 0644)
-			if err == nil {
-				utils.ProcessArtImage(tempImagePath)
-				sections = append(sections, gaba.NewImageSection("", tempImagePath, 640, 480, constants.TextAlignCenter))
-			} else {
-				logger.Warn("Failed to write cover image", "error", err)
-			}
-		}
+	coverImagePath := s.getCoverImagePath(input.Host, game)
+	if coverImagePath != "" {
+		sections = append(sections, gaba.NewImageSection("", coverImagePath, 640, 480, constants.TextAlignCenter))
+	} else {
+		logger.Debug("No cover image available", "game", game.Name)
 	}
 
 	if game.Summary != "" {
@@ -200,18 +193,15 @@ func (s *GameDetailsScreen) buildSections(input GameDetailsInput) []gaba.Section
 	return sections
 }
 
-func (s *GameDetailsScreen) fetchCoverImage(host romm.Host, game romm.Rom) []byte {
+// getCoverImagePath returns the path to the cover image, using cache if available
+func (s *GameDetailsScreen) getCoverImagePath(host romm.Host, game romm.Rom) string {
 	logger := gaba.GetLogger()
 
 	// First, check if artwork is in the cache
 	if utils.ArtworkExists(game.PlatformSlug, game.ID) {
 		cachePath := utils.GetArtworkCachePath(game.PlatformSlug, game.ID)
-		data, err := os.ReadFile(cachePath)
-		if err == nil {
-			logger.Debug("Using cached artwork for game details", "game", game.Name)
-			return data
-		}
-		logger.Debug("Failed to read cached artwork, will fetch from server", "error", err)
+		logger.Debug("Using cached artwork for game details", "game", game.Name)
+		return cachePath
 	}
 
 	// Not in cache, fetch from server
@@ -223,24 +213,24 @@ func (s *GameDetailsScreen) fetchCoverImage(host romm.Host, game romm.Rom) []byt
 	} else if game.URLCover != "" {
 		coverPath = game.URLCover
 	} else {
-		return nil
+		return ""
 	}
 
 	coverURL := host.URL() + coverPath
 	imageData := s.fetchImageFromURL(host, coverURL)
 
-	// Cache the artwork for future use
+	// Cache the artwork for future use and return cache path
 	if imageData != nil {
 		if err := utils.EnsureArtworkCacheDir(game.PlatformSlug); err == nil {
 			cachePath := utils.GetArtworkCachePath(game.PlatformSlug, game.ID)
 			if err := os.WriteFile(cachePath, imageData, 0644); err == nil {
 				utils.ProcessArtImage(cachePath)
-				logger.Debug("Cached artwork from game details", "game", game.Name)
+				return cachePath
 			}
 		}
 	}
 
-	return imageData
+	return ""
 }
 
 func (s *GameDetailsScreen) fetchImageFromURL(host romm.Host, imageURL string) []byte {

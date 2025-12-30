@@ -49,38 +49,87 @@ func (s *CollectionPlatformSelectionScreen) Draw(input CollectionPlatformSelecti
 	if len(input.CachedGames) > 0 {
 		allGames = input.CachedGames
 	} else {
-		var loadErr error
-		_, err := gaba.ProcessMessage(
-			i18n.Localize(&goi18n.Message{ID: "games_list_loading", Other: "Loading {{.Name}}..."}, map[string]interface{}{"Name": input.Collection.Name}),
-			gaba.ProcessMessageOptions{ShowThemeBackground: true},
-			func() (interface{}, error) {
-				rc := utils.GetRommClient(input.Host)
-				opt := romm.GetRomsQuery{
-					Limit: 10000,
-				}
+		// Build query for cache key and freshness check
+		cacheKey := utils.GetCollectionCacheKey(input.Collection)
+		opt := romm.GetRomsQuery{
+			Limit: 10000,
+		}
 
-				// Use appropriate ID based on collection type
-				if input.Collection.IsVirtual {
-					opt.VirtualCollectionID = input.Collection.VirtualID
-				} else if input.Collection.IsSmart {
-					opt.SmartCollectionID = input.Collection.ID
-				} else {
-					opt.CollectionID = input.Collection.ID
-				}
+		// Use appropriate ID based on collection type
+		if input.Collection.IsVirtual {
+			opt.VirtualCollectionID = input.Collection.VirtualID
+		} else if input.Collection.IsSmart {
+			opt.SmartCollectionID = input.Collection.ID
+		} else {
+			opt.CollectionID = input.Collection.ID
+		}
 
-				res, err := rc.GetRoms(opt)
-				if err != nil {
-					logger.Error("Error downloading game list", "error", err)
-					loadErr = err
-					return nil, err
+		// Check if a prefetch is in progress for this collection
+		loadedFromCache := false
+		if cr := utils.GetCacheRefresh(); cr != nil {
+			if cr.IsPrefetchInProgress(cacheKey) {
+				logger.Debug("Waiting for collection prefetch to complete", "key", cacheKey)
+				// Show a loading message while waiting
+				gaba.ProcessMessage(
+					i18n.Localize(&goi18n.Message{ID: "games_list_loading", Other: "Loading {{.Name}}..."}, map[string]interface{}{"Name": input.Collection.Name}),
+					gaba.ProcessMessageOptions{ShowThemeBackground: true},
+					func() (interface{}, error) {
+						cr.WaitForPrefetch(cacheKey)
+						return nil, nil
+					},
+				)
+				// After prefetch completes, load from cache
+				cached, err := utils.LoadCachedGames(cacheKey)
+				if err == nil {
+					logger.Debug("Loaded collection from prefetch cache", "key", cacheKey, "count", len(cached))
+					allGames = cached
+					loadedFromCache = true
 				}
-				allGames = res.Items
-				return nil, nil
-			},
-		)
+			}
+		}
 
-		if err != nil || loadErr != nil {
-			return withCode(output, gaba.ExitCodeError), err
+		// Check if cache is fresh (skip loading screen if so)
+		if !loadedFromCache {
+			isFresh, _ := utils.CheckCacheFreshness(input.Host, input.Config, cacheKey, opt)
+			if isFresh {
+				cached, err := utils.LoadCachedGames(cacheKey)
+				if err == nil {
+					logger.Debug("Loaded collection games from cache (no loading screen)", "key", cacheKey, "count", len(cached))
+					allGames = cached
+					loadedFromCache = true
+				}
+			}
+		}
+
+		// If we didn't load from cache, fetch from API with loading screen
+		if !loadedFromCache {
+			var loadErr error
+			_, err := gaba.ProcessMessage(
+				i18n.Localize(&goi18n.Message{ID: "games_list_loading", Other: "Loading {{.Name}}..."}, map[string]interface{}{"Name": input.Collection.Name}),
+				gaba.ProcessMessageOptions{ShowThemeBackground: true},
+				func() (interface{}, error) {
+					// Fetch from API
+					rc := utils.GetRommClient(input.Host)
+					res, err := rc.GetRoms(opt)
+					if err != nil {
+						logger.Error("Error downloading game list", "error", err)
+						loadErr = err
+						return nil, err
+					}
+					allGames = res.Items
+
+					// Save to cache
+					if err := utils.SaveGamesToCache(cacheKey, allGames); err != nil {
+						logger.Debug("Failed to save games to cache", "error", err)
+					}
+
+					return nil, nil
+				},
+			)
+
+			if err != nil || loadErr != nil {
+				return withCode(output, gaba.ExitCodeError), err
+			}
 		}
 	}
 
@@ -114,7 +163,7 @@ func (s *CollectionPlatformSelectionScreen) Draw(input CollectionPlatformSelecti
 
 	if len(platformMap) == 0 {
 		gaba.ProcessMessage(
-			i18n.Localize(&goi18n.Message{ID: "collection_platform_no_mapped", Other: "No platforms with mapped games in\\n{{.Name}}"}, map[string]interface{}{"Name": input.Collection.Name}),
+			i18n.Localize(&goi18n.Message{ID: "collection_platform_no_mapped", Other: "No platforms with mapped games in\n{{.Name}}"}, map[string]interface{}{"Name": input.Collection.Name}),
 			gaba.ProcessMessageOptions{ShowThemeBackground: true},
 			func() (interface{}, error) {
 				time.Sleep(time.Second * 2)

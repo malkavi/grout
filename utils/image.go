@@ -3,19 +3,15 @@ package utils
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"image/png"
 	"os"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
-	"github.com/yeqown/go-qrcode/v2"
-	"github.com/yeqown/go-qrcode/writer/standard"
+	go_qr "github.com/piglig/go-qr"
 	"golang.org/x/image/draw"
 )
 
 func ProcessArtImage(inputPath string) error {
-	logger := gaba.GetLogger()
-
 	inputFile, err := os.Open(inputPath)
 	if err != nil {
 		return fmt.Errorf("failed to open image: %w", err)
@@ -27,8 +23,6 @@ func ProcessArtImage(inputPath string) error {
 		return fmt.Errorf("failed to decode image: %w", err)
 	}
 	inputFile.Close()
-
-	logger.Debug("Detected image format", "format", format, "path", inputPath)
 
 	windowWidth := int(gaba.GetWindow().GetWidth()) / 2
 	windowHeight := int(gaba.GetWindow().GetHeight()) / 2
@@ -51,8 +45,6 @@ func ProcessArtImage(inputPath string) error {
 
 	var processedImg = img
 	if newWidth != imgWidth || newHeight != imgHeight {
-		logger.Debug("Resizing image", "from", fmt.Sprintf("%dx%d", imgWidth, imgHeight), "to", fmt.Sprintf("%dx%d", newWidth, newHeight))
-
 		dst := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
 
 		draw.BiLinear.Scale(dst, dst.Bounds(), img, img.Bounds(), draw.Over, nil)
@@ -60,8 +52,6 @@ func ProcessArtImage(inputPath string) error {
 	}
 
 	if format != "png" || processedImg != img {
-		logger.Debug("Converting/saving image as PNG", "original_format", format)
-
 		outputFile, err := os.Create(inputPath)
 		if err != nil {
 			return fmt.Errorf("failed to create output file: %w", err)
@@ -77,7 +67,7 @@ func ProcessArtImage(inputPath string) error {
 }
 
 func CreateTempQRCode(content string, size int) (string, error) {
-	qr, err := qrcode.New(content)
+	qr, err := go_qr.EncodeText(content, go_qr.Low)
 	if err != nil {
 		return "", err
 	}
@@ -86,16 +76,10 @@ func CreateTempQRCode(content string, size int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer tempFile.Close()
+	tempFile.Close()
 
-	w := standard.NewWithWriter(tempFile,
-		standard.WithQRWidth(uint8(size/10)),
-		standard.WithBgColor(color.Black),
-		standard.WithFgColor(color.White),
-		standard.WithBorderWidth(0),
-	)
-
-	if err := qr.Save(w); err != nil {
+	config := go_qr.NewQrCodeImgConfig(size/10, 0)
+	if err := qr.PNG(config, tempFile.Name()); err != nil {
 		return "", err
 	}
 
