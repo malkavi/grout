@@ -79,7 +79,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Package
-        run: task build extract package-next package-muos package-knulli
+        run: task build extract package-next package-muos package-knulli package-spruce
 
       - name: Create NextUI distribution
         run: |
@@ -97,6 +97,12 @@ jobs:
           cd build/Knulli
           zip -r ../Grout-Knulli.zip Grout
 
+      - name: Create spruce distribution
+        run: |
+          cd build/Spruce
+          zip -r Grout.spruce Grout
+          mv Grout.spruce ../Grout.spruce
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -111,6 +117,7 @@ jobs:
           files: |
             build/Grout.pak.zip
             build/Grout.muxapp
+            build/Grout.spruce.zip
             build/Grout-Knulli.zip
             build/grout
           draft: false

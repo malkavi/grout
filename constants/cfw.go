@@ -6,6 +6,7 @@ const (
 	NextUI CFW = "NEXTUI"
 	MuOS   CFW = "MUOS"
 	Knulli CFW = "KNULLI"
+	Spruce CFW = "SPRUCE"
 )
 
 const MuOSSD1 = "/mnt/mmc"
@@ -21,6 +22,10 @@ var MuOSPlatforms = mustLoadJSONMap[string, []string]("cfw/muos/platforms.json")
 var MuOSSaveDirectories = mustLoadJSONMap[string, []string]("cfw/muos/save_directories.json")
 
 var MuOSArtDirectory = mustLoadJSONMap[string, string]("cfw/muos/art_directories.json")
+
+var SprucePlatforms = mustLoadJSONMap[string, []string]("cfw/spruce/platforms.json")
+
+var SpruceSaveDirectories = mustLoadJSONMap[string, []string]("cfw/spruce/save_directories.json")
 
 var KnulliPlatforms = mustLoadJSONMap[string, []string]("cfw/knulli/platforms.json")
 

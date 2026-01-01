@@ -15,11 +15,11 @@ func GetCFW() constants.CFW {
 	cfw := constants.CFW(cfwEnv)
 
 	switch cfw {
-	case constants.MuOS, constants.NextUI, constants.Knulli:
+	case constants.MuOS, constants.NextUI, constants.Knulli, constants.Spruce:
 		return cfw
 	default:
 		LogStandardFatal(
-			fmt.Sprintf("Unsupported CFW: '%s'. Valid options: NextUI, muOS, Knulli", cfwEnv),
+			fmt.Sprintf("Unsupported CFW: '%s'. Valid options: NextUI, muOS, Knulli, Spruce", cfwEnv),
 			nil,
 		)
 		return ""
@@ -40,6 +40,8 @@ func GetRomDirectory() string {
 		return filepath.Join(getBasePath(constants.NextUI), "Roms")
 	case constants.Knulli:
 		return filepath.Join(getBasePath(constants.Knulli), "roms")
+	case constants.Spruce:
+		return filepath.Join(getBasePath(constants.Spruce), "Roms")
 	}
 
 	return ""
@@ -63,6 +65,9 @@ func GetArtDirectory(config Config, platform romm.Platform) string {
 	case constants.Knulli:
 		romDir := GetPlatformRomDirectory(config, platform)
 		return filepath.Join(romDir, "images")
+	case constants.Spruce:
+		romDir := GetPlatformRomDirectory(config, platform)
+		return filepath.Join(romDir, "Imgs")
 	case constants.MuOS:
 		systemName, exists := constants.MuOSArtDirectory[platform.Slug]
 		if !exists {
@@ -85,6 +90,8 @@ func GetBIOSDirectory() string {
 		return filepath.Join(getBasePath(constants.MuOS), "MUOS", "bios")
 	case constants.Knulli:
 		return filepath.Join(getBasePath(constants.Knulli), "bios")
+	case constants.Spruce:
+		return filepath.Join(getBasePath(constants.Spruce), "BIOS")
 	}
 
 	return ""
@@ -119,6 +126,8 @@ func GetPlatformMap(cfw constants.CFW) map[string][]string {
 		return constants.NextUIPlatforms
 	case constants.Knulli:
 		return constants.KnulliPlatforms
+	case constants.Spruce:
+		return constants.SprucePlatforms
 	default:
 		return nil
 	}
@@ -132,6 +141,8 @@ func EmulatorFolderMap(cfw constants.CFW) map[string][]string {
 		return constants.NextUISaveDirectories
 	case constants.Knulli:
 		return constants.KnulliSaveDirectories
+	case constants.Spruce:
+		return constants.SpruceSaveDirectories
 	default:
 		return nil
 	}
@@ -168,6 +179,8 @@ func RomFolderBase(path string) string {
 		return path
 	case constants.NextUI:
 		return ParseTag(path)
+	case constants.Spruce:
+		return path
 	default:
 		return path
 	}
@@ -202,6 +215,11 @@ func getBasePath(cfw constants.CFW) string {
 		}
 		return "/userdata"
 
+	case constants.Spruce:
+		if os.Getenv("SPRUCE_BASE_PATH") != "" {
+			return os.Getenv("SPRUCE_BASE_PATH")
+		}
+		return "/mnt/SDCARD"
 	default:
 		return ""
 	}
@@ -220,6 +238,8 @@ func BaseSavePath() string {
 		return filepath.Join(getBasePath(cfw), "Saves")
 	case constants.Knulli:
 		return filepath.Join(getBasePath(cfw), "saves")
+	case constants.Spruce:
+		return filepath.Join(getBasePath(cfw), "Saves", "saves")
 	}
 
 	return ""

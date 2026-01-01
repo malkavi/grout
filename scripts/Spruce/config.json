@@ -1,0 +1,7 @@
+{
+  "label": "Grout",
+  "icon": "/mnt/SDCARD/App/Grout/grout.png",
+  "launch": "launch.sh",
+  "description": "A RomM client for NextUI, muOS, spruce and knulli",
+  "devices": ["MIYOO_A30", "TRIMUI_BRICK", "TRIMUI_SMART_PRO_S", "TRIMUI_SMART_PRO","MIYOO_FLIP"]
+}

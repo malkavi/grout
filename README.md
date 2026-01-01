@@ -6,7 +6,7 @@
   <br />
   <img src=".github/resources/logotipo.png" height="45px" width="auto" alt="romm grout logotype">
     <h3 style="font-size: 25px;">
-A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.org">Knulli</a>, and <a href="https://nextui.loveretro.games">NextUI</a>.
+A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.org">Knulli</a>, <a href="https://spruceui.github.io/">Spruce (v4/nightlies)</a> and <a href="https://nextui.loveretro.games">NextUI</a>.
     </h3>
 
 <br>
@@ -39,6 +39,7 @@ Choose your platform and follow the installation guide:
 
 - [muOS Installation](docs/INSTALL_MUOS.md)
 - [Knulli Installation](docs/INSTALL_KNULLI.md)
+- [Spruce Installation](docs/INSTALL_SPRUCE.md)
 - [NextUI Installation](docs/INSTALL_NEXTUI.md)
 
 ---

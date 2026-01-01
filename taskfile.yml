@@ -24,6 +24,7 @@ tasks:
       - task: package-next
       - task: package-muos
       - task: package-knulli
+      - task: package-spruce
 
   all-local:
     desc: Build (with local gabagool via go work) and package for all platforms
@@ -34,6 +35,7 @@ tasks:
       - task: package-muos
       - task: muxapp
       - task: package-knulli
+      - task: package-spruce
 
   extract:
     desc: Extract binary and libraries from Docker image
@@ -71,6 +73,16 @@ tasks:
       - mkdir -p build/Knulli/Grout/lib
       - cp build/grout scripts/Knulli/Grout.sh README.md LICENSE build/Knulli/Grout
       - cp -R build/lib/* build/Knulli/Grout/lib/
+    silent: true
+
+  package-spruce:
+    desc: Package for Spruce
+    cmds:
+      - rm -rf build/Spruce || true
+      - mkdir -p build/Spruce/Grout/grout/lib
+      - cp scripts/Spruce/* README.md LICENSE build/Spruce/Grout
+      - cp build/grout build/Spruce/Grout/grout
+      - cp -R build/lib/* build/Spruce/Grout/grout/lib/
     silent: true
 
   muxapp:
