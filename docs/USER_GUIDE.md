@@ -367,7 +367,8 @@ slow connections. Options range from 15 to 120 minutes.
 connection or are a completionist with a heavily loaded server, increase this. Options range from 15 to 300 seconds.
 
 **Kid Mode** – Hides some of the more advanced settings. When enabled, kid mode will hide the settings screen, BIOS
-screen, and game option screen. You can turn this off on a per-session basis by pressing `L1`, `R1` and `Menu` during the
+screen, and game option screen. You can turn this off on a per-session basis by pressing `L1`, `R1` and `Menu` during
+the
 Grout splash screen. To turn off permanently, return to this menu.
 
 **Log Level** – Set to Debug if you're troubleshooting issues and want detailed logs. Otherwise, Error is fine.
@@ -379,9 +380,6 @@ Use `Left/Right` to cycle through options. Press `Start` to save your changes, o
 ---
 
 ## Save Sync
-
-> [!IMPORTANT]
-> This feature requires RomM v4.5.0 as it relies on an endpoint released in this version.
 
 Save Sync keeps your game saves synchronized between your RomM server and your handheld device.
 
@@ -399,11 +397,9 @@ Grout offers two sync modes, configurable in Settings:
 
 - Grout automatically syncs saves in the background when you launch the app
 - A cloud icon appears in the status bar showing sync progress:
-    - **Cloud with arrow** – Sync in progress
+    - **Cloud with up arrow** – Upload in progress
+    - **Cloud with down arrow** - Download in progress
     - **Cloud with checkmark** – Sync completed successfully
-    - **Cloud with exclamation** – Issues detected during sync
-- If issues are detected, the `Y` button prompt appears so you can access manual sync to review and resolve problems
-- The status icon disappears after a few seconds once sync completes successfully
 
 ### How It Works
 
@@ -416,15 +412,15 @@ When you run Save Sync, Grout:
 
 ### Sync Logic
 
-For each save file found on your device, Grout determines what action to take:
+For each mapped ROM file found on your device, Grout determines what action to take:
 
 **When RomM has no save:**
 
-- Your local save is uploaded to RomM (with timestamp appended to filename)
+- Your local save, if present, is uploaded to RomM (with timestamp appended to filename)
 
 **When you have no local save:**
 
-- RomM's save is downloaded to your device
+- RomM's save, if present, is downloaded to your device
 
 **When both exist:**
 
@@ -455,8 +451,6 @@ After syncing, you'll see a summary showing:
 - **Save states conflict:** If you use save states with autoload enabled, disable autoload or delete the state after
   downloading a save, otherwise the emulator will load the state instead
 - **User-specific:** Saves are tied to your RomM user account – keep this in mind if you share your RomM account
-- **Backup protection:** When a save is downloaded from RomM, the current save is backed up with a timestamp appended to
-  the filename to aid in recovery
 
 ---
 
