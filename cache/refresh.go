@@ -67,8 +67,6 @@ func (c *Refresh) run(platforms []romm.Platform) {
 		close(c.done)
 	}()
 
-	logger.Debug("Refresh: Starting background cache validation and prefetch")
-
 	var wg sync.WaitGroup
 
 	for _, platform := range platforms {
@@ -109,7 +107,7 @@ func (c *Refresh) validateAndPrefetchPlatform(platform romm.Platform) {
 	isFresh, err := checkCacheFreshnessInternal(c.host, c.config, cacheKey, query)
 
 	if err != nil {
-		logger.Debug("Refresh: Failed to validate cache", "platform", platform.Name, "error", err)
+		logger.Error("Refresh: Failed to validate cache", "platform", platform.Name, "error", err)
 		c.freshnessMu.Lock()
 		c.freshnessCache[cacheKey] = false
 		c.freshnessMu.Unlock()
@@ -144,20 +142,17 @@ func (c *Refresh) prefetchPlatform(platform romm.Platform, cacheKey string) {
 		c.prefetchMu.Unlock()
 	}()
 
-	logger.Debug("Refresh: Prefetching platform", "platform", platform.Name)
-
 	games, err := c.fetchPlatformGames(platform.ID)
 	if err != nil {
-		logger.Debug("Refresh: Failed to prefetch platform", "platform", platform.Name, "error", err)
+		logger.Error("Refresh: Failed to prefetch platform", "platform", platform.Name, "error", err)
 		return
 	}
 
 	if err := SaveGamesToCache(cacheKey, games); err != nil {
-		logger.Debug("Refresh: Failed to save prefetched games", "platform", platform.Name, "error", err)
+		logger.Error("Refresh: Failed to save prefetched games", "platform", platform.Name, "error", err)
 		return
 	}
 
-	logger.Debug("Refresh: Prefetched platform", "platform", platform.Name, "games", len(games))
 }
 
 func (c *Refresh) fetchPlatformGames(platformID int) ([]romm.Rom, error) {
@@ -205,7 +200,7 @@ func (c *Refresh) fetchAndPrefetchCollections() {
 			defer wg.Done()
 			collections, err := rc.GetCollections()
 			if err != nil {
-				logger.Debug("Refresh: Failed to fetch regular collections", "error", err)
+				logger.Error("Refresh: Failed to fetch regular collections", "error", err)
 				return
 			}
 			mu.Lock()
@@ -220,7 +215,7 @@ func (c *Refresh) fetchAndPrefetchCollections() {
 			defer wg.Done()
 			collections, err := rc.GetSmartCollections()
 			if err != nil {
-				logger.Debug("Refresh: Failed to fetch smart collections", "error", err)
+				logger.Error("Refresh: Failed to fetch smart collections", "error", err)
 				return
 			}
 			for i := range collections {
@@ -238,7 +233,7 @@ func (c *Refresh) fetchAndPrefetchCollections() {
 			defer wg.Done()
 			virtualCollections, err := rc.GetVirtualCollections()
 			if err != nil {
-				logger.Debug("Refresh: Failed to fetch virtual collections", "error", err)
+				logger.Error("Refresh: Failed to fetch virtual collections", "error", err)
 				return
 			}
 			mu.Lock()
@@ -254,8 +249,6 @@ func (c *Refresh) fetchAndPrefetchCollections() {
 	c.collectionsMu.Lock()
 	c.collections = allCollections
 	c.collectionsMu.Unlock()
-
-	logger.Debug("Refresh: Fetched collections", "count", len(allCollections))
 
 	var prefetchWg sync.WaitGroup
 	for _, collection := range allCollections {
@@ -274,21 +267,19 @@ func (c *Refresh) validateAndPrefetchCollection(collection romm.Collection) {
 
 	metadata, err := loadMetadata()
 	if err != nil {
-		logger.Debug("Refresh: Failed to load metadata for collection", "collection", collection.Name, "error", err)
+		logger.Error("Refresh: Failed to load metadata for collection", "collection", collection.Name, "error", err)
 		c.prefetchCollection(collection, cacheKey)
 		return
 	}
 
 	entry, exists := metadata.Entries[cacheKey]
 	if !exists {
-		logger.Debug("Refresh: No cache entry for collection, prefetching", "collection", collection.Name)
 		c.prefetchCollection(collection, cacheKey)
 		return
 	}
 
 	cachePath := getCacheFilePath(cacheKey)
 	if !fileutil.FileExists(cachePath) {
-		logger.Debug("Refresh: Cache file missing for collection, prefetching", "collection", collection.Name)
 		c.prefetchCollection(collection, cacheKey)
 		return
 	}
@@ -301,17 +292,12 @@ func (c *Refresh) validateAndPrefetchCollection(collection romm.Collection) {
 		c.freshnessMu.Unlock()
 		if !isFresh {
 			c.prefetchCollection(collection, cacheKey)
-		} else {
-			logger.Debug("Refresh: Virtual collection cache is fresh", "collection", collection.Name)
 		}
+
 		return
 	}
 
 	if collection.UpdatedAt.After(entry.LastUpdatedAt) {
-		logger.Debug("Refresh: Collection updated since cache, prefetching",
-			"collection", collection.Name,
-			"cached_at", entry.LastUpdatedAt,
-			"updated_at", collection.UpdatedAt)
 		c.freshnessMu.Lock()
 		c.freshnessCache[cacheKey] = false
 		c.freshnessMu.Unlock()
@@ -319,7 +305,6 @@ func (c *Refresh) validateAndPrefetchCollection(collection romm.Collection) {
 		return
 	}
 
-	logger.Debug("Refresh: Collection cache is fresh", "collection", collection.Name)
 	c.freshnessMu.Lock()
 	c.freshnessCache[cacheKey] = true
 	c.freshnessMu.Unlock()
@@ -341,16 +326,14 @@ func (c *Refresh) prefetchCollection(collection romm.Collection, cacheKey string
 		c.prefetchMu.Unlock()
 	}()
 
-	logger.Debug("Refresh: Prefetching collection", "collection", collection.Name)
-
 	games, err := c.fetchCollectionGames(collection)
 	if err != nil {
-		logger.Debug("Refresh: Failed to prefetch collection", "collection", collection.Name, "error", err)
+		logger.Error("Refresh: Failed to prefetch collection", "collection", collection.Name, "error", err)
 		return
 	}
 
 	if err := saveCollectionToCache(cacheKey, games, collection.UpdatedAt); err != nil {
-		logger.Debug("Refresh: Failed to save prefetched collection", "collection", collection.Name, "error", err)
+		logger.Error("Refresh: Failed to save prefetched collection", "collection", collection.Name, "error", err)
 		return
 	}
 
@@ -358,7 +341,6 @@ func (c *Refresh) prefetchCollection(collection romm.Collection, cacheKey string
 	c.freshnessCache[cacheKey] = true
 	c.freshnessMu.Unlock()
 
-	logger.Debug("Refresh: Prefetched collection", "collection", collection.Name, "games", len(games))
 }
 
 func (c *Refresh) fetchCollectionGames(collection romm.Collection) ([]romm.Rom, error) {
@@ -403,12 +385,11 @@ func (c *Refresh) fetchBIOSAvailability(platform romm.Platform) {
 
 	c.biosMu.Lock()
 	if err != nil {
-		logger.Debug("Refresh: Failed to fetch BIOS info", "platform", platform.Name, "error", err)
+		logger.Error("Refresh: Failed to fetch BIOS info", "platform", platform.Name, "error", err)
 		c.biosCache[platform.ID] = false
 	} else {
 		hasBIOS := len(firmware) > 0
 		c.biosCache[platform.ID] = hasBIOS
-		logger.Debug("Refresh: Fetched BIOS info", "platform", platform.Name, "hasBIOS", hasBIOS)
 	}
 	c.biosMu.Unlock()
 }

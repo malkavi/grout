@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
 
 type CFW string
@@ -178,11 +176,9 @@ func getBasePath(cfw CFW) string {
 		// Hack to see if there is actually content
 		sd2InfoDir := filepath.Join(sd2, "MUOS", "info")
 		if fileutil.FileExists(sd2InfoDir) {
-			gaba.GetLogger().Debug("Using MUOS Base Path", "path", sd2)
 			return sd2
 		}
 
-		gaba.GetLogger().Debug("Using MUOS Base Path", "path", sd1)
 		return sd1
 
 	case NextUI:

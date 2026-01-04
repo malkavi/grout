@@ -163,7 +163,6 @@ func checkCacheFreshnessInternal(host romm.Host, config Config, cacheKey string,
 	if len(res.Items) == 0 {
 		cached, err := LoadCachedGames(cacheKey)
 		if err == nil && len(cached) == 0 {
-			logger.Debug("Cache is fresh (empty collection)", "key", cacheKey)
 			return true, nil
 		}
 		return false, nil
