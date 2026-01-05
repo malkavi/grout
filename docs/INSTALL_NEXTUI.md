@@ -42,8 +42,10 @@ You can install Grout using one of these two methods:
 3. Select Grout and update.
 4. Launch Grout from the `Tools` menu and enjoy the latest version!
 
-
 ### Manual update
+To update Grout, simply download the latest release and replace the existing Grout folder in your `SD_ROOT/Tools/tg5040` directory. If you
+have made any custom configurations, ensure to back them up before replacing the folder. Be sure to keep the `config.json`
+file if you do not want to authenticate again, and configure platforms folder mappings again.
 
 ## Next Steps
 
