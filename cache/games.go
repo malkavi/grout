@@ -11,7 +11,6 @@ import (
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
 
-// Cache key types (kept for compatibility)
 type Type string
 
 const (
@@ -21,17 +20,14 @@ const (
 	VirtualCollection Type = "virtual_collection"
 )
 
-// GetCacheKey generates a cache key (kept for compatibility with existing code)
 func GetCacheKey(cacheType Type, id string) string {
 	return string(cacheType) + "_" + id
 }
 
-// GetPlatformCacheKey generates a platform cache key
 func GetPlatformCacheKey(platformID int) string {
 	return GetCacheKey(Platform, strconv.Itoa(platformID))
 }
 
-// GetCollectionCacheKey generates a collection cache key
 func GetCollectionCacheKey(collection romm.Collection) string {
 	if collection.IsVirtual {
 		return GetCacheKey(VirtualCollection, collection.VirtualID)
@@ -42,8 +38,7 @@ func GetCollectionCacheKey(collection romm.Collection) string {
 	return GetCacheKey(Collection, strconv.Itoa(collection.ID))
 }
 
-// GetPlatformGames retrieves all games for a platform from cache
-func (cm *CacheManager) GetPlatformGames(platformID int) ([]romm.Rom, error) {
+func (cm *Manager) GetPlatformGames(platformID int) ([]romm.Rom, error) {
 	if cm == nil || !cm.initialized {
 		return nil, ErrNotInitialized
 	}
@@ -90,8 +85,7 @@ func (cm *CacheManager) GetPlatformGames(platformID int) ([]romm.Rom, error) {
 	return games, nil
 }
 
-// SavePlatformGames saves games for a platform to cache
-func (cm *CacheManager) SavePlatformGames(platformID int, games []romm.Rom) error {
+func (cm *Manager) SavePlatformGames(platformID int, games []romm.Rom) error {
 	if cm == nil || !cm.initialized {
 		return ErrNotInitialized
 	}
@@ -107,15 +101,14 @@ func (cm *CacheManager) SavePlatformGames(platformID int, games []romm.Rom) erro
 	}
 	defer tx.Rollback()
 
-	// Delete existing games for this platform
 	_, err = tx.Exec(`DELETE FROM games WHERE platform_id = ?`, platformID)
 	if err != nil {
 		return newCacheError("save", "games", GetPlatformCacheKey(platformID), err)
 	}
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO games (id, platform_id, platform_fs_slug, name, fs_name, data_json, updated_at, cached_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO games (id, platform_id, platform_fs_slug, name, fs_name, fs_name_no_ext, crc_hash, md5_hash, sha1_hash, data_json, updated_at, cached_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return newCacheError("save", "games", GetPlatformCacheKey(platformID), err)
@@ -135,6 +128,10 @@ func (cm *CacheManager) SavePlatformGames(platformID int, games []romm.Rom) erro
 			game.PlatformFSSlug,
 			game.Name,
 			game.FsName,
+			game.FsNameNoExt,
+			game.CrcHash,
+			game.Md5Hash,
+			game.Sha1Hash,
 			string(dataJSON),
 			game.UpdatedAt,
 			now,
@@ -152,8 +149,7 @@ func (cm *CacheManager) SavePlatformGames(platformID int, games []romm.Rom) erro
 	return nil
 }
 
-// GetCollectionGames retrieves all games for a collection from cache
-func (cm *CacheManager) GetCollectionGames(collection romm.Collection) ([]romm.Rom, error) {
+func (cm *Manager) GetCollectionGames(collection romm.Collection) ([]romm.Rom, error) {
 	if cm == nil || !cm.initialized {
 		return nil, ErrNotInitialized
 	}
@@ -161,7 +157,6 @@ func (cm *CacheManager) GetCollectionGames(collection romm.Collection) ([]romm.R
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 
-	// Get the collection's internal ID
 	collectionID, err := cm.getCollectionInternalID(collection)
 	if err != nil {
 		return nil, err
@@ -209,9 +204,7 @@ func (cm *CacheManager) GetCollectionGames(collection romm.Collection) ([]romm.R
 	return games, nil
 }
 
-// SaveCollectionGames saves game-collection mappings to cache
-// Games should already exist from platform fetching; this only creates the mappings
-func (cm *CacheManager) SaveCollectionGames(collection romm.Collection, games []romm.Rom) error {
+func (cm *Manager) SaveCollectionGames(collection romm.Collection, games []romm.Rom) error {
 	if cm == nil || !cm.initialized {
 		return ErrNotInitialized
 	}
@@ -277,8 +270,7 @@ func (cm *CacheManager) SaveCollectionGames(collection romm.Collection, games []
 	return nil
 }
 
-// getCollectionInternalIDLocked gets collection ID without acquiring lock (caller must hold lock)
-func (cm *CacheManager) getCollectionInternalIDLocked(collection romm.Collection) (int64, error) {
+func (cm *Manager) getCollectionInternalID(collection romm.Collection) (int64, error) {
 	var id int64
 	var err error
 
@@ -304,9 +296,11 @@ func (cm *CacheManager) getCollectionInternalIDLocked(collection romm.Collection
 	return id, nil
 }
 
-// SaveAllCollectionMappings saves all game-collection mappings in a single transaction
-// Uses ROMIDs from the collection response - no additional API calls needed
-func (cm *CacheManager) SaveAllCollectionMappings(collections []romm.Collection) error {
+func (cm *Manager) getCollectionInternalIDLocked(collection romm.Collection) (int64, error) {
+	return cm.getCollectionInternalID(collection)
+}
+
+func (cm *Manager) SaveAllCollectionMappings(collections []romm.Collection) error {
 	if cm == nil || !cm.initialized {
 		return ErrNotInitialized
 	}
@@ -402,8 +396,7 @@ func (cm *CacheManager) SaveAllCollectionMappings(collections []romm.Collection)
 	return nil
 }
 
-// GetGamesByIDs retrieves multiple games by their IDs efficiently
-func (cm *CacheManager) GetGamesByIDs(gameIDs []int) ([]romm.Rom, error) {
+func (cm *Manager) GetGamesByIDs(gameIDs []int) ([]romm.Rom, error) {
 	if cm == nil || !cm.initialized {
 		return nil, ErrNotInitialized
 	}
@@ -462,55 +455,7 @@ func (cm *CacheManager) GetGamesByIDs(gameIDs []int) ([]romm.Rom, error) {
 	return games, nil
 }
 
-// GetGameByID retrieves a single game by ID
-func (cm *CacheManager) GetGameByID(gameID int) (romm.Rom, error) {
-	if cm == nil || !cm.initialized {
-		return romm.Rom{}, ErrNotInitialized
-	}
-
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-
-	var dataJSON string
-	err := cm.db.QueryRow(`
-		SELECT data_json FROM games WHERE id = ?
-	`, gameID).Scan(&dataJSON)
-
-	if err == sql.ErrNoRows {
-		cm.stats.recordMiss()
-		return romm.Rom{}, ErrCacheMiss
-	}
-	if err != nil {
-		cm.stats.recordError()
-		return romm.Rom{}, newCacheError("get", "games", strconv.Itoa(gameID), err)
-	}
-
-	var game romm.Rom
-	if err := json.Unmarshal([]byte(dataJSON), &game); err != nil {
-		cm.stats.recordError()
-		return romm.Rom{}, newCacheError("get", "games", strconv.Itoa(gameID), err)
-	}
-
-	cm.stats.recordHit()
-	return game, nil
-}
-
-// HasPlatformGames checks if games are cached for a platform
-func (cm *CacheManager) HasPlatformGames(platformID int) bool {
-	if cm == nil || !cm.initialized {
-		return false
-	}
-
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-
-	var count int
-	err := cm.db.QueryRow(`SELECT COUNT(*) FROM games WHERE platform_id = ?`, platformID).Scan(&count)
-	return err == nil && count > 0
-}
-
-// GetCachedGameIDs returns a map of all game IDs in the cache for fast lookup
-func (cm *CacheManager) GetCachedGameIDs() map[int]bool {
+func (cm *Manager) GetCachedGameIDs() map[int]bool {
 	if cm == nil || !cm.initialized {
 		return nil
 	}
@@ -533,55 +478,4 @@ func (cm *CacheManager) GetCachedGameIDs() map[int]bool {
 	}
 
 	return gameIDs
-}
-
-// Helper function to get collection internal ID
-func (cm *CacheManager) getCollectionInternalID(collection romm.Collection) (int64, error) {
-	var id int64
-	var err error
-
-	if collection.IsVirtual {
-		err = cm.db.QueryRow(`SELECT id FROM collections WHERE virtual_id = ?`, collection.VirtualID).Scan(&id)
-	} else {
-		collType := "regular"
-		if collection.IsSmart {
-			collType = "smart"
-		}
-		err = cm.db.QueryRow(`SELECT id FROM collections WHERE romm_id = ? AND type = ?`, collection.ID, collType).Scan(&id)
-	}
-
-	if err == sql.ErrNoRows {
-		cm.stats.recordMiss()
-		return 0, ErrCacheMiss
-	}
-	if err != nil {
-		cm.stats.recordError()
-		return 0, newCacheError("get", "collections", GetCollectionCacheKey(collection), err)
-	}
-
-	return id, nil
-}
-
-// ClearGamesCache clears the games cache (compatibility wrapper)
-func ClearGamesCache() error {
-	cm := GetCacheManager()
-	if cm == nil {
-		return nil
-	}
-	return cm.ClearGames()
-}
-
-// HasGamesCache checks if games cache has data (compatibility wrapper)
-func HasGamesCache() bool {
-	cm := GetCacheManager()
-	if cm == nil {
-		return false
-	}
-	return cm.HasCache()
-}
-
-// GetGamesCacheDir returns the cache directory (kept for compatibility)
-// Note: This no longer reflects actual storage location but is kept for compatibility
-func GetGamesCacheDir() string {
-	return GetArtworkCacheDir() // Just return something valid
 }

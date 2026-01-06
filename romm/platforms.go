@@ -10,6 +10,7 @@ type Platform struct {
 	Slug                string     `json:"slug"`
 	FSSlug              string     `json:"fs_slug"`
 	Name                string     `json:"name"`
+	ApiName             string     `json:"-"` // Original name from API (not serialized, set by DisambiguatePlatformNames)
 	CustomName          string     `json:"custom_name"`
 	ShortName           string     `json:"short_name"`
 	LogoPath            string     `json:"logo_path"`
@@ -48,10 +49,12 @@ func (c *Client) GetPlatform(id int) (Platform, error) {
 // DisambiguatePlatformNames sets each platform's Name field to its display name
 // (preferring CustomName if set), and appends the FSSlug when multiple platforms
 // share the same display name (e.g., "Arcade" becomes "Arcade (fbneo)")
+// The original API name is preserved in ApiName before modification.
 func DisambiguatePlatformNames(platforms []Platform) {
-	// First pass: set Name to DisplayName and count occurrences
+	// First pass: save original API name, set Name to DisplayName, and count occurrences
 	nameCounts := make(map[string]int)
 	for i := range platforms {
+		platforms[i].ApiName = platforms[i].Name // Preserve original API name
 		platforms[i].Name = platforms[i].DisplayName()
 		nameCounts[platforms[i].Name]++
 	}

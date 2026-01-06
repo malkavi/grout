@@ -5,7 +5,6 @@ import (
 	"fmt"
 )
 
-// Sentinel errors for cache operations
 var (
 	ErrNotInitialized  = errors.New("cache manager not initialized")
 	ErrCacheMiss       = errors.New("cache miss")
@@ -13,15 +12,14 @@ var (
 	ErrInvalidCacheKey = errors.New("invalid cache key")
 )
 
-// CacheError provides detailed error information for cache operations
-type CacheError struct {
+type Error struct {
 	Op        string // Operation name: "get", "save", "delete", etc.
 	Key       string // Cache key if applicable
 	CacheType string // "platform", "collection", "rom_id", "artwork"
 	Err       error  // Underlying error
 }
 
-func (e *CacheError) Error() string {
+func (e *Error) Error() string {
 	if e.Key != "" {
 		return fmt.Sprintf("cache %s [%s:%s]: %v", e.Op, e.CacheType, e.Key, e.Err)
 	}
@@ -31,13 +29,12 @@ func (e *CacheError) Error() string {
 	return fmt.Sprintf("cache %s: %v", e.Op, e.Err)
 }
 
-func (e *CacheError) Unwrap() error {
+func (e *Error) Unwrap() error {
 	return e.Err
 }
 
-// newCacheError creates a new CacheError
-func newCacheError(op, cacheType, key string, err error) *CacheError {
-	return &CacheError{
+func newCacheError(op, cacheType, key string, err error) *Error {
+	return &Error{
 		Op:        op,
 		Key:       key,
 		CacheType: cacheType,

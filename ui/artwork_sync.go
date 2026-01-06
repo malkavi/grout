@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"grout/artwork"
 	"grout/cache"
 	"grout/internal"
 	"grout/internal/imageutil"
@@ -106,7 +105,7 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 				}
 
 				// Get all ROMs with artwork URLs (download everything)
-				withArtwork := artwork.GetWithArtwork(roms)
+				withArtwork := cache.GetRomsWithArtwork(roms)
 				allWithArtwork = append(allWithArtwork, withArtwork...)
 				return nil, nil
 			},
@@ -128,16 +127,16 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 
 	baseURL := input.Host.URL()
 	for _, rom := range allWithArtwork {
-		coverPath := artwork.GetCoverPath(rom)
+		coverPath := cache.GetArtworkCoverPath(rom)
 		if coverPath == "" {
 			continue
 		}
 
 		downloadURL := strings.ReplaceAll(baseURL+coverPath, " ", "%20")
-		cachePath := artwork.GetCachePath(rom.PlatformFSSlug, rom.ID)
+		cachePath := cache.GetArtworkCachePath(rom.PlatformFSSlug, rom.ID)
 
 		// Ensure directory exists
-		artwork.EnsureCacheDir(rom.PlatformFSSlug)
+		cache.EnsureArtworkCacheDir(rom.PlatformFSSlug)
 
 		downloads = append(downloads, gaba.Download{
 			URL:         downloadURL,

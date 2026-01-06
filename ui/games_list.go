@@ -3,7 +3,6 @@ package ui
 import (
 	"errors"
 	"fmt"
-	"grout/artwork"
 	"grout/cache"
 	"grout/constants"
 	"grout/internal"
@@ -75,7 +74,7 @@ func (s *GameListScreen) Draw(input GameListInput) (ScreenResult[GameListOutput]
 		hasBIOS = loaded.hasBIOS
 
 		if input.Config.ShowBoxArt {
-			go artwork.SyncInBackground(input.Host, games)
+			go cache.SyncArtworkInBackground(input.Host, games)
 		}
 	}
 
@@ -173,7 +172,7 @@ func (s *GameListScreen) Draw(input GameListInput) (ScreenResult[GameListOutput]
 	for i, game := range displayGames {
 		imageFilename := ""
 		if input.Config.ShowBoxArt {
-			imageFilename = artwork.GetCachePath(game.PlatformFSSlug, game.ID)
+			imageFilename = cache.GetArtworkCachePath(game.PlatformFSSlug, game.ID)
 		}
 		menuItems[i] = gaba.MenuItem{
 			Text:          game.DisplayName,

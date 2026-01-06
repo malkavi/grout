@@ -144,20 +144,12 @@ other = "Auswählen"
 hash = "sha1-c7f73bb54d928922c3838bb789ee9fb8a5b1eb37"
 other = "Einstellungen"
 
-[cache_artwork]
-hash = "sha1-1cb834b429143507648837792190c647a34f64ab"
-other = "Artwork-Cache"
-
-[cache_artwork_metadata]
-other = "Artwork-Metadaten"
+[cache_collections]
+other = "Sammlungs-Cache"
 
 [cache_games]
 hash = "sha1-1e7dbd606b8bad53986d06fd58c9d73dcad67d64"
 other = "Spiele-Cache"
-
-[clear_cache_title]
-hash = "sha1-522175083f0bf50b4584d1dd8dbed60ae22535be"
-other = "Cache leeren"
 
 [collection_platform_no_mapped]
 hash = "sha1-423fa43d1088dbfa790bd41466ee1193947902cd"
@@ -550,10 +542,6 @@ other = "API-Zeitüberschreitung"
 [settings_box_art]
 hash = "sha1-0eb3d5ab393c2db23feb4e143d5c1987ff52685a"
 other = "Box-Art"
-
-[settings_clear_cache]
-hash = "sha1-522175083f0bf50b4584d1dd8dbed60ae22535be"
-other = "Cache leeren"
 
 [settings_collection_view]
 hash = "sha1-b5c401da5ed3ead09ad836091786ea351f1a4218"

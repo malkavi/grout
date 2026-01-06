@@ -1,15 +1,13 @@
 package cache
 
 import (
-	"database/sql"
 	"encoding/json"
 	"grout/romm"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
 
-// GetCollections retrieves all cached collections
-func (cm *CacheManager) GetCollections() ([]romm.Collection, error) {
+func (cm *Manager) GetCollections() ([]romm.Collection, error) {
 	if cm == nil || !cm.initialized {
 		return nil, ErrNotInitialized
 	}
@@ -56,8 +54,7 @@ func (cm *CacheManager) GetCollections() ([]romm.Collection, error) {
 	return collections, nil
 }
 
-// GetCollectionsByType retrieves collections of a specific type
-func (cm *CacheManager) GetCollectionsByType(collType string) ([]romm.Collection, error) {
+func (cm *Manager) GetCollectionsByType(collType string) ([]romm.Collection, error) {
 	if cm == nil || !cm.initialized {
 		return nil, ErrNotInitialized
 	}
@@ -104,8 +101,7 @@ func (cm *CacheManager) GetCollectionsByType(collType string) ([]romm.Collection
 	return collections, nil
 }
 
-// SaveCollections saves collection metadata to cache
-func (cm *CacheManager) SaveCollections(collections []romm.Collection) error {
+func (cm *Manager) SaveCollections(collections []romm.Collection) error {
 	if cm == nil || !cm.initialized {
 		return ErrNotInitialized
 	}
@@ -175,71 +171,4 @@ func (cm *CacheManager) SaveCollections(collections []romm.Collection) error {
 
 	logger.Debug("Saved collections to cache", "count", len(collections))
 	return nil
-}
-
-// GetCollection retrieves a single collection by its identifier
-func (cm *CacheManager) GetCollection(collection romm.Collection) (romm.Collection, error) {
-	if cm == nil || !cm.initialized {
-		return romm.Collection{}, ErrNotInitialized
-	}
-
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-
-	var dataJSON string
-	var err error
-
-	if collection.IsVirtual {
-		err = cm.db.QueryRow(`
-			SELECT data_json FROM collections WHERE virtual_id = ?
-		`, collection.VirtualID).Scan(&dataJSON)
-	} else {
-		collType := "regular"
-		if collection.IsSmart {
-			collType = "smart"
-		}
-		err = cm.db.QueryRow(`
-			SELECT data_json FROM collections WHERE romm_id = ? AND type = ?
-		`, collection.ID, collType).Scan(&dataJSON)
-	}
-
-	if err == sql.ErrNoRows {
-		cm.stats.recordMiss()
-		return romm.Collection{}, ErrCacheMiss
-	}
-	if err != nil {
-		cm.stats.recordError()
-		return romm.Collection{}, newCacheError("get", "collections", collection.Name, err)
-	}
-
-	var result romm.Collection
-	if err := json.Unmarshal([]byte(dataJSON), &result); err != nil {
-		cm.stats.recordError()
-		return romm.Collection{}, newCacheError("get", "collections", collection.Name, err)
-	}
-
-	cm.stats.recordHit()
-	return result, nil
-}
-
-// HasCollectionGames checks if games are cached for a collection
-func (cm *CacheManager) HasCollectionGames(collection romm.Collection) bool {
-	if cm == nil || !cm.initialized {
-		return false
-	}
-
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-
-	collectionID, err := cm.getCollectionInternalID(collection)
-	if err != nil {
-		return false
-	}
-
-	var count int
-	err = cm.db.QueryRow(`
-		SELECT COUNT(*) FROM game_collections WHERE collection_id = ?
-	`, collectionID).Scan(&count)
-
-	return err == nil && count > 0
 }

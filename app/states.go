@@ -1,7 +1,6 @@
 package main
 
 import (
-	"grout/artwork"
 	"grout/cache"
 	"grout/cfw"
 	"grout/constants"
@@ -44,7 +43,6 @@ const (
 	saveSyncSettings            gaba.StateName = "save_sync_settings"
 	info                        gaba.StateName = "info"
 	logoutConfirmation          gaba.StateName = "logout_confirmation"
-	clearCacheConfirmation      gaba.StateName = "clear_cache_confirmation"
 	refreshCache                gaba.StateName = "refresh_cache"
 	saveSync                    gaba.StateName = "save_sync"
 	biosDownload                gaba.StateName = "bios_download"
@@ -124,12 +122,7 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 	}
 
 	// Validate artwork cache in background
-	go artwork.ValidateCache()
-
-	// Index any existing artwork files
-	if cm := cache.GetCacheManager(); cm != nil {
-		go cm.ScanAndIndexArtwork()
-	}
+	cache.RunArtworkValidation()
 
 	gaba.AddState(fsm, platformSelection, func(ctx *gaba.Context) (ui.PlatformSelectionOutput, gaba.ExitCode) {
 		platforms, _ := gaba.Get[[]romm.Platform](ctx)
@@ -562,6 +555,7 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 		}).
 		On(constants.ExitCodeGeneralSettings, generalSettings).
 		On(constants.ExitCodeCollectionsSettings, collectionsSettings).
+		On(constants.ExitCodeEditMappings, settingsPlatformMapping).
 		On(constants.ExitCodeAdvancedSettings, advancedSettings).
 		On(constants.ExitCodeSaveSyncSettings, saveSyncSettings).
 		On(constants.ExitCodeInfo, info).
@@ -665,7 +659,6 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 	}).
 		On(gaba.ExitCodeSuccess, settings).
 		On(constants.ExitCodeEditMappings, settingsPlatformMapping).
-		On(constants.ExitCodeClearCache, clearCacheConfirmation).
 		On(constants.ExitCodeRefreshCache, refreshCache).
 		On(constants.ExitCodeSyncArtwork, artworkSync).
 		On(gaba.ExitCodeBack, settings)
@@ -744,6 +737,12 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 			config, _ := gaba.Get[*internal.Config](ctx)
 			currentCFW, _ := gaba.Get[cfw.CFW](ctx)
 
+			// Delete the entire cache folder on logout
+			if err := cache.DeleteCacheFolder(); err != nil {
+				gaba.GetLogger().Error("Failed to delete cache folder", "error", err)
+				// Continue with logout even if cache deletion fails
+			}
+
 			config.Hosts = nil
 			config.DirectoryMappings = nil
 			config.PlatformOrder = nil
@@ -787,6 +786,11 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 				}
 			}
 
+			// Re-initialize cache manager for the new host
+			if err := cache.InitCacheManager(config.Hosts[0], config); err != nil {
+				gaba.GetLogger().Error("Failed to initialize cache manager after re-login", "error", err)
+			}
+
 			platforms, err := internal.GetMappedPlatforms(config.Hosts[0], config.DirectoryMappings, config.ApiTimeout)
 			if err != nil {
 				gaba.GetLogger().Error("Failed to load platforms after re-login", "error", err)
@@ -794,44 +798,8 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 			}
 			gaba.Set(ctx, platforms)
 
-			nav, _ := gaba.Get[*NavState](ctx)
-			nav.ResetGameList()
-			nav.PlatformListPos = ListPosition{}
-
-			return nil
-		})
-
-	gaba.AddState(fsm, clearCacheConfirmation, func(ctx *gaba.Context) (ui.ClearCacheOutput, gaba.ExitCode) {
-		screen := ui.NewClearCacheScreen()
-		result, err := screen.Draw()
-
-		if err != nil {
-			return ui.ClearCacheOutput{}, gaba.ExitCodeError
-		}
-
-		return result.Value, result.ExitCode
-	}).
-		On(gaba.ExitCodeBack, advancedSettings).
-		OnWithHook(gaba.ExitCodeSuccess, advancedSettings, func(ctx *gaba.Context) error {
-			logger := gaba.GetLogger()
-
-			// If games cache was cleared, re-fetch platforms and re-populate
-			cm := cache.GetCacheManager()
-			if cm != nil && cm.IsFirstRun() {
-				host, _ := gaba.Get[romm.Host](ctx)
-				config, _ := gaba.Get[*internal.Config](ctx)
-
-				// Fetch fresh platform list from API
-				platforms, err := internal.GetMappedPlatforms(host, config.DirectoryMappings, config.ApiTimeout)
-				if err != nil {
-					logger.Error("Failed to fetch platforms after cache clear", "error", err)
-					return nil // Don't fail, just log
-				}
-
-				// Update platforms in context
-				gaba.Set(ctx, platforms)
-
-				// Re-populate cache with progress
+			// Populate cache for the new login
+			if cm := cache.GetCacheManager(); cm != nil && cm.IsFirstRun() {
 				progress := uatomic.NewFloat64(0)
 				gaba.ProcessMessage(
 					i18n.Localize(&goi18n.Message{ID: "cache_building", Other: "Building cache..."}, nil),
@@ -844,9 +812,11 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 						return nil, cm.PopulateFullCacheWithProgress(platforms, progress)
 					},
 				)
-
-				logger.Info("Cache rebuilt after clear")
 			}
+
+			nav, _ := gaba.Get[*NavState](ctx)
+			nav.ResetGameList()
+			nav.PlatformListPos = ListPosition{}
 
 			return nil
 		})
@@ -876,7 +846,6 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 
 			refreshGames := false
 			refreshCollections := false
-			refreshArtwork := false
 
 			for _, t := range result.SelectedTypes {
 				switch t {
@@ -884,8 +853,6 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 					refreshGames = true
 				case ui.RefreshCacheCollections:
 					refreshCollections = true
-				case ui.RefreshCacheArtwork:
-					refreshArtwork = true
 				}
 			}
 
@@ -898,11 +865,6 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 			if refreshCollections {
 				if err := cm.ClearCollections(); err != nil {
 					logger.Error("Failed to clear collections cache", "error", err)
-				}
-			}
-			if refreshArtwork {
-				if err := cm.ClearArtwork(); err != nil {
-					logger.Error("Failed to clear artwork cache", "error", err)
 				}
 			}
 
@@ -933,36 +895,9 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 				)
 			}
 
-			// If only refreshing artwork, sync it in background
-			if refreshArtwork && !refreshGames && !refreshCollections {
-				platforms, _ := gaba.Get[[]romm.Platform](ctx)
-				go func() {
-					for _, p := range platforms {
-						games, err := cm.GetPlatformGames(p.ID)
-						if err == nil {
-							artwork.SyncInBackground(host, games)
-						}
-					}
-					// Record artwork refresh time after sync completes
-					cm.RecordRefreshTime(cache.MetaKeyArtworkRefreshedAt)
-				}()
-
-				gaba.ProcessMessage(
-					i18n.Localize(&goi18n.Message{ID: "artwork_sync_started", Other: "Artwork sync started in background"}, nil),
-					gaba.ProcessMessageOptions{ShowThemeBackground: true},
-					func() (interface{}, error) {
-						return nil, nil
-					},
-				)
-			} else if refreshArtwork {
-				// Record artwork refresh time (it was cleared and will be re-downloaded on demand)
-				cm.RecordRefreshTime(cache.MetaKeyArtworkRefreshedAt)
-			}
-
 			logger.Info("Cache refresh completed",
 				"games", refreshGames,
-				"collections", refreshCollections,
-				"artwork", refreshArtwork)
+				"collections", refreshCollections)
 			return nil
 		})
 

@@ -5,7 +5,6 @@ import (
 	"grout/cache"
 	"grout/internal"
 	"grout/internal/fileutil"
-	"grout/internal/stringutil"
 	"grout/romm"
 	"os"
 	"path/filepath"
@@ -192,23 +191,14 @@ func (s *SaveSync) upload(host romm.Host, config *internal.Config) (string, erro
 	return s.Local.Path, nil
 }
 
-// lookupRomID looks up a ROM ID by filename, first checking cache then the provided ROM map
-func lookupRomID(romFile *LocalRomFile, romsByFilename map[string]romm.Rom) (int, string) {
+// lookupRomID looks up a ROM ID by filename from the cache
+func lookupRomID(romFile *LocalRomFile) (int, string) {
 	logger := gaba.GetLogger()
 
-	// Check cache first
+	// Look up from the games cache
 	if romID, romName, found := cache.GetCachedRomIDByFilename(romFile.FSSlug, romFile.FileName); found {
 		logger.Debug("ROM lookup from cache", "fsSlug", romFile.FSSlug, "file", romFile.FileName, "romID", romID, "name", romName)
 		return romID, romName
-	}
-
-	// Look up in the ROM map by filename (without extension)
-	key := stringutil.StripExtension(romFile.FileName)
-	if rom, found := romsByFilename[key]; found {
-		// Cache the result for next time
-		cache.StoreRomID(romFile.FSSlug, romFile.FileName, rom.ID, rom.Name)
-		logger.Debug("ROM lookup from RomM", "fsSlug", romFile.FSSlug, "file", romFile.FileName, "romID", rom.ID, "name", rom.Name)
-		return rom.ID, rom.Name
 	}
 
 	logger.Debug("No ROM found for file", "fsSlug", romFile.FSSlug, "file", romFile.FileName)
@@ -228,11 +218,21 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 
 	logger.Debug("FindSaveSyncs: Scanned local ROMs", "platformCount", len(scanLocal))
 
-	// Get all platforms to build fsSlug -> platformID map
-	platforms, err := rc.GetPlatforms()
-	if err != nil {
-		logger.Error("FindSaveSyncs: Could not retrieve platforms", "error", err)
-		return []SaveSync{}, nil, err
+	// Get platforms from cache or API to build fsSlug -> platformID map
+	cm := cache.GetCacheManager()
+	var platforms []romm.Platform
+	var err error
+
+	if cm != nil {
+		platforms, err = cm.GetPlatforms()
+	}
+	if err != nil || len(platforms) == 0 {
+		// Fall back to API if cache miss
+		platforms, err = rc.GetPlatforms()
+		if err != nil {
+			logger.Error("FindSaveSyncs: Could not retrieve platforms", "error", err)
+			return []SaveSync{}, nil, err
+		}
 	}
 
 	fsSlugToPlatformID := make(map[string]int)
@@ -240,11 +240,10 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 		fsSlugToPlatformID[p.FSSlug] = p.ID
 	}
 
-	// Fetch saves and ROMs per platform in parallel
+	// Fetch saves per platform in parallel (saves are not cached - always fresh from API)
 	type platformFetchResult struct {
 		fsSlug   string
 		saves    []romm.Save
-		roms     map[string]romm.Rom
 		hasError bool
 	}
 
@@ -264,10 +263,9 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 
 			result := platformFetchResult{
 				fsSlug: fsSlug,
-				roms:   make(map[string]romm.Rom),
 			}
 
-			// Fetch saves for this platform
+			// Fetch saves for this platform (always from API - saves need to be fresh)
 			platformSaves, err := rc.GetSaves(romm.SaveQuery{PlatformID: platformID})
 			if err != nil {
 				logger.Warn("FindSaveSyncs: Could not retrieve saves for platform", "fsSlug", fsSlug, "error", err)
@@ -278,31 +276,6 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 			result.saves = platformSaves
 			logger.Debug("FindSaveSyncs: Retrieved saves for platform", "fsSlug", fsSlug, "count", len(platformSaves))
 
-			// Fetch all ROMs for this platform to build filename map
-			offset := 0
-			for {
-				romsPage, err := rc.GetRoms(romm.GetRomsQuery{
-					PlatformID: platformID,
-					Offset:     offset,
-					Limit:      100,
-				})
-				if err != nil {
-					logger.Warn("FindSaveSyncs: Could not retrieve ROMs for platform", "fsSlug", fsSlug, "error", err)
-					break
-				}
-
-				for _, rom := range romsPage.Items {
-					key := stringutil.StripExtension(rom.FsNameNoExt)
-					result.roms[key] = rom
-				}
-
-				if len(romsPage.Items) < 100 || len(result.roms) >= romsPage.Total {
-					break
-				}
-				offset += len(romsPage.Items)
-			}
-			logger.Debug("FindSaveSyncs: Built ROM filename map", "fsSlug", fsSlug, "count", len(result.roms))
-
 			resultChan <- result
 		}(fsSlug, platformID)
 	}
@@ -312,10 +285,8 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 		close(resultChan)
 	}()
 
-	// Collect results
+	// Collect saves by ROM ID
 	savesByRomID := make(map[int][]romm.Save)
-	romsByFilename := make(map[string]map[string]romm.Rom)
-
 	for result := range resultChan {
 		if result.hasError {
 			continue
@@ -324,18 +295,11 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 		for _, s := range result.saves {
 			savesByRomID[s.RomID] = append(savesByRomID[s.RomID], s)
 		}
-
-		romsByFilename[result.fsSlug] = result.roms
 	}
 
-	// Match local ROMs to remote ROMs by filename
+	// Match local ROMs to cached ROMs by filename
 	var unmatched []UnmatchedSave
 	for fsSlug, localRoms := range scanLocal {
-		platformRoms := romsByFilename[fsSlug]
-		if platformRoms == nil {
-			platformRoms = make(map[string]romm.Rom)
-		}
-
 		for idx := range localRoms {
 			romFile := &scanLocal[fsSlug][idx]
 
@@ -344,7 +308,8 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 				continue
 			}
 
-			romID, romName := lookupRomID(romFile, platformRoms)
+			// Look up ROM ID from the games cache
+			romID, romName := lookupRomID(romFile)
 
 			if romID == 0 {
 				if romFile.SaveFile != nil {

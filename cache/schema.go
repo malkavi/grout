@@ -6,16 +6,13 @@ import (
 
 const schemaVersion = 1
 
-// createTables creates all required database tables
 func createTables(db *sql.DB) error {
-	// Create tables in a transaction
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	// Cache metadata table - stores schema version and global state
 	_, err = tx.Exec(`
 		CREATE TABLE IF NOT EXISTS cache_metadata (
 			key TEXT PRIMARY KEY,
@@ -27,13 +24,13 @@ func createTables(db *sql.DB) error {
 		return err
 	}
 
-	// Platforms table - cached platform data
 	_, err = tx.Exec(`
 		CREATE TABLE IF NOT EXISTS platforms (
 			id INTEGER PRIMARY KEY,
 			slug TEXT NOT NULL,
 			fs_slug TEXT NOT NULL,
 			name TEXT NOT NULL,
+			api_name TEXT DEFAULT '',
 			custom_name TEXT DEFAULT '',
 			rom_count INTEGER DEFAULT 0,
 			has_bios INTEGER DEFAULT 0,
@@ -51,7 +48,6 @@ func createTables(db *sql.DB) error {
 		return err
 	}
 
-	// Collections table - cached collection data
 	_, err = tx.Exec(`
 		CREATE TABLE IF NOT EXISTS collections (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,8 +72,6 @@ func createTables(db *sql.DB) error {
 		return err
 	}
 
-	// Games table - cached ROM/game data
-	// Stores full JSON to preserve all fields from romm.Rom
 	_, err = tx.Exec(`
 		CREATE TABLE IF NOT EXISTS games (
 			id INTEGER PRIMARY KEY,
@@ -85,6 +79,10 @@ func createTables(db *sql.DB) error {
 			platform_fs_slug TEXT NOT NULL,
 			name TEXT NOT NULL,
 			fs_name TEXT DEFAULT '',
+			fs_name_no_ext TEXT DEFAULT '',
+			crc_hash TEXT DEFAULT '',
+			md5_hash TEXT DEFAULT '',
+			sha1_hash TEXT DEFAULT '',
 			data_json TEXT NOT NULL,
 			updated_at DATETIME,
 			cached_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -104,7 +102,26 @@ func createTables(db *sql.DB) error {
 		return err
 	}
 
-	// Game-Collection many-to-many relationship
+	_, err = tx.Exec(`CREATE INDEX IF NOT EXISTS idx_games_fs_lookup ON games(platform_fs_slug, fs_name_no_ext)`)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`CREATE INDEX IF NOT EXISTS idx_games_md5 ON games(md5_hash) WHERE md5_hash != ''`)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`CREATE INDEX IF NOT EXISTS idx_games_sha1 ON games(sha1_hash) WHERE sha1_hash != ''`)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`CREATE INDEX IF NOT EXISTS idx_games_crc ON games(crc_hash) WHERE crc_hash != ''`)
+	if err != nil {
+		return err
+	}
+
 	_, err = tx.Exec(`
 		CREATE TABLE IF NOT EXISTS game_collections (
 			game_id INTEGER NOT NULL,
@@ -116,50 +133,6 @@ func createTables(db *sql.DB) error {
 		return err
 	}
 
-	// ROM ID cache - maps filenames to ROM IDs for save sync
-	_, err = tx.Exec(`
-		CREATE TABLE IF NOT EXISTS rom_id_cache (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			platform_fs_slug TEXT NOT NULL,
-			filename_key TEXT NOT NULL,
-			rom_id INTEGER NOT NULL,
-			rom_name TEXT NOT NULL,
-			cached_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			UNIQUE(platform_fs_slug, filename_key)
-		)
-	`)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(`CREATE INDEX IF NOT EXISTS idx_rom_id_cache_lookup ON rom_id_cache(platform_fs_slug, filename_key)`)
-	if err != nil {
-		return err
-	}
-
-	// Artwork metadata - tracks artwork files on disk
-	_, err = tx.Exec(`
-		CREATE TABLE IF NOT EXISTS artwork_metadata (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			platform_fs_slug TEXT NOT NULL,
-			rom_id INTEGER NOT NULL,
-			file_path TEXT NOT NULL,
-			file_size_bytes INTEGER DEFAULT 0,
-			cached_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			validated_at DATETIME,
-			UNIQUE(platform_fs_slug, rom_id)
-		)
-	`)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(`CREATE INDEX IF NOT EXISTS idx_artwork_platform_rom ON artwork_metadata(platform_fs_slug, rom_id)`)
-	if err != nil {
-		return err
-	}
-
-	// BIOS availability per platform
 	_, err = tx.Exec(`
 		CREATE TABLE IF NOT EXISTS bios_availability (
 			platform_id INTEGER PRIMARY KEY,
@@ -171,7 +144,6 @@ func createTables(db *sql.DB) error {
 		return err
 	}
 
-	// Store schema version
 	_, err = tx.Exec(`
 		INSERT OR REPLACE INTO cache_metadata (key, value, updated_at)
 		VALUES ('schema_version', ?, CURRENT_TIMESTAMP)

@@ -280,6 +280,9 @@ See [General Settings](#general-settings) below.
 **Collections** - Opens a sub-menu for configuring collection display options.
 See [Collections Settings](#collections-settings) below.
 
+**Directory Mappings** – Change which device directories are mapped to which RomM platforms. This takes you back to
+the platform mapping screen that appeared during setup.
+
 **Save Sync** - Controls save synchronization behavior:
 
 - **Off** – Save sync is completely disabled
@@ -350,15 +353,11 @@ This sub-menu contains all collection-related configuration:
 
 This sub-menu contains advanced configuration and system settings:
 
-**Directory Mappings** – Change which device directories are mapped to which RomM platforms. This takes you back to
-the platform mapping screen that appeared during setup.
-
-**Cache Artwork** - Pre-cache artwork for all games across all mapped platforms. Grout scans your platforms, identifies
+**Preload Artwork** - Pre-cache artwork for all games across all mapped platforms. Grout scans your platforms, identifies
 games without cached artwork, and downloads cover art from RomM. Useful for pre-caching after adding new games.
 
-**Clear Cache** - Clears cached artwork and/or games cache from your device. This will free up storage space but
-artwork will need to be re-downloaded as you browse. You'll be prompted to select which caches to clear. Only visible
-when there is cached data to clear.
+**Refresh Cache** - Re-sync cached data from RomM. Select which caches to refresh: Games Cache (platform and ROM data)
+or Collections Cache. Shows when each cache was last refreshed.
 
 **Download Timeout** – How long Grout waits for a single ROM to download before giving up. Useful for large files or
 slow connections. Options range from 15 to 120 minutes.

@@ -3,7 +3,6 @@ package ui
 import (
 	"errors"
 	"fmt"
-	"grout/cache"
 	"grout/cfw"
 	"grout/cfw/muos"
 	"grout/constants"
@@ -267,18 +266,6 @@ func (s *DownloadScreen) draw(input downloadInput) (ScreenResult[downloadOutput]
 			return d.DisplayName == g.Name
 		}) {
 			downloadedGames = append(downloadedGames, g)
-
-			// Cache ROM filename for future save sync lookups
-			var cacheFilename string
-			if g.HasMultipleFiles {
-				cacheFilename = g.FsNameNoExt
-			} else if len(g.Files) > 0 {
-				cacheFilename = g.Files[0].FileName
-			}
-			if cacheFilename != "" {
-				cache.StoreRomID(g.PlatformFSSlug, cacheFilename, g.ID, g.Name)
-				logger.Debug("Cached ROM filename", "name", g.Name, "filename", cacheFilename, "id", g.ID)
-			}
 		}
 	}
 

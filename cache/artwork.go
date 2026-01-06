@@ -1,175 +1,93 @@
 package cache
 
 import (
-	"database/sql"
+	"fmt"
+	"grout/constants"
 	"grout/internal/fileutil"
+	"grout/internal/imageutil"
+	"grout/romm"
 	"image/png"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
 
-func GetArtworkCachePath(fsSlug string, romID int) string {
-	return filepath.Join(GetArtworkCacheDir(), fsSlug, strconv.Itoa(romID)+".png")
+func GetArtworkCachePath(platformFSSlug string, romID int) string {
+	return filepath.Join(GetArtworkCacheDir(), platformFSSlug, strconv.Itoa(romID)+".png")
 }
 
-func (cm *CacheManager) IsArtworkCached(fsSlug string, romID int) bool {
-	if cm == nil || !cm.initialized {
-		// Fallback to file check
-		return fileutil.FileExists(GetArtworkCachePath(fsSlug, romID))
-	}
-
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-
-	var count int
-	err := cm.db.QueryRow(`
-		SELECT COUNT(*) FROM artwork_metadata
-		WHERE platform_fs_slug = ? AND rom_id = ?
-	`, fsSlug, romID).Scan(&count)
-
-	if err != nil || count == 0 {
-		// No metadata, but check if file exists (for legacy compatibility)
-		return fileutil.FileExists(GetArtworkCachePath(fsSlug, romID))
-	}
-
-	return fileutil.FileExists(GetArtworkCachePath(fsSlug, romID))
+func ArtworkExists(platformFSSlug string, romID int) bool {
+	return fileutil.FileExists(GetArtworkCachePath(platformFSSlug, romID))
 }
 
-func (cm *CacheManager) GetArtworkPath(fsSlug string, romID int) string {
-	return GetArtworkCachePath(fsSlug, romID)
-}
-
-func (cm *CacheManager) MarkArtworkCached(fsSlug string, romID int, filePath string) error {
-	if cm == nil || !cm.initialized {
-		return ErrNotInitialized
-	}
-
-	logger := gaba.GetLogger()
-
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
-	var size int64
-	if info, err := os.Stat(filePath); err == nil {
-		size = info.Size()
-	}
-
-	_, err := cm.db.Exec(`
-		INSERT OR REPLACE INTO artwork_metadata
-		(platform_fs_slug, rom_id, file_path, file_size_bytes, cached_at, validated_at)
-		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-	`, fsSlug, romID, filePath, size)
-
-	if err != nil {
-		logger.Debug("Failed to mark artwork cached", "fsSlug", fsSlug, "romID", romID, "error", err)
-		return newCacheError("save", "artwork", strconv.Itoa(romID), err)
-	}
-
-	return nil
-}
-
-func (cm *CacheManager) RemoveArtworkMetadata(fsSlug string, romID int) error {
-	if cm == nil || !cm.initialized {
-		return ErrNotInitialized
-	}
-
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
-	_, err := cm.db.Exec(`
-		DELETE FROM artwork_metadata
-		WHERE platform_fs_slug = ? AND rom_id = ?
-	`, fsSlug, romID)
-
-	if err != nil {
-		return newCacheError("delete", "artwork", strconv.Itoa(romID), err)
-	}
-
-	return nil
-}
-
-func (cm *CacheManager) ValidateArtworkCache() (int, error) {
-	if cm == nil || !cm.initialized {
-		return 0, ErrNotInitialized
-	}
-
-	logger := gaba.GetLogger()
-
-	cm.mu.RLock()
-	rows, err := cm.db.Query(`
-		SELECT platform_fs_slug, rom_id, file_path FROM artwork_metadata
-	`)
-	cm.mu.RUnlock()
-
-	if err != nil {
-		return 0, newCacheError("validate", "artwork", "", err)
-	}
-	defer rows.Close()
-
-	type toRemove struct {
-		fsSlug string
-		romID  int
-		path   string
-	}
-
-	var removeList []toRemove
-
-	for rows.Next() {
-		var fsSlug string
-		var romID int
-		var filePath string
-
-		if err := rows.Scan(&fsSlug, &romID, &filePath); err != nil {
-			continue
-		}
-
-		if !fileutil.FileExists(filePath) {
-			removeList = append(removeList, toRemove{fsSlug, romID, filePath})
-			continue
-		}
-
-		if !isValidPNG(filePath) {
-			removeList = append(removeList, toRemove{fsSlug, romID, filePath})
-		}
-	}
-
-	cm.mu.Lock()
-	for _, item := range removeList {
-		cm.db.Exec(`
-			DELETE FROM artwork_metadata
-			WHERE platform_fs_slug = ? AND rom_id = ?
-		`, item.fsSlug, item.romID)
-
-		os.Remove(item.path)
-	}
-	cm.mu.Unlock()
-
-	if len(removeList) > 0 {
-		logger.Debug("Removed invalid artwork entries", "count", len(removeList))
-	}
-
-	return len(removeList), nil
-}
-
-func (cm *CacheManager) GetArtworkCount() int {
-	if cm == nil || !cm.initialized {
-		return 0
-	}
-
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-
-	var count int
-	cm.db.QueryRow(`SELECT COUNT(*) FROM artwork_metadata`).Scan(&count)
-	return count
-}
-
-func EnsureArtworkCacheDir(fsSlug string) error {
-	dir := filepath.Join(GetArtworkCacheDir(), fsSlug)
+func EnsureArtworkCacheDir(platformFSSlug string) error {
+	dir := filepath.Join(GetArtworkCacheDir(), platformFSSlug)
 	return os.MkdirAll(dir, 0755)
+}
+
+func (cm *Manager) ValidateArtworkCache() (int, error) {
+	logger := gaba.GetLogger()
+	cacheDir := GetArtworkCacheDir()
+	removed := 0
+
+	platformDirs, err := os.ReadDir(cacheDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, err
+	}
+
+	for _, platformDir := range platformDirs {
+		if !platformDir.IsDir() {
+			continue
+		}
+
+		platformPath := filepath.Join(cacheDir, platformDir.Name())
+		files, err := os.ReadDir(platformPath)
+		if err != nil {
+			continue
+		}
+
+		for _, file := range files {
+			if file.IsDir() || filepath.Ext(file.Name()) != ".png" {
+				continue
+			}
+
+			filePath := filepath.Join(platformPath, file.Name())
+			if !isValidPNG(filePath) {
+				os.Remove(filePath)
+				removed++
+			}
+		}
+	}
+
+	if removed > 0 {
+		logger.Debug("Removed invalid artwork files", "count", removed)
+	}
+
+	return removed, nil
+}
+
+func RunArtworkValidation() {
+	if cm := GetCacheManager(); cm != nil {
+		go func() {
+			removed, err := cm.ValidateArtworkCache()
+			if err != nil {
+				gaba.GetLogger().Debug("Failed to validate artwork cache", "error", err)
+				return
+			}
+			if removed > 0 {
+				gaba.GetLogger().Debug("Removed invalid artwork files", "count", removed)
+			}
+		}()
+	}
 }
 
 func isValidPNG(path string) bool {
@@ -183,165 +101,172 @@ func isValidPNG(path string) bool {
 	return err == nil
 }
 
-func (cm *CacheManager) ScanAndIndexArtwork() (int, error) {
-	if cm == nil || !cm.initialized {
-		return 0, ErrNotInitialized
+func GetRomsWithArtwork(roms []romm.Rom) []romm.Rom {
+	var withArtwork []romm.Rom
+	for _, rom := range roms {
+		if HasArtworkURL(rom) {
+			withArtwork = append(withArtwork, rom)
+		}
 	}
+	return withArtwork
+}
 
+func GetMissingArtwork(roms []romm.Rom) []romm.Rom {
+	var missing []romm.Rom
+	for _, rom := range roms {
+		if !HasArtworkURL(rom) {
+			continue
+		}
+		if !ArtworkExists(rom.PlatformFSSlug, rom.ID) {
+			missing = append(missing, rom)
+		}
+	}
+	return missing
+}
+
+func HasArtworkURL(rom romm.Rom) bool {
+	return rom.PathCoverSmall != "" || rom.PathCoverLarge != "" || rom.URLCover != ""
+}
+
+func GetArtworkCoverPath(rom romm.Rom) string {
+	if rom.PathCoverSmall != "" {
+		return rom.PathCoverSmall
+	}
+	if rom.PathCoverLarge != "" {
+		return rom.PathCoverLarge
+	}
+	return rom.URLCover
+}
+
+func DownloadAndCacheArtwork(rom romm.Rom, host romm.Host) error {
 	logger := gaba.GetLogger()
-	cacheDir := GetArtworkCacheDir()
 
-	platformDirs, err := os.ReadDir(cacheDir)
+	coverPath := GetArtworkCoverPath(rom)
+	if coverPath == "" {
+		return nil // No artwork available
+	}
+
+	if err := EnsureArtworkCacheDir(rom.PlatformFSSlug); err != nil {
+		return fmt.Errorf("failed to create cache directory: %w", err)
+	}
+
+	cachePath := GetArtworkCachePath(rom.PlatformFSSlug, rom.ID)
+
+	artURL := host.URL() + coverPath
+	artURL = strings.ReplaceAll(artURL, " ", "%20")
+
+	req, err := http.NewRequest("GET", artURL, nil)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return 0, nil
-		}
-		return 0, newCacheError("scan", "artwork", "", err)
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Authorization", host.BasicAuthHeader())
+
+	client := &http.Client{Timeout: constants.DefaultClientTimeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to download artwork: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %s", resp.Status)
 	}
 
-	indexed := 0
-	for _, platformDir := range platformDirs {
-		if !platformDir.IsDir() {
-			continue
-		}
+	outFile, err := os.Create(cachePath)
+	if err != nil {
+		return fmt.Errorf("failed to create cache file: %w", err)
+	}
+	defer outFile.Close()
 
-		fsSlug := platformDir.Name()
-		platformPath := filepath.Join(cacheDir, fsSlug)
+	if _, err = io.Copy(outFile, resp.Body); err != nil {
+		os.Remove(cachePath)
+		return fmt.Errorf("failed to write cache file: %w", err)
+	}
+	outFile.Close()
 
-		files, err := os.ReadDir(platformPath)
-		if err != nil {
-			continue
-		}
-
-		for _, file := range files {
-			if file.IsDir() || filepath.Ext(file.Name()) != ".png" {
-				continue
-			}
-
-			name := file.Name()
-			romIDStr := name[:len(name)-4] // Remove ".png"
-			romID, err := strconv.Atoi(romIDStr)
-			if err != nil {
-				continue
-			}
-
-			filePath := filepath.Join(platformPath, file.Name())
-
-			cm.mu.RLock()
-			var count int
-			cm.db.QueryRow(`
-				SELECT COUNT(*) FROM artwork_metadata
-				WHERE platform_fs_slug = ? AND rom_id = ?
-			`, fsSlug, romID).Scan(&count)
-			cm.mu.RUnlock()
-
-			if count == 0 {
-				cm.MarkArtworkCached(fsSlug, romID, filePath)
-				indexed++
-			}
-		}
+	if err := imageutil.ProcessArtImage(cachePath); err != nil {
+		logger.Warn("Failed to process artwork image", "path", cachePath, "error", err)
+		os.Remove(cachePath)
+		return fmt.Errorf("failed to process artwork: %w", err)
 	}
 
-	if indexed > 0 {
-		logger.Debug("Indexed existing artwork files", "count", indexed)
+	file, err := os.Open(cachePath)
+	if err != nil {
+		return fmt.Errorf("failed to open processed artwork: %w", err)
+	}
+	_, err = png.DecodeConfig(file)
+	file.Close()
+	if err != nil {
+		os.Remove(cachePath)
+		return fmt.Errorf("processed artwork is not a valid PNG: %w", err)
 	}
 
-	return indexed, nil
+	return nil
 }
 
-func (cm *CacheManager) GetAllArtworkMetadata() ([]struct {
-	FSSlug string
-	RomID  int
-	Path   string
-}, error) {
-	if cm == nil || !cm.initialized {
-		return nil, ErrNotInitialized
+func SyncArtworkInBackground(host romm.Host, games []romm.Rom) {
+	logger := gaba.GetLogger()
+
+	missing := GetMissingArtwork(games)
+	if len(missing) == 0 {
+		return
 	}
 
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-
-	rows, err := cm.db.Query(`
-		SELECT platform_fs_slug, rom_id, file_path FROM artwork_metadata
-	`)
-	if err != nil {
-		return nil, newCacheError("get", "artwork", "", err)
-	}
-	defer rows.Close()
-
-	var results []struct {
-		FSSlug string
-		RomID  int
-		Path   string
-	}
-
-	for rows.Next() {
-		var fsSlug string
-		var romID int
-		var path string
-
-		if err := rows.Scan(&fsSlug, &romID, &path); err != nil {
-			continue
+	for _, rom := range missing {
+		if err := DownloadAndCacheArtwork(rom, host); err != nil {
+			logger.Debug("Failed to download artwork", "rom", rom.Name, "error", err)
 		}
-
-		results = append(results, struct {
-			FSSlug string
-			RomID  int
-			Path   string
-		}{fsSlug, romID, path})
 	}
-
-	return results, nil
 }
 
-func (cm *CacheManager) HasArtworkByFilename(fsSlug string) bool {
-	if cm == nil || !cm.initialized {
+func CheckRemoteArtworkLastModified(url string, authHeader string) (time.Time, error) {
+	req, err := http.NewRequest("HEAD", url, nil)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
+
+	client := &http.Client{Timeout: 10 * constants.DefaultHTTPTimeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return time.Time{}, fmt.Errorf("bad status: %s", resp.Status)
+	}
+
+	lastModified := resp.Header.Get("Last-Modified")
+	if lastModified == "" {
+		return time.Time{}, nil
+	}
+
+	return http.ParseTime(lastModified)
+}
+
+func ArtworkNeedsUpdate(rom romm.Rom, host romm.Host) bool {
+	cachePath := GetArtworkCachePath(rom.PlatformFSSlug, rom.ID)
+
+	localInfo, err := os.Stat(cachePath)
+	if err != nil {
+		return true
+	}
+
+	coverPath := GetArtworkCoverPath(rom)
+	if coverPath == "" {
 		return false
 	}
 
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
+	artURL := host.URL() + coverPath
+	artURL = strings.ReplaceAll(artURL, " ", "%20")
 
-	var count int
-	err := cm.db.QueryRow(`
-		SELECT COUNT(*) FROM artwork_metadata WHERE platform_fs_slug = ?
-	`, fsSlug).Scan(&count)
-
-	if err != nil {
-		// Fallback to checking directory
-		dir := filepath.Join(GetArtworkCacheDir(), fsSlug)
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			return false
-		}
-		return len(entries) > 0
+	remoteModTime, err := CheckRemoteArtworkLastModified(artURL, host.BasicAuthHeader())
+	if err != nil || remoteModTime.IsZero() {
+		return false // On error or no Last-Modified header, skip re-download
 	}
 
-	return count > 0
-}
-
-func GetGameByIDForArtwork(gameID int) (struct {
-	PlatformFSSlug string
-}, error) {
-	cm := GetCacheManager()
-	if cm == nil {
-		return struct{ PlatformFSSlug string }{}, ErrNotInitialized
-	}
-
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-
-	var platformFSSlug string
-	err := cm.db.QueryRow(`
-		SELECT platform_fs_slug FROM games WHERE id = ?
-	`, gameID).Scan(&platformFSSlug)
-
-	if err == sql.ErrNoRows {
-		return struct{ PlatformFSSlug string }{}, ErrCacheMiss
-	}
-	if err != nil {
-		return struct{ PlatformFSSlug string }{}, err
-	}
-
-	return struct{ PlatformFSSlug string }{platformFSSlug}, nil
+	return remoteModTime.After(localInfo.ModTime())
 }

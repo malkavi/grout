@@ -15,7 +15,6 @@ const (
 	ExitCodeCollectionsSettings      gaba.ExitCode = 107
 	ExitCodeAdvancedSettings         gaba.ExitCode = 108
 	ExitCodeBackToAdvanced           gaba.ExitCode = 109
-	ExitCodeClearCache               gaba.ExitCode = 110
 	ExitCodeRefreshCache             gaba.ExitCode = 111
 	ExitCodeSaveSyncSettings         gaba.ExitCode = 112
 	ExitCodeGameOptions              gaba.ExitCode = 113

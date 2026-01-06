@@ -18,7 +18,6 @@ type RefreshCacheType int
 const (
 	RefreshCacheGames RefreshCacheType = iota
 	RefreshCacheCollections
-	RefreshCacheArtwork
 )
 
 type RefreshCacheOutput struct {
@@ -64,13 +63,6 @@ func (s *RefreshCacheScreen) Draw() (ScreenResult[RefreshCacheOutput], error) {
 			hasCache:    cm != nil && cm.HasCollections(),
 			metaKey:     cache.MetaKeyCollectionsRefreshedAt,
 			lastRefresh: refreshTimes[cache.MetaKeyCollectionsRefreshedAt],
-		},
-		{
-			name:        i18n.Localize(&goi18n.Message{ID: "cache_artwork_metadata", Other: "Artwork Metadata"}, nil),
-			cacheType:   RefreshCacheArtwork,
-			hasCache:    true, // Artwork can always be refreshed
-			metaKey:     cache.MetaKeyArtworkRefreshedAt,
-			lastRefresh: refreshTimes[cache.MetaKeyArtworkRefreshedAt],
 		},
 	}
 

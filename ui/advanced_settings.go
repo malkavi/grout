@@ -2,8 +2,6 @@ package ui
 
 import (
 	"errors"
-	"grout/artwork"
-	"grout/cache"
 	"grout/constants"
 	"grout/internal"
 	"grout/romm"
@@ -22,8 +20,6 @@ type AdvancedSettingsInput struct {
 }
 
 type AdvancedSettingsOutput struct {
-	EditMappingsClicked   bool
-	ClearCacheClicked     bool
 	RefreshCacheClicked   bool
 	SyncArtworkClicked    bool
 	LastSelectedIndex     int
@@ -74,16 +70,6 @@ func (s *AdvancedSettingsScreen) Draw(input AdvancedSettingsInput) (ScreenResult
 	if result.Action == gaba.ListActionSelected {
 		selectedText := items[result.Selected].Item.Text
 
-		if selectedText == i18n.Localize(&goi18n.Message{ID: "settings_edit_mappings", Other: "Directory Mappings"}, nil) {
-			output.EditMappingsClicked = true
-			return withCode(output, constants.ExitCodeEditMappings), nil
-		}
-
-		if selectedText == i18n.Localize(&goi18n.Message{ID: "settings_clear_cache", Other: "Clear Cache"}, nil) {
-			output.ClearCacheClicked = true
-			return withCode(output, constants.ExitCodeClearCache), nil
-		}
-
 		if selectedText == i18n.Localize(&goi18n.Message{ID: "settings_refresh_cache", Other: "Refresh Cache"}, nil) {
 			output.RefreshCacheClicked = true
 			return withCode(output, constants.ExitCodeRefreshCache), nil
@@ -109,19 +95,8 @@ func (s *AdvancedSettingsScreen) Draw(input AdvancedSettingsInput) (ScreenResult
 func (s *AdvancedSettingsScreen) buildMenuItems(config *internal.Config) []gaba.ItemWithOptions {
 	return []gaba.ItemWithOptions{
 		{
-			Item:    gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_edit_mappings", Other: "Directory Mappings"}, nil)},
-			Options: []gaba.Option{{Type: gaba.OptionTypeClickable}},
-		},
-		{
 			Item:    gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_sync_artwork", Other: "Preload Artwork"}, nil)},
 			Options: []gaba.Option{{Type: gaba.OptionTypeClickable}},
-		},
-		{
-			Item:    gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_clear_cache", Other: "Clear Cache"}, nil)},
-			Options: []gaba.Option{{Type: gaba.OptionTypeClickable}},
-			Visible: func() bool {
-				return artwork.HasCache() || cache.HasGamesCache()
-			},
 		},
 		{
 			Item:    gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_refresh_cache", Other: "Refresh Cache"}, nil)},

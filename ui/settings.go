@@ -31,6 +31,7 @@ type SettingsOutput struct {
 	GeneralSettingsClicked     bool
 	InfoClicked                bool
 	CollectionsSettingsClicked bool
+	DirectoryMappingsClicked   bool
 	AdvancedSettingsClicked    bool
 	SaveSyncSettingsClicked    bool
 	CheckUpdatesClicked        bool
@@ -49,6 +50,7 @@ type SettingType string
 const (
 	SettingGeneralSettings     SettingType = "general_settings"
 	SettingCollectionsSettings SettingType = "collections_settings"
+	SettingDirectoryMappings   SettingType = "directory_mappings"
 	SettingSaveSync            SettingType = "save_sync"
 	SettingSaveSyncSettings    SettingType = "save_sync_settings"
 	SettingAdvancedSettings    SettingType = "advanced_settings"
@@ -59,6 +61,7 @@ const (
 var settingsOrder = []SettingType{
 	SettingGeneralSettings,
 	SettingCollectionsSettings,
+	SettingDirectoryMappings,
 	SettingSaveSync,
 	SettingSaveSyncSettings,
 	SettingAdvancedSettings,
@@ -119,6 +122,11 @@ func (s *SettingsScreen) Draw(input SettingsInput) (ScreenResult[SettingsOutput]
 			return withCode(output, constants.ExitCodeCollectionsSettings), nil
 		}
 
+		if selectedText == i18n.Localize(&goi18n.Message{ID: "settings_edit_mappings", Other: "Directory Mappings"}, nil) {
+			output.DirectoryMappingsClicked = true
+			return withCode(output, constants.ExitCodeEditMappings), nil
+		}
+
 		if selectedText == i18n.Localize(&goi18n.Message{ID: "settings_advanced", Other: "Advanced"}, nil) {
 			output.AdvancedSettingsClicked = true
 			return withCode(output, constants.ExitCodeAdvancedSettings), nil
@@ -158,6 +166,12 @@ func (s *SettingsScreen) buildMenuItem(settingType SettingType, config *internal
 	case SettingCollectionsSettings:
 		return gaba.ItemWithOptions{
 			Item:    gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_collections", Other: "Collections Settings"}, nil)},
+			Options: []gaba.Option{{Type: gaba.OptionTypeClickable}},
+		}
+
+	case SettingDirectoryMappings:
+		return gaba.ItemWithOptions{
+			Item:    gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_edit_mappings", Other: "Directory Mappings"}, nil)},
 			Options: []gaba.Option{{Type: gaba.OptionTypeClickable}},
 		}
 
