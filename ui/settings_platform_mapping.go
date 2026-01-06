@@ -20,12 +20,13 @@ import (
 )
 
 type PlatformMappingInput struct {
-	Host           romm.Host
-	ApiTimeout     time.Duration
-	CFW            cfw.CFW
-	RomDirectory   string
-	AutoSelect     bool
-	HideBackButton bool
+	Host             romm.Host
+	ApiTimeout       time.Duration
+	CFW              cfw.CFW
+	RomDirectory     string
+	AutoSelect       bool
+	HideBackButton   bool
+	ExistingMappings map[string]internal.DirectoryMapping // For return visits, use existing config
 }
 
 type PlatformMappingOutput struct {
@@ -146,6 +147,10 @@ func (s *PlatformMappingScreen) buildPlatformOptions(
 
 	cfwDirectories := s.getCFWDirectoriesForPlatform(platform.FSSlug, input.CFW)
 
+	// Check if this is a return visit with existing mappings
+	hasExistingMappings := len(input.ExistingMappings) > 0
+	existingMapping, platformHasMapping := input.ExistingMappings[platform.FSSlug]
+
 	createOptionAdded := false
 	for _, cfwDir := range cfwDirectories {
 		dirExists := false
@@ -166,6 +171,11 @@ func (s *PlatformMappingScreen) buildPlatformOptions(
 				Value:       cfwDir,
 			})
 			createOptionAdded = true
+
+			// For return visits, select if this matches the existing mapping
+			if hasExistingMappings && platformHasMapping && cfwDir == existingMapping.RelativePath {
+				selectedIndex = len(options) - 1
+			}
 		}
 	}
 
@@ -183,13 +193,22 @@ func (s *PlatformMappingScreen) buildPlatformOptions(
 				Value:       dirName,
 			})
 
-			if s.directoryMatchesPlatform(platform, romDir.Name(), input.CFW) {
-				selectedIndex = len(options) - 1
+			if hasExistingMappings {
+				// For return visits, only select if this platform has a mapping and it matches
+				if platformHasMapping && dirName == existingMapping.RelativePath {
+					selectedIndex = len(options) - 1
+				}
+			} else {
+				// First time: auto-detect based on directory name matching platform
+				if s.directoryMatchesPlatform(platform, romDir.Name(), input.CFW) {
+					selectedIndex = len(options) - 1
+				}
 			}
 		}
 	}
 
-	if selectedIndex == 0 && createOptionAdded && input.AutoSelect {
+	// Only auto-select create option on first run (not return visits)
+	if !hasExistingMappings && selectedIndex == 0 && createOptionAdded && input.AutoSelect {
 		selectedIndex = 1
 	}
 

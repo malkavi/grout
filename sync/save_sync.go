@@ -279,11 +279,11 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 			logger.Debug("FindSaveSyncs: Retrieved saves for platform", "fsSlug", fsSlug, "count", len(platformSaves))
 
 			// Fetch all ROMs for this platform to build filename map
-			page := 1
+			offset := 0
 			for {
 				romsPage, err := rc.GetRoms(romm.GetRomsQuery{
 					PlatformID: platformID,
-					Page:       page,
+					Offset:     offset,
 					Limit:      100,
 				})
 				if err != nil {
@@ -296,10 +296,10 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 					result.roms[key] = rom
 				}
 
-				if len(romsPage.Items) < 100 {
+				if len(romsPage.Items) < 100 || len(result.roms) >= romsPage.Total {
 					break
 				}
-				page++
+				offset += len(romsPage.Items)
 			}
 			logger.Debug("FindSaveSyncs: Built ROM filename map", "fsSlug", fsSlug, "count", len(result.roms))
 

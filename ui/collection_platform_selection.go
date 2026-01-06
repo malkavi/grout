@@ -50,87 +50,33 @@ func (s *CollectionPlatformSelectionScreen) Draw(input CollectionPlatformSelecti
 	if len(input.CachedGames) > 0 {
 		allGames = input.CachedGames
 	} else {
-		// Build query for cache key and freshness check
-		cacheKey := cache.GetCollectionCacheKey(input.Collection)
-		opt := romm.GetRomsQuery{
-			Limit: 10000,
-		}
-
-		// Use appropriate ID based on collection type
-		if input.Collection.IsVirtual {
-			opt.VirtualCollectionID = input.Collection.VirtualID
-		} else if input.Collection.IsSmart {
-			opt.SmartCollectionID = input.Collection.ID
-		} else {
-			opt.CollectionID = input.Collection.ID
-		}
-
-		// Check if a prefetch is in progress for this collection
-		loadedFromCache := false
-		if cr := cache.GetRefresh(); cr != nil {
-			if cr.IsPrefetchInProgress(cacheKey) {
-				logger.Debug("Waiting for collection prefetch to complete", "key", cacheKey)
-				// Show a loading message while waiting
-				gaba.ProcessMessage(
-					i18n.Localize(&goi18n.Message{ID: "games_list_loading", Other: "Loading {{.Name}}..."}, map[string]interface{}{"Name": input.Collection.Name}),
-					gaba.ProcessMessageOptions{ShowThemeBackground: true},
-					func() (interface{}, error) {
-						cr.WaitForPrefetch(cacheKey)
-						return nil, nil
-					},
-				)
-				// After prefetch completes, load from cache
-				cached, err := cache.LoadCachedGames(cacheKey)
-				if err == nil {
-					logger.Debug("Loaded collection from prefetch cache", "key", cacheKey, "count", len(cached))
-					allGames = cached
-					loadedFromCache = true
+		cm := cache.GetCacheManager()
+		if cm != nil {
+			// Try to load from cache via game_collections join
+			if cached, err := cm.GetCollectionGames(input.Collection); err == nil && len(cached) > 0 {
+				logger.Debug("Loaded collection games from cache", "collection", input.Collection.Name, "count", len(cached))
+				allGames = cached
+			} else if len(input.Collection.ROMIDs) > 0 {
+				// Fallback: collection has ROM IDs, fetch games directly by ID from cache
+				logger.Debug("Cache join miss, trying direct ID lookup", "collection", input.Collection.Name, "romIDs", len(input.Collection.ROMIDs))
+				if games, err := cm.GetGamesByIDs(input.Collection.ROMIDs); err == nil && len(games) > 0 {
+					logger.Debug("Loaded collection games by ID from cache", "collection", input.Collection.Name, "count", len(games))
+					allGames = games
 				}
 			}
 		}
 
-		// Check if cache is fresh (skip loading screen if so)
-		if !loadedFromCache {
-			isFresh, _ := cache.CheckCacheFreshness(input.Host, input.Config, cacheKey, opt)
-			if isFresh {
-				cached, err := cache.LoadCachedGames(cacheKey)
-				if err == nil {
-					logger.Debug("Loaded collection games from cache (no loading screen)", "key", cacheKey, "count", len(cached))
-					allGames = cached
-					loadedFromCache = true
-				}
-			}
-		}
-
-		// If we didn't load from cache, fetch from API with loading screen
-		if !loadedFromCache {
-			var loadErr error
-			_, err := gaba.ProcessMessage(
-				i18n.Localize(&goi18n.Message{ID: "games_list_loading", Other: "Loading {{.Name}}..."}, map[string]interface{}{"Name": input.Collection.Name}),
+		// If still no games, show error - cache should be populated
+		if len(allGames) == 0 {
+			gaba.ProcessMessage(
+				i18n.Localize(&goi18n.Message{ID: "collection_cache_missing", Other: "Collection not cached.\nPlease refresh the cache."}, nil),
 				gaba.ProcessMessageOptions{ShowThemeBackground: true},
 				func() (interface{}, error) {
-					// Fetch from API
-					rc := romm.NewClientFromHost(input.Host, input.Config.ApiTimeout)
-					res, err := rc.GetRoms(opt)
-					if err != nil {
-						logger.Error("Error downloading game list", "error", err)
-						loadErr = err
-						return nil, err
-					}
-					allGames = res.Items
-
-					// Save to cache
-					if err := cache.SaveGamesToCache(cacheKey, allGames); err != nil {
-						logger.Debug("Failed to save games to cache", "error", err)
-					}
-
+					time.Sleep(time.Second * 2)
 					return nil, nil
 				},
 			)
-
-			if err != nil || loadErr != nil {
-				return withCode(output, gaba.ExitCodeError), err
-			}
+			return withCode(output, gaba.ExitCodeBack), nil
 		}
 	}
 

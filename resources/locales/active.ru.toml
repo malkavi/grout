@@ -26,6 +26,10 @@ other = "Сканирование платформы %d/%d: %s..."
 hash = "sha1-ef880c0f2577f0a9fb8ca21f2ed3710e5aef1376"
 other = "Все обложки уже в кэше!"
 
+[artwork_sync_no_artwork]
+hash = "sha1-447a12c1a94ffbcefafc528ff6de40d16b247a7d"
+other = "Нет доступных обложек для загрузки."
+
 [auto_sync_waiting]
 hash = "sha1-c005f14e70da37982e2152d3af9d29a58ea8f01c"
 other = "Ожидание завершения синхронизации..."
@@ -148,6 +152,10 @@ other = "Кэш обложек"
 [cache_games]
 hash = "sha1-1e7dbd606b8bad53986d06fd58c9d73dcad67d64"
 other = "Кэш игр"
+
+[cache_artwork_metadata]
+hash = "sha1-447a12c1a94ffbcefafc528ff6de40d16b247a7d"
+other = "Метаданные обложек"
 
 [clear_cache_title]
 hash = "sha1-522175083f0bf50b4584d1dd8dbed60ae22535be"
@@ -645,7 +653,7 @@ other = "Виртуальные коллекции"
 
 [settings_sync_artwork]
 hash = "sha1-447a12c1a94ffbcefafc528ff6de40d16b247a7d"
-other = "Кэшировать обложки"
+other = "Предзагрузить обложки"
 
 [settings_title]
 hash = "sha1-c7f73bb54d928922c3838bb789ee9fb8a5b1eb37"

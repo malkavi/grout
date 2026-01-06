@@ -22,6 +22,9 @@ other = "Artwork wird verarbeitet..."
 hash = "sha1-b6223550ccbdc62d88de558bd9d49c7c1da8e3bc"
 other = "Scanne Plattform %d/%d: %s..."
 
+[artwork_sync_no_artwork]
+other = "Kein Artwork zum Herunterladen verfügbar."
+
 [artwork_sync_up_to_date]
 hash = "sha1-ef880c0f2577f0a9fb8ca21f2ed3710e5aef1376"
 other = "Alles Artwork ist bereits zwischengespeichert!"
@@ -144,6 +147,9 @@ other = "Einstellungen"
 [cache_artwork]
 hash = "sha1-1cb834b429143507648837792190c647a34f64ab"
 other = "Artwork-Cache"
+
+[cache_artwork_metadata]
+other = "Artwork-Metadaten"
 
 [cache_games]
 hash = "sha1-1e7dbd606b8bad53986d06fd58c9d73dcad67d64"
@@ -645,7 +651,7 @@ other = "Virtuelle Sammlungen"
 
 [settings_sync_artwork]
 hash = "sha1-447a12c1a94ffbcefafc528ff6de40d16b247a7d"
-other = "Artwork zwischenspeichern"
+other = "Artwork vorladen"
 
 [settings_title]
 hash = "sha1-c7f73bb54d928922c3838bb789ee9fb8a5b1eb37"

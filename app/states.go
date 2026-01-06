@@ -15,6 +15,9 @@ import (
 	"sync/atomic"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
+	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/i18n"
+	goi18n "github.com/nicksnyder/go-i18n/v2/i18n"
+	uatomic "go.uber.org/atomic"
 )
 
 var (
@@ -42,6 +45,7 @@ const (
 	info                        gaba.StateName = "info"
 	logoutConfirmation          gaba.StateName = "logout_confirmation"
 	clearCacheConfirmation      gaba.StateName = "clear_cache_confirmation"
+	refreshCache                gaba.StateName = "refresh_cache"
 	saveSync                    gaba.StateName = "save_sync"
 	biosDownload                gaba.StateName = "bios_download"
 	artworkSync                 gaba.StateName = "artwork_sync"
@@ -97,11 +101,35 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 	gaba.Set(fsm.Context(), platforms)
 	gaba.Set(fsm.Context(), nav)
 
-	// Start background cache refresh immediately
-	cache.InitRefresh(config.Hosts[0], config, platforms)
+	// Initialize cache manager
+	if err := cache.InitCacheManager(config.Hosts[0], config); err != nil {
+		gaba.GetLogger().Error("Failed to initialize cache manager", "error", err)
+	}
+
+	// Check if this is a first run and populate cache if needed
+	if cm := cache.GetCacheManager(); cm != nil && cm.IsFirstRun() {
+		gaba.GetLogger().Info("First run detected, populating cache")
+		progress := uatomic.NewFloat64(0)
+		gaba.ProcessMessage(
+			i18n.Localize(&goi18n.Message{ID: "cache_building", Other: "Building cache..."}, nil),
+			gaba.ProcessMessageOptions{
+				ShowThemeBackground: true,
+				ShowProgressBar:     true,
+				Progress:            progress,
+			},
+			func() (interface{}, error) {
+				return nil, cm.PopulateFullCacheWithProgress(platforms, progress)
+			},
+		)
+	}
 
 	// Validate artwork cache in background
 	go artwork.ValidateCache()
+
+	// Index any existing artwork files
+	if cm := cache.GetCacheManager(); cm != nil {
+		go cm.ScanAndIndexArtwork()
+	}
 
 	gaba.AddState(fsm, platformSelection, func(ctx *gaba.Context) (ui.PlatformSelectionOutput, gaba.ExitCode) {
 		platforms, _ := gaba.Get[[]romm.Platform](ctx)
@@ -638,6 +666,7 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 		On(gaba.ExitCodeSuccess, settings).
 		On(constants.ExitCodeEditMappings, settingsPlatformMapping).
 		On(constants.ExitCodeClearCache, clearCacheConfirmation).
+		On(constants.ExitCodeRefreshCache, refreshCache).
 		On(constants.ExitCodeSyncArtwork, artworkSync).
 		On(gaba.ExitCodeBack, settings)
 
@@ -648,12 +677,13 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 
 		screen := ui.NewPlatformMappingScreen()
 		result, err := screen.Draw(ui.PlatformMappingInput{
-			Host:           host,
-			ApiTimeout:     config.ApiTimeout,
-			CFW:            currentCFW,
-			RomDirectory:   cfw.GetRomDirectory(),
-			AutoSelect:     false,
-			HideBackButton: false,
+			Host:             host,
+			ApiTimeout:       config.ApiTimeout,
+			CFW:              currentCFW,
+			RomDirectory:     cfw.GetRomDirectory(),
+			AutoSelect:       false,
+			HideBackButton:   false,
+			ExistingMappings: config.DirectoryMappings, // Pass existing mappings for return visits
 		})
 
 		if err != nil {
@@ -782,7 +812,159 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 		return result.Value, result.ExitCode
 	}).
 		On(gaba.ExitCodeBack, advancedSettings).
-		On(gaba.ExitCodeSuccess, advancedSettings)
+		OnWithHook(gaba.ExitCodeSuccess, advancedSettings, func(ctx *gaba.Context) error {
+			logger := gaba.GetLogger()
+
+			// If games cache was cleared, re-fetch platforms and re-populate
+			cm := cache.GetCacheManager()
+			if cm != nil && cm.IsFirstRun() {
+				host, _ := gaba.Get[romm.Host](ctx)
+				config, _ := gaba.Get[*internal.Config](ctx)
+
+				// Fetch fresh platform list from API
+				platforms, err := internal.GetMappedPlatforms(host, config.DirectoryMappings, config.ApiTimeout)
+				if err != nil {
+					logger.Error("Failed to fetch platforms after cache clear", "error", err)
+					return nil // Don't fail, just log
+				}
+
+				// Update platforms in context
+				gaba.Set(ctx, platforms)
+
+				// Re-populate cache with progress
+				progress := uatomic.NewFloat64(0)
+				gaba.ProcessMessage(
+					i18n.Localize(&goi18n.Message{ID: "cache_building", Other: "Building cache..."}, nil),
+					gaba.ProcessMessageOptions{
+						ShowThemeBackground: true,
+						ShowProgressBar:     true,
+						Progress:            progress,
+					},
+					func() (interface{}, error) {
+						return nil, cm.PopulateFullCacheWithProgress(platforms, progress)
+					},
+				)
+
+				logger.Info("Cache rebuilt after clear")
+			}
+
+			return nil
+		})
+
+	gaba.AddState(fsm, refreshCache, func(ctx *gaba.Context) (ui.RefreshCacheOutput, gaba.ExitCode) {
+		screen := ui.NewRefreshCacheScreen()
+		result, err := screen.Draw()
+
+		if err != nil {
+			return ui.RefreshCacheOutput{}, gaba.ExitCodeError
+		}
+
+		return result.Value, result.ExitCode
+	}).
+		On(gaba.ExitCodeBack, advancedSettings).
+		OnWithHook(gaba.ExitCodeSuccess, advancedSettings, func(ctx *gaba.Context) error {
+			logger := gaba.GetLogger()
+			host, _ := gaba.Get[romm.Host](ctx)
+			config, _ := gaba.Get[*internal.Config](ctx)
+			result, _ := gaba.Get[ui.RefreshCacheOutput](ctx)
+
+			cm := cache.GetCacheManager()
+			if cm == nil {
+				logger.Error("Cache manager not initialized")
+				return nil
+			}
+
+			refreshGames := false
+			refreshCollections := false
+			refreshArtwork := false
+
+			for _, t := range result.SelectedTypes {
+				switch t {
+				case ui.RefreshCacheGames:
+					refreshGames = true
+				case ui.RefreshCacheCollections:
+					refreshCollections = true
+				case ui.RefreshCacheArtwork:
+					refreshArtwork = true
+				}
+			}
+
+			// Clear selected caches
+			if refreshGames {
+				if err := cm.ClearGames(); err != nil {
+					logger.Error("Failed to clear games cache", "error", err)
+				}
+			}
+			if refreshCollections {
+				if err := cm.ClearCollections(); err != nil {
+					logger.Error("Failed to clear collections cache", "error", err)
+				}
+			}
+			if refreshArtwork {
+				if err := cm.ClearArtwork(); err != nil {
+					logger.Error("Failed to clear artwork cache", "error", err)
+				}
+			}
+
+			// If we need to refresh games or collections, re-populate
+			if refreshGames || refreshCollections {
+				// Fetch fresh platform list from API
+				platforms, err := internal.GetMappedPlatforms(host, config.DirectoryMappings, config.ApiTimeout)
+				if err != nil {
+					logger.Error("Failed to fetch platforms", "error", err)
+					return nil
+				}
+
+				// Update platforms in context
+				gaba.Set(ctx, platforms)
+
+				// Re-populate cache with progress
+				progress := uatomic.NewFloat64(0)
+				gaba.ProcessMessage(
+					i18n.Localize(&goi18n.Message{ID: "cache_building", Other: "Building cache..."}, nil),
+					gaba.ProcessMessageOptions{
+						ShowThemeBackground: true,
+						ShowProgressBar:     true,
+						Progress:            progress,
+					},
+					func() (interface{}, error) {
+						return nil, cm.PopulateFullCacheWithProgress(platforms, progress)
+					},
+				)
+			}
+
+			// If only refreshing artwork, sync it in background
+			if refreshArtwork && !refreshGames && !refreshCollections {
+				platforms, _ := gaba.Get[[]romm.Platform](ctx)
+				go func() {
+					for _, p := range platforms {
+						games, err := cm.GetPlatformGames(p.ID)
+						if err == nil {
+							artwork.SyncInBackground(host, games)
+						}
+					}
+					// Record artwork refresh time after sync completes
+					cm.RecordRefreshTime(cache.MetaKeyArtworkRefreshedAt)
+				}()
+
+				gaba.ProcessMessage(
+					i18n.Localize(&goi18n.Message{ID: "artwork_sync_started", Other: "Artwork sync started in background"}, nil),
+					gaba.ProcessMessageOptions{ShowThemeBackground: true},
+					func() (interface{}, error) {
+						return nil, nil
+					},
+				)
+			} else if refreshArtwork {
+				// Record artwork refresh time (it was cleared and will be re-downloaded on demand)
+				cm.RecordRefreshTime(cache.MetaKeyArtworkRefreshedAt)
+			}
+
+			logger.Info("Cache refresh completed",
+				"games", refreshGames,
+				"collections", refreshCollections,
+				"artwork", refreshArtwork)
+			return nil
+		})
 
 	gaba.AddState(fsm, saveSync, func(ctx *gaba.Context) (ui.SaveSyncOutput, gaba.ExitCode) {
 		config, _ := gaba.Get[*internal.Config](ctx)

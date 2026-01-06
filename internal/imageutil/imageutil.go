@@ -3,12 +3,15 @@ package imageutil
 import (
 	"fmt"
 	"image"
+	_ "image/gif"  // Register GIF decoder
+	_ "image/jpeg" // Register JPEG decoder
 	"image/png"
 	"os"
 
 	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	go_qr "github.com/piglig/go-qr"
 	"golang.org/x/image/draw"
+	_ "golang.org/x/image/webp" // Register WebP decoder
 )
 
 func CreateTempQRCode(content string, size int) (string, error) {

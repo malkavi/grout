@@ -15,6 +15,17 @@ import (
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
 
+// GetWithArtwork returns all ROMs that have artwork URLs available
+func GetWithArtwork(roms []romm.Rom) []romm.Rom {
+	var withArtwork []romm.Rom
+	for _, rom := range roms {
+		if HasURL(rom) {
+			withArtwork = append(withArtwork, rom)
+		}
+	}
+	return withArtwork
+}
+
 func GetMissing(roms []romm.Rom) []romm.Rom {
 	var missing []romm.Rom
 	for _, rom := range roms {
@@ -169,6 +180,9 @@ func DownloadAndCache(rom romm.Rom, host romm.Host) error {
 		os.Remove(cachePath)
 		return fmt.Errorf("processed artwork is not a valid PNG: %w", err)
 	}
+
+	// Record in SQLite metadata
+	MarkCached(rom.PlatformFSSlug, rom.ID)
 
 	return nil
 }

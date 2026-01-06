@@ -24,6 +24,7 @@ type AdvancedSettingsInput struct {
 type AdvancedSettingsOutput struct {
 	EditMappingsClicked   bool
 	ClearCacheClicked     bool
+	RefreshCacheClicked   bool
 	SyncArtworkClicked    bool
 	LastSelectedIndex     int
 	LastVisibleStartIndex int
@@ -83,7 +84,12 @@ func (s *AdvancedSettingsScreen) Draw(input AdvancedSettingsInput) (ScreenResult
 			return withCode(output, constants.ExitCodeClearCache), nil
 		}
 
-		if selectedText == i18n.Localize(&goi18n.Message{ID: "settings_sync_artwork", Other: "Cache Artwork"}, nil) {
+		if selectedText == i18n.Localize(&goi18n.Message{ID: "settings_refresh_cache", Other: "Refresh Cache"}, nil) {
+			output.RefreshCacheClicked = true
+			return withCode(output, constants.ExitCodeRefreshCache), nil
+		}
+
+		if selectedText == i18n.Localize(&goi18n.Message{ID: "settings_sync_artwork", Other: "Preload Artwork"}, nil) {
 			output.SyncArtworkClicked = true
 			return withCode(output, constants.ExitCodeSyncArtwork), nil
 		}
@@ -107,7 +113,7 @@ func (s *AdvancedSettingsScreen) buildMenuItems(config *internal.Config) []gaba.
 			Options: []gaba.Option{{Type: gaba.OptionTypeClickable}},
 		},
 		{
-			Item:    gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_sync_artwork", Other: "Cache Artwork"}, nil)},
+			Item:    gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_sync_artwork", Other: "Preload Artwork"}, nil)},
 			Options: []gaba.Option{{Type: gaba.OptionTypeClickable}},
 		},
 		{
@@ -116,6 +122,10 @@ func (s *AdvancedSettingsScreen) buildMenuItems(config *internal.Config) []gaba.
 			Visible: func() bool {
 				return artwork.HasCache() || cache.HasGamesCache()
 			},
+		},
+		{
+			Item:    gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_refresh_cache", Other: "Refresh Cache"}, nil)},
+			Options: []gaba.Option{{Type: gaba.OptionTypeClickable}},
 		},
 		{
 			Item: gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_download_timeout", Other: "Download Timeout"}, nil)},

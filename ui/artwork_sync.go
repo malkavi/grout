@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"grout/artwork"
+	"grout/cache"
 	"grout/internal"
 	"grout/internal/imageutil"
 	"grout/romm"
@@ -70,40 +71,51 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 		return
 	}
 
-	// Collect all ROMs that need artwork (missing or outdated)
-	var allNeedingArtwork []romm.Rom
+	// Collect all ROMs that have artwork available
+	var allWithArtwork []romm.Rom
 	platformCount := len(mappedPlatforms)
 
+	cm := cache.GetCacheManager()
 	for i, platform := range mappedPlatforms {
 		// Show scanning progress
 		gaba.ProcessMessage(
 			fmt.Sprintf(i18n.Localize(&goi18n.Message{ID: "artwork_sync_scanning", Other: "Scanning platform %d/%d: %s..."}, nil), i+1, platformCount, platform.Name),
 			gaba.ProcessMessageOptions{ShowThemeBackground: true},
 			func() (interface{}, error) {
-				roms, err := client.GetRoms(romm.GetRomsQuery{
-					PlatformID: platform.ID,
-					Limit:      10000,
-				})
-				if err != nil {
-					logger.Error("Failed to fetch ROMs for platform", "platform", platform.Name, "error", err)
+				var roms []romm.Rom
+				var err error
+
+				// Use cache if available
+				if cm != nil {
+					roms, err = cm.GetPlatformGames(platform.ID)
+					if err != nil || len(roms) == 0 {
+						// Cache miss - refresh from API
+						if err := cm.RefreshPlatformGames(platform); err != nil {
+							logger.Error("Failed to refresh platform games", "platform", platform.Name, "error", err)
+							return nil, nil
+						}
+						roms, err = cm.GetPlatformGames(platform.ID)
+						if err != nil {
+							logger.Error("Failed to get platform games from cache", "platform", platform.Name, "error", err)
+							return nil, nil
+						}
+					}
+				} else {
+					logger.Error("Cache manager not available", "platform", platform.Name)
 					return nil, nil
 				}
 
-				// Get missing artwork
-				missing := artwork.GetMissing(roms.Items)
-				allNeedingArtwork = append(allNeedingArtwork, missing...)
-
-				// Check for outdated artwork via ETag
-				outdated := artwork.GetOutdated(roms.Items, input.Host)
-				allNeedingArtwork = append(allNeedingArtwork, outdated...)
+				// Get all ROMs with artwork URLs (download everything)
+				withArtwork := artwork.GetWithArtwork(roms)
+				allWithArtwork = append(allWithArtwork, withArtwork...)
 				return nil, nil
 			},
 		)
 	}
 
-	if len(allNeedingArtwork) == 0 {
+	if len(allWithArtwork) == 0 {
 		gaba.ConfirmationMessage(
-			i18n.Localize(&goi18n.Message{ID: "artwork_sync_up_to_date", Other: "All artwork is already cached!"}, nil),
+			i18n.Localize(&goi18n.Message{ID: "artwork_sync_no_artwork", Other: "No artwork available to download."}, nil),
 			ContinueFooter(),
 			gaba.MessageOptions{},
 		)
@@ -115,7 +127,7 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 	romsByLocation := make(map[string]romm.Rom)
 
 	baseURL := input.Host.URL()
-	for _, rom := range allNeedingArtwork {
+	for _, rom := range allWithArtwork {
 		coverPath := artwork.GetCoverPath(rom)
 		if coverPath == "" {
 			continue

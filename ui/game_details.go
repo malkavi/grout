@@ -232,6 +232,7 @@ func (s *GameDetailsScreen) getCoverImagePath(host romm.Host, game romm.Rom) str
 			cachePath := artwork.GetCachePath(game.PlatformFSSlug, game.ID)
 			if err := os.WriteFile(cachePath, imageData, 0644); err == nil {
 				imageutil.ProcessArtImage(cachePath)
+				artwork.MarkCached(game.PlatformFSSlug, game.ID)
 				return cachePath
 			}
 		}

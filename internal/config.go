@@ -243,11 +243,7 @@ func GetMappedPlatforms(host romm.Host, mappings map[string]DirectoryMapping, ti
 	for _, platform := range rommPlatforms {
 		_, exists := mappings[platform.FSSlug]
 		if exists {
-			platforms = append(platforms, romm.Platform{
-				Name:   platform.Name,
-				ID:     platform.ID,
-				FSSlug: platform.FSSlug,
-			})
+			platforms = append(platforms, platform)
 		}
 	}
 

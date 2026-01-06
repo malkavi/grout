@@ -52,7 +52,7 @@ func (s *PlatformSelectionScreen) Draw(input PlatformSelectionInput) (ScreenResu
 			Text:           i18n.Localize(&goi18n.Message{ID: "platform_selection_collections", Other: "Collections"}, nil),
 			Selected:       false,
 			Focused:        false,
-			Metadata:       romm.Platform{Slug: "collections"},
+			Metadata:       romm.Platform{FSSlug: "collections"},
 			NotReorderable: true,
 		})
 	}

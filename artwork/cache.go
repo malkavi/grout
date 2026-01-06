@@ -1,8 +1,8 @@
 package artwork
 
 import (
+	"grout/cache"
 	"grout/internal/fileutil"
-	"image/png"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,31 +11,39 @@ import (
 )
 
 func GetCacheDir() string {
-	wd, err := os.Getwd()
-	if err != nil {
-		return filepath.Join(os.TempDir(), ".cache", "artwork")
-	}
-	return filepath.Join(wd, ".cache", "artwork")
+	return cache.GetArtworkCacheDir()
 }
 
 func ClearCache() error {
-	cacheDir := GetCacheDir()
+	// Clear SQLite metadata
+	if cm := cache.GetCacheManager(); cm != nil {
+		if err := cm.ClearArtwork(); err != nil {
+			gaba.GetLogger().Debug("Failed to clear artwork metadata", "error", err)
+		}
+	}
 
+	// Clear files from disk
+	cacheDir := GetCacheDir()
 	if !fileutil.FileExists(cacheDir) {
 		return nil
 	}
-
 	return os.RemoveAll(cacheDir)
 }
 
 func HasCache() bool {
-	cacheDir := GetCacheDir()
+	// Check SQLite first for speed
+	if cm := cache.GetCacheManager(); cm != nil {
+		if cm.GetArtworkCount() > 0 {
+			return true
+		}
+	}
 
+	// Fall back to filesystem check
+	cacheDir := GetCacheDir()
 	entries, err := os.ReadDir(cacheDir)
 	if err != nil {
 		return false
 	}
-
 	return len(entries) > 0
 }
 
@@ -44,6 +52,14 @@ func GetCachePath(platformFSSlug string, romID int) string {
 }
 
 func Exists(platformFSSlug string, romID int) bool {
+	// Check SQLite metadata first (fast)
+	if cm := cache.GetCacheManager(); cm != nil {
+		if cm.IsArtworkCached(platformFSSlug, romID) {
+			return true
+		}
+	}
+
+	// Fall back to filesystem check
 	return fileutil.FileExists(GetCachePath(platformFSSlug, romID))
 }
 
@@ -52,50 +68,27 @@ func EnsureCacheDir(platformFSSlug string) error {
 	return os.MkdirAll(dir, 0755)
 }
 
+// MarkCached records that artwork has been cached for a ROM
+func MarkCached(platformFSSlug string, romID int) {
+	if cm := cache.GetCacheManager(); cm != nil {
+		path := GetCachePath(platformFSSlug, romID)
+		if err := cm.MarkArtworkCached(platformFSSlug, romID, path); err != nil {
+			gaba.GetLogger().Debug("Failed to mark artwork cached", "error", err)
+		}
+	}
+}
+
 func ValidateCache() {
-	go func() {
-		logger := gaba.GetLogger()
-		cacheDir := GetCacheDir()
-
-		platformDirs, err := os.ReadDir(cacheDir)
-		if err != nil {
-			return
-		}
-
-		removed := 0
-		for _, platformDir := range platformDirs {
-			if !platformDir.IsDir() {
-				continue
-			}
-
-			platformPath := filepath.Join(cacheDir, platformDir.Name())
-			files, err := os.ReadDir(platformPath)
+	if cm := cache.GetCacheManager(); cm != nil {
+		go func() {
+			removed, err := cm.ValidateArtworkCache()
 			if err != nil {
-				continue
+				gaba.GetLogger().Debug("Failed to validate artwork cache", "error", err)
+				return
 			}
-
-			for _, file := range files {
-				if file.IsDir() || filepath.Ext(file.Name()) != ".png" {
-					continue
-				}
-
-				path := filepath.Join(platformPath, file.Name())
-				f, err := os.Open(path)
-				if err != nil {
-					continue
-				}
-
-				_, err = png.DecodeConfig(f)
-				f.Close()
-				if err != nil {
-					os.Remove(path)
-					removed++
-				}
+			if removed > 0 {
+				gaba.GetLogger().Debug("Removed invalid artwork entries", "count", removed)
 			}
-		}
-
-		if removed > 0 {
-			logger.Debug("Removed corrupted artwork files", "count", removed)
-		}
-	}()
+		}()
+	}
 }

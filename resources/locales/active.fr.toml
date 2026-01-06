@@ -26,6 +26,10 @@ other = "Analyse de la plateforme %d/%d : %s..."
 hash = "sha1-ef880c0f2577f0a9fb8ca21f2ed3710e5aef1376"
 other = "Toutes les illustrations sont déjà en cache !"
 
+[artwork_sync_no_artwork]
+hash = "sha1-447a12c1a94ffbcefafc528ff6de40d16b247a7d"
+other = "Aucune illustration disponible à télécharger."
+
 [auto_sync_waiting]
 hash = "sha1-c005f14e70da37982e2152d3af9d29a58ea8f01c"
 other = "En attente de la fin de la synchronisation..."
@@ -148,6 +152,10 @@ other = "Cache des Artworks"
 [cache_games]
 hash = "sha1-1e7dbd606b8bad53986d06fd58c9d73dcad67d64"
 other = "Cache des Jeux"
+
+[cache_artwork_metadata]
+hash = "sha1-447a12c1a94ffbcefafc528ff6de40d16b247a7d"
+other = "Métadonnées des illustrations"
 
 [clear_cache_title]
 hash = "sha1-522175083f0bf50b4584d1dd8dbed60ae22535be"
@@ -645,7 +653,7 @@ other = "Collections Virtuelles"
 
 [settings_sync_artwork]
 hash = "sha1-447a12c1a94ffbcefafc528ff6de40d16b247a7d"
-other = "Mettre en cache"
+other = "Précharger les illustrations"
 
 [settings_title]
 hash = "sha1-c7f73bb54d928922c3838bb789ee9fb8a5b1eb37"
