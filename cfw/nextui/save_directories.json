@@ -39,7 +39,9 @@
   "cpet": [
     "PET"
   ],
-  "dc": [],
+  "dc": [
+    "DC"
+  ],
   "doom": [
     "PRBOOM"
   ],
