@@ -37,7 +37,9 @@
     "COLECO"
   ],
   "cpet": [],
-  "dc": [],
+  "dc": [
+    "DC"
+  ],
   "doom": [
     "DOOM"
   ],

@@ -39,7 +39,9 @@
   "cpet": [
     "Commodore PET (PET)"
   ],
-  "dc": [],
+  "dc": [
+    "Sega Dreamcast (DC)"
+  ],
   "doom": [
     "Doom (PRBOOM)"
   ],
