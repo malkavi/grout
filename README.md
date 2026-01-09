@@ -33,7 +33,7 @@ A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.o
 
 ---
 
-## Installation
+## Installation / Updating
 
 Choose your platform and follow the installation guide:
 
