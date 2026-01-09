@@ -15,11 +15,11 @@ welcoming to all contributors regardless of experience level.
 
 1. Read the [Development Guide](DEVELOPMENT.md) for setup instructions
 2. Fork and clone the repository
-3. Create a feature branch from `dev` with a descriptive name (e.g., `feature/add-search-filter`)
+3. Create a feature branch from `main` with a descriptive name (e.g., `feature/add-search-filter`)
 4. Make your changes
 5. Test locally on your target CFW if possible
 6. Commit with clear, descriptive messages
-7. Push and open a pull request against `dev`
+7. Push and open a pull request against `main`
 
 ## Pull Request Standards
 
