@@ -2,18 +2,13 @@ package ui
 
 import (
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
-	icons "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/constants"
 )
 
 var defaultStatusBar = gaba.StatusBarOptions{
 	Enabled:    true,
 	ShowTime:   true,
 	TimeFormat: gaba.TimeFormat24Hour,
-	Icons: []gaba.StatusBarIcon{
-		{
-			Text: icons.WiFi,
-		},
-	},
+	Icons:      []gaba.StatusBarIcon{},
 }
 
 func StatusBar() gaba.StatusBarOptions {

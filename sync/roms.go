@@ -8,6 +8,7 @@ import (
 	"grout/romm"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	gosync "sync"
@@ -15,6 +16,17 @@ import (
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
+
+// timestampPattern matches the timestamp suffix appended to save files
+// Format: " [YYYY-MM-DD HH-MM-SS-mmm]" e.g., " [2024-01-02 15-04-05-000]"
+var timestampPattern = regexp.MustCompile(` \[\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}-\d{3}\]$`)
+
+// extractSaveBaseName strips the timestamp suffix from a remote save's filename
+// to get the original base name for comparison with local saves.
+// e.g., "Pokemon Red [2024-01-02 15-04-05-000]" -> "Pokemon Red"
+func extractSaveBaseName(fileNameNoExt string) string {
+	return timestampPattern.ReplaceAllString(fileNameNoExt, "")
+}
 
 type LocalRomFile struct {
 	RomID       int
@@ -26,9 +38,17 @@ type LocalRomFile struct {
 	SaveFile    *LocalSave
 }
 
+// baseName returns the ROM filename without extension, used for matching saves
+func (lrf LocalRomFile) baseName() string {
+	return strings.TrimSuffix(lrf.FileName, filepath.Ext(lrf.FileName))
+}
+
 func (lrf LocalRomFile) syncAction() SyncAction {
 	hasLocal := lrf.SaveFile != nil
-	hasRemote := len(lrf.RemoteSaves) > 0
+	baseName := lrf.baseName()
+
+	// Check for remote saves that match this ROM's base name
+	hasRemote := lrf.hasRemoteSaveForBaseName(baseName)
 
 	switch {
 	case !hasLocal && !hasRemote:
@@ -43,7 +63,8 @@ func (lrf LocalRomFile) syncAction() SyncAction {
 	// Truncate to second precision to avoid timestamp precision issues
 	// API timestamps are typically second/millisecond precision, but filesystem is nanosecond
 	localTime := lrf.SaveFile.LastModified.Truncate(time.Second)
-	remoteTime := lrf.lastRemoteSave().UpdatedAt.Truncate(time.Second)
+	remoteSave := lrf.lastRemoteSaveForBaseName(baseName)
+	remoteTime := remoteSave.UpdatedAt.Truncate(time.Second)
 
 	switch localTime.Compare(remoteTime) {
 	case -1:
@@ -55,16 +76,43 @@ func (lrf LocalRomFile) syncAction() SyncAction {
 	}
 }
 
-func (lrf LocalRomFile) lastRemoteSave() romm.Save {
+// lastRemoteSaveForBaseName returns the most recent remote save that matches
+// the given base name (after stripping timestamps from remote save filenames).
+// This allows multiple local ROM files with different names but the same CRC32
+// to each sync with their own set of remote saves.
+func (lrf LocalRomFile) lastRemoteSaveForBaseName(baseName string) romm.Save {
 	if len(lrf.RemoteSaves) == 0 {
 		return romm.Save{}
 	}
 
-	slices.SortFunc(lrf.RemoteSaves, func(s1 romm.Save, s2 romm.Save) int {
+	// Filter saves to only those matching the base name
+	var matching []romm.Save
+	for _, s := range lrf.RemoteSaves {
+		remoteBaseName := extractSaveBaseName(s.FileNameNoExt)
+		if remoteBaseName == baseName {
+			matching = append(matching, s)
+		}
+	}
+
+	if len(matching) == 0 {
+		return romm.Save{}
+	}
+
+	slices.SortFunc(matching, func(s1 romm.Save, s2 romm.Save) int {
 		return s2.UpdatedAt.Compare(s1.UpdatedAt)
 	})
 
-	return lrf.RemoteSaves[0]
+	return matching[0]
+}
+
+// hasRemoteSaveForBaseName checks if there's any remote save matching the given base name
+func (lrf LocalRomFile) hasRemoteSaveForBaseName(baseName string) bool {
+	for _, s := range lrf.RemoteSaves {
+		if extractSaveBaseName(s.FileNameNoExt) == baseName {
+			return true
+		}
+	}
+	return false
 }
 
 // LocalRomScan holds the results of scanning local ROMs, keyed by platform fs_slug

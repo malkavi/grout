@@ -395,8 +395,9 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 					// For uploads, key by local save path to avoid duplicates
 					key = r.SaveFile.Path
 				} else {
-					// For downloads, key by romID to avoid duplicate downloads
-					key = fmt.Sprintf("download_%d", r.RomID)
+					// For downloads, key by romID and baseName to allow different
+					// ROM files (same CRC32, different names) to download their own saves
+					key = fmt.Sprintf("download_%d_%s", r.RomID, baseName)
 				}
 
 				// Skip if already added (happens when multiple fs_slugs share same save dir)
@@ -410,7 +411,7 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 					FSSlug:   fsSlug,
 					GameBase: baseName,
 					Local:    r.SaveFile,
-					Remote:   r.lastRemoteSave(),
+					Remote:   r.lastRemoteSaveForBaseName(baseName),
 					Action:   action,
 				}
 			}
