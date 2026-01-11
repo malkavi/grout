@@ -147,7 +147,7 @@ tasks:
     desc: Extract i18n messages from source code to active.en.toml
     silent: true
     cmds:
-      - goi18n extract -format=toml -outdir=resources/locales .
+      - go tool goi18n extract -format=toml -outdir=resources/locales .
       - echo "Extracted messages to resources/locales/active.en.toml"
 
   i18n:merge:
@@ -157,7 +157,7 @@ tasks:
       - mkdir -p translations_todo
       - |
         for lang in es fr de it pt ja ru; do
-          goi18n merge -sourceLanguage en -outdir resources/locales -format toml \
+          go tool goi18n merge -sourceLanguage en -outdir resources/locales -format toml \
             resources/locales/active.en.toml resources/locales/active.${lang}.toml
           if [ -f resources/locales/translate.${lang}.toml ]; then
             mv resources/locales/translate.${lang}.toml translations_todo/${lang}.toml
