@@ -39,7 +39,6 @@ func (s *ArtworkSyncScreen) Execute(config internal.Config, host romm.Host) Artw
 func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 	logger := gaba.GetLogger()
 
-	// Fetch platforms
 	client := romm.NewClientFromHost(input.Host, input.Config.ApiTimeout)
 	platforms, err := client.GetPlatforms()
 	if err != nil {
@@ -53,7 +52,6 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 	}
 	romm.DisambiguatePlatformNames(platforms)
 
-	// Filter to only mapped platforms
 	var mappedPlatforms []romm.Platform
 	for _, p := range platforms {
 		if _, exists := input.Config.DirectoryMappings[p.FSSlug]; exists {
@@ -70,13 +68,11 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 		return
 	}
 
-	// Collect all ROMs that have artwork available
-	var allWithArtwork []romm.Rom
+	var allMissingArtwork []romm.Rom
 	platformCount := len(mappedPlatforms)
 
 	cm := cache.GetCacheManager()
 	for i, platform := range mappedPlatforms {
-		// Show scanning progress
 		gaba.ProcessMessage(
 			fmt.Sprintf(i18n.Localize(&goi18n.Message{ID: "artwork_sync_scanning", Other: "Scanning platform %d/%d: %s..."}, nil), i+1, platformCount, platform.Name),
 			gaba.ProcessMessageOptions{ShowThemeBackground: true},
@@ -84,11 +80,9 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 				var roms []romm.Rom
 				var err error
 
-				// Use cache if available
 				if cm != nil {
 					roms, err = cm.GetPlatformGames(platform.ID)
 					if err != nil || len(roms) == 0 {
-						// Cache miss - refresh from API
 						if err := cm.RefreshPlatformGames(platform); err != nil {
 							logger.Error("Failed to refresh platform games", "platform", platform.Name, "error", err)
 							return nil, nil
@@ -104,29 +98,27 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 					return nil, nil
 				}
 
-				// Get all ROMs with artwork URLs (download everything)
-				withArtwork := cache.GetRomsWithArtwork(roms)
-				allWithArtwork = append(allWithArtwork, withArtwork...)
+				missingArtwork := cache.GetMissingArtwork(roms)
+				allMissingArtwork = append(allMissingArtwork, missingArtwork...)
 				return nil, nil
 			},
 		)
 	}
 
-	if len(allWithArtwork) == 0 {
+	if len(allMissingArtwork) == 0 {
 		gaba.ConfirmationMessage(
-			i18n.Localize(&goi18n.Message{ID: "artwork_sync_no_artwork", Other: "No artwork available to download."}, nil),
+			i18n.Localize(&goi18n.Message{ID: "artwork_sync_up_to_date", Other: "All artwork is already cached!"}, nil),
 			ContinueFooter(),
 			gaba.MessageOptions{},
 		)
 		return
 	}
 
-	// Build downloads
 	var downloads []gaba.Download
 	romsByLocation := make(map[string]romm.Rom)
 
 	baseURL := input.Host.URL()
-	for _, rom := range allWithArtwork {
+	for _, rom := range allMissingArtwork {
 		coverPath := cache.GetArtworkCoverPath(rom)
 		if coverPath == "" {
 			continue
@@ -135,7 +127,6 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 		downloadURL := strings.ReplaceAll(baseURL+coverPath, " ", "%20")
 		cachePath := cache.GetArtworkCachePath(rom.PlatformFSSlug, rom.ID)
 
-		// Ensure directory exists
 		cache.EnsureArtworkCacheDir(rom.PlatformFSSlug)
 
 		downloads = append(downloads, gaba.Download{
@@ -155,7 +146,6 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 		return
 	}
 
-	// Show confirmation before downloading
 	_, err = gaba.ConfirmationMessage(
 		fmt.Sprintf(i18n.Localize(&goi18n.Message{ID: "artwork_sync_confirm", Other: "Download artwork for %d games?"}, nil), len(downloads)),
 		[]gaba.FooterHelpItem{
@@ -166,7 +156,6 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 	)
 
 	if err != nil {
-		// User cancelled
 		return
 	}
 
@@ -186,17 +175,16 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 		return
 	}
 
-	// Process downloaded images in parallel
 	var successCount int32
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, 4) // Limit to 4 concurrent processors
+	semaphore := make(chan struct{}, 4)
 
 	for _, download := range res.Completed {
 		wg.Add(1)
 		go func(dl gaba.Download) {
 			defer wg.Done()
-			semaphore <- struct{}{}        // Acquire
-			defer func() { <-semaphore }() // Release
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
 
 			if err := imageutil.ProcessArtImage(dl.Location); err != nil {
 				logger.Warn("Failed to process artwork", "path", dl.Location, "error", err)
@@ -206,7 +194,6 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 		}(download)
 	}
 
-	// Wait for all processing to complete with a progress message
 	done := make(chan struct{})
 	go func() {
 		wg.Wait()
@@ -225,7 +212,6 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 	finalCount := int(atomic.LoadInt32(&successCount))
 	logger.Info("Artwork sync complete", "success", finalCount, "failed", len(res.Failed))
 
-	// Show completion message
 	if finalCount > 0 {
 		gaba.ConfirmationMessage(
 			fmt.Sprintf(i18n.Localize(&goi18n.Message{ID: "artwork_sync_complete", Other: "Successfully downloaded %d artwork images."}, nil), finalCount),
