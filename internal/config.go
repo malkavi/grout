@@ -266,7 +266,10 @@ func GetMappedPlatforms(host romm.Host, mappings map[string]DirectoryMapping, ti
 
 // LoadPlatformsBinding fetches the PLATFORMS_BINDING from the RomM server
 // and stores it in the config for use in CFW lookups.
-func (c Config) LoadPlatformsBinding(host romm.Host, timeout ...time.Duration) error {
+// This requires the pointer receiver!
+//
+//goland:noinspection ALL
+func (c *Config) LoadPlatformsBinding(host romm.Host, timeout ...time.Duration) error {
 	client := romm.NewClientFromHost(host, timeout...)
 
 	rommConfig, err := client.GetConfig()
