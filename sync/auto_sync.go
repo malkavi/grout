@@ -79,7 +79,7 @@ func (a *AutoSync) run() {
 	a.icon.SetText(icons.CloudRefresh)
 	logger.Debug("AutoSync: Starting save sync scan")
 
-	syncs, _, err := FindSaveSyncs(a.host, a.config)
+	syncs, _, _, err := FindSaveSyncs(a.host, a.config)
 	if err != nil {
 		logger.Error("AutoSync: Failed to find save syncs", "error", err)
 		a.icon.SetText(icons.CloudAlert)

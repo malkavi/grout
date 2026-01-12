@@ -4,7 +4,7 @@ import (
 	"database/sql"
 )
 
-const schemaVersion = 2
+const schemaVersion = 3
 
 func createTables(db *sql.DB) error {
 	tx, err := db.Begin()
@@ -162,6 +162,24 @@ func createTables(db *sql.DB) error {
 	}
 
 	_, err = tx.Exec(`CREATE INDEX IF NOT EXISTS idx_filename_mappings_lookup ON filename_mappings(platform_fs_slug, local_filename_no_ext)`)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		CREATE TABLE IF NOT EXISTS failed_lookups (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			platform_fs_slug TEXT NOT NULL,
+			local_filename_no_ext TEXT NOT NULL,
+			last_attempt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(platform_fs_slug, local_filename_no_ext)
+		)
+	`)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`CREATE INDEX IF NOT EXISTS idx_failed_lookups ON failed_lookups(platform_fs_slug, local_filename_no_ext)`)
 	if err != nil {
 		return err
 	}

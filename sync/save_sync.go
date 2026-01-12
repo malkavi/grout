@@ -6,6 +6,7 @@ import (
 	"grout/cache"
 	"grout/internal"
 	"grout/internal/fileutil"
+	"grout/internal/stringutil"
 	"grout/romm"
 	"os"
 	"path/filepath"
@@ -15,8 +16,6 @@ import (
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
 
-// ErrOrphanRom is returned when attempting to sync a save for a ROM that isn't matched in the cache.
-// This typically happens when the local ROM filename differs from what's in RomM.
 var ErrOrphanRom = errors.New("orphan ROM")
 
 type SaveSync struct {
@@ -43,7 +42,7 @@ type SyncResult struct {
 	Action         SyncAction
 	Success        bool
 	Error          string
-	Err            error // The actual error for type checking
+	Err            error
 	FilePath       string
 	UnmatchedSaves []UnmatchedSave
 }
@@ -53,10 +52,19 @@ type UnmatchedSave struct {
 	FSSlug   string
 }
 
+type PendingFuzzyMatch struct {
+	LocalFilename string
+	LocalPath     string
+	SavePath      string
+	FSSlug        string
+	MatchedRomID  int
+	MatchedName   string
+	Similarity    float64
+}
+
 func (s *SaveSync) Execute(host romm.Host, config *internal.Config) SyncResult {
 	logger := gaba.GetLogger()
 
-	// Strip file extension from ROM name for cleaner display
 	displayName := s.RomName
 	if displayName != "" {
 		displayName = strings.TrimSuffix(displayName, filepath.Ext(displayName))
@@ -224,6 +232,11 @@ func lookupRomByHash(rc *romm.Client, romFile *LocalRomFile) (int, string) {
 		return 0, ""
 	}
 
+	if !cache.ShouldAttemptLookup(romFile.FSSlug, romFile.FileName) {
+		logger.Debug("Skipping hash lookup (cooldown active)", "file", romFile.FileName, "fsSlug", romFile.FSSlug)
+		return 0, ""
+	}
+
 	crcHash, err := fileutil.ComputeCRC32(romFile.FilePath)
 	if err != nil {
 		logger.Debug("Failed to compute CRC32 hash", "file", romFile.FileName, "error", err)
@@ -233,37 +246,122 @@ func lookupRomByHash(rc *romm.Client, romFile *LocalRomFile) (int, string) {
 	logger.Debug("Looking up ROM by CRC32 hash", "file", romFile.FileName, "crc", crcHash)
 
 	rom, err := rc.GetRomByHash(romm.GetRomByHashQuery{CrcHash: crcHash})
-	if err != nil {
-		logger.Debug("ROM not found by hash", "file", romFile.FileName, "crc", crcHash, "error", err)
-		return 0, ""
-	}
-
-	if rom.ID > 0 {
+	if err == nil && rom.ID > 0 {
 		logger.Info("Found ROM by CRC32 hash",
 			"file", romFile.FileName,
 			"crc", crcHash,
 			"romID", rom.ID,
 			"romName", rom.Name)
+		_ = cache.SaveFilenameMapping(romFile.FSSlug, romFile.FileName, rom.ID, rom.Name)
+		_ = cache.ClearFailedLookup(romFile.FSSlug, romFile.FileName)
 		return rom.ID, rom.Name
 	}
 
+	sha1Hash, err := fileutil.ComputeSHA1(romFile.FilePath)
+	if err != nil {
+		logger.Debug("Failed to compute SHA1 hash", "file", romFile.FileName, "error", err)
+		_ = cache.RecordFailedLookup(romFile.FSSlug, romFile.FileName)
+		return 0, ""
+	}
+
+	logger.Debug("Looking up ROM by SHA1 hash", "file", romFile.FileName, "sha1", sha1Hash)
+
+	rom, err = rc.GetRomByHash(romm.GetRomByHashQuery{Sha1Hash: sha1Hash})
+	if err == nil && rom.ID > 0 {
+		logger.Info("Found ROM by SHA1 hash",
+			"file", romFile.FileName,
+			"sha1", sha1Hash,
+			"romID", rom.ID,
+			"romName", rom.Name)
+		_ = cache.SaveFilenameMapping(romFile.FSSlug, romFile.FileName, rom.ID, rom.Name)
+		_ = cache.ClearFailedLookup(romFile.FSSlug, romFile.FileName)
+		return rom.ID, rom.Name
+	}
+
+	// Both lookups failed - don't record yet, let fuzzy matching try first
+	logger.Debug("ROM not found by hash", "file", romFile.FileName, "crc", crcHash, "sha1", sha1Hash)
 	return 0, ""
 }
 
-func FindSaveSyncs(host romm.Host, config *internal.Config) ([]SaveSync, []UnmatchedSave, error) {
+const FuzzyMatchThreshold = 0.80
+
+func lookupRomByFuzzyTitle(romFile *LocalRomFile) *PendingFuzzyMatch {
+	logger := gaba.GetLogger()
+
+	if romFile.FSSlug == "" || romFile.FileName == "" {
+		return nil
+	}
+
+	logger.Debug("Starting fuzzy title search",
+		"file", romFile.FileName,
+		"fsSlug", romFile.FSSlug)
+
+	games, err := cache.GetGamesForPlatform(romFile.FSSlug)
+	if err != nil || len(games) == 0 {
+		logger.Debug("No games in cache for fuzzy matching", "fsSlug", romFile.FSSlug, "error", err)
+		return nil
+	}
+
+	localNormalized := stringutil.NormalizeForComparison(romFile.FileName)
+	if localNormalized == "" {
+		return nil
+	}
+
+	logger.Debug("Fuzzy search comparing against cached games",
+		"file", romFile.FileName,
+		"normalized", localNormalized,
+		"candidateCount", len(games))
+
+	var bestMatch *PendingFuzzyMatch
+	var bestSimilarity float64
+
+	for _, game := range games {
+		remoteNormalized := stringutil.NormalizeForComparison(game.Name)
+		if remoteNormalized == "" {
+			continue
+		}
+
+		similarity := stringutil.BestSimilarity(localNormalized, remoteNormalized)
+		if similarity >= FuzzyMatchThreshold && similarity > bestSimilarity {
+			bestSimilarity = similarity
+			bestMatch = &PendingFuzzyMatch{
+				LocalFilename: stringutil.StripExtension(romFile.FileName),
+				LocalPath:     romFile.FilePath,
+				FSSlug:        romFile.FSSlug,
+				MatchedRomID:  game.ID,
+				MatchedName:   game.Name,
+				Similarity:    similarity,
+			}
+		}
+	}
+
+	if bestMatch != nil {
+		logger.Info("Fuzzy match found",
+			"local", romFile.FileName,
+			"matched", bestMatch.MatchedName,
+			"similarity", fmt.Sprintf("%.0f%%", bestMatch.Similarity*100))
+	} else {
+		logger.Debug("No fuzzy match found above threshold",
+			"file", romFile.FileName,
+			"threshold", fmt.Sprintf("%.0f%%", FuzzyMatchThreshold*100))
+	}
+
+	return bestMatch
+}
+
+func FindSaveSyncs(host romm.Host, config *internal.Config) ([]SaveSync, []UnmatchedSave, []PendingFuzzyMatch, error) {
 	return FindSaveSyncsFromScan(host, config, ScanRoms())
 }
 
-func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal LocalRomScan) ([]SaveSync, []UnmatchedSave, error) {
+func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal LocalRomScan) ([]SaveSync, []UnmatchedSave, []PendingFuzzyMatch, error) {
 	logger := gaba.GetLogger()
 	if config == nil {
-		return nil, nil, fmt.Errorf("config is nil")
+		return nil, nil, nil, fmt.Errorf("config is nil")
 	}
 	rc := romm.NewClientFromHost(host, config.ApiTimeout)
 
 	logger.Debug("FindSaveSyncs: Scanned local ROMs", "platformCount", len(scanLocal))
 
-	// Get platforms from cache or API to build fsSlug -> platformID map
 	cm := cache.GetCacheManager()
 	var platforms []romm.Platform
 	var err error
@@ -272,11 +370,10 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 		platforms, err = cm.GetPlatforms()
 	}
 	if err != nil || len(platforms) == 0 {
-		// Fall back to API if cache miss
 		platforms, err = rc.GetPlatforms()
 		if err != nil {
 			logger.Error("FindSaveSyncs: Could not retrieve platforms", "error", err)
-			return []SaveSync{}, nil, err
+			return []SaveSync{}, nil, nil, err
 		}
 	}
 
@@ -285,7 +382,6 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 		fsSlugToPlatformID[p.FSSlug] = p.ID
 	}
 
-	// Fetch saves per platform in parallel (saves are not cached - always fresh from API)
 	type platformFetchResult struct {
 		fsSlug   string
 		saves    []romm.Save
@@ -310,7 +406,6 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 				fsSlug: fsSlug,
 			}
 
-			// Fetch saves for this platform (always from API - saves need to be fresh)
 			platformSaves, err := rc.GetSaves(romm.SaveQuery{PlatformID: platformID})
 			if err != nil {
 				logger.Warn("FindSaveSyncs: Could not retrieve saves for platform", "fsSlug", fsSlug, "error", err)
@@ -330,7 +425,6 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 		close(resultChan)
 	}()
 
-	// Collect saves by ROM ID
 	savesByRomID := make(map[int][]romm.Save)
 	for result := range resultChan {
 		if result.hasError {
@@ -342,27 +436,37 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 		}
 	}
 
-	// Match local ROMs to cached ROMs by filename
 	var unmatched []UnmatchedSave
+	var pendingFuzzy []PendingFuzzyMatch
 	for fsSlug, localRoms := range scanLocal {
 		for idx := range localRoms {
 			romFile := &scanLocal[fsSlug][idx]
 
-			// Skip if no save file and no remote saves exist
 			if romFile.SaveFile == nil && len(savesByRomID) == 0 {
 				continue
 			}
 
-			// Look up ROM ID from the games cache
 			romID, romName := lookupRomID(romFile)
 
 			if romID == 0 && romFile.SaveFile != nil {
-				// Try to find ROM by CRC32 hash as fallback
 				romID, romName = lookupRomByHash(rc, romFile)
 			}
 
-			if romID == 0 {
-				if romFile.SaveFile != nil {
+			if romID == 0 && romFile.SaveFile != nil {
+				logger.Debug("Attempting fuzzy title match",
+					"file", romFile.FileName,
+					"fsSlug", romFile.FSSlug)
+				fuzzyMatch := lookupRomByFuzzyTitle(romFile)
+				if fuzzyMatch != nil {
+					fuzzyMatch.SavePath = romFile.SaveFile.Path
+					pendingFuzzy = append(pendingFuzzy, *fuzzyMatch)
+					romFile.PendingFuzzyMatch = true // Mark to skip in sync building
+					logger.Info("Fuzzy match candidate found",
+						"local", romFile.FileName,
+						"matched", fuzzyMatch.MatchedName,
+						"similarity", fmt.Sprintf("%.0f%%", fuzzyMatch.Similarity*100))
+				} else {
+					_ = cache.RecordFailedLookup(romFile.FSSlug, romFile.FileName)
 					unmatched = append(unmatched, UnmatchedSave{
 						SavePath: romFile.SaveFile.Path,
 						FSSlug:   fsSlug,
@@ -372,6 +476,10 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 						"romFile", romFile.FileName,
 						"fsSlug", fsSlug)
 				}
+				continue
+			}
+
+			if romID == 0 {
 				continue
 			}
 
@@ -385,34 +493,32 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 		}
 	}
 
-	// Build sync list from ROMs that need syncing
-	// Use a map to deduplicate by save file path (multiple fs_slugs may share saves)
-	syncMap := make(map[string]SaveSync) // key: save file path or romID for downloads
+	syncMap := make(map[string]SaveSync)
 	for fsSlug, roms := range scanLocal {
 		for _, r := range roms {
-			if r.RomID > 0 {
-				logger.Debug("Evaluating ROM for sync",
-					"romName", r.RomName,
-					"romID", r.RomID,
-					"hasLocalSave", r.SaveFile != nil,
-					"remoteSaveCount", len(r.RemoteSaves))
+			if r.PendingFuzzyMatch {
+				continue
 			}
+			// Skip unmatched ROMs - they're already in the unmatched list
+			if r.RomID == 0 {
+				continue
+			}
+			logger.Debug("Evaluating ROM for sync",
+				"romName", r.RomName,
+				"romID", r.RomID,
+				"hasLocalSave", r.SaveFile != nil,
+				"remoteSaveCount", len(r.RemoteSaves))
 			action := r.syncAction()
 			if action == Upload || action == Download {
 				baseName := strings.TrimSuffix(r.FileName, filepath.Ext(r.FileName))
 
-				// Create unique key for deduplication
 				var key string
 				if r.SaveFile != nil {
-					// For uploads, key by local save path to avoid duplicates
 					key = r.SaveFile.Path
 				} else {
-					// For downloads, key by romID and baseName to allow different
-					// ROM files (same CRC32, different names) to download their own saves
 					key = fmt.Sprintf("download_%d_%s", r.RomID, baseName)
 				}
 
-				// Skip if already added (happens when multiple fs_slugs share same save dir)
 				if _, exists := syncMap[key]; exists {
 					continue
 				}
@@ -439,10 +545,13 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 		logger.Info("Unmatched saves", "count", len(unmatched))
 	}
 
-	return syncs, unmatched, nil
+	if len(pendingFuzzy) > 0 {
+		logger.Info("Pending fuzzy matches", "count", len(pendingFuzzy))
+	}
+
+	return syncs, unmatched, pendingFuzzy, nil
 }
 
-// normalizeExt ensures the extension has a leading dot
 func normalizeExt(ext string) string {
 	if ext != "" && !strings.HasPrefix(ext, ".") {
 		return "." + ext

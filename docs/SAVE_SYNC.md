@@ -8,6 +8,7 @@ Save Sync keeps your game saves synchronized between your RomM server and your h
 
 - [Sync Modes](#sync-modes)
 - [How It Works](#how-it-works)
+- [ROM Matching](#rom-matching)
 - [Sync Logic](#sync-logic)
 - [Sync Results](#sync-results)
 - [Per-Game Save Directory](#per-game-save-directory)
@@ -44,6 +45,69 @@ When you run Save Sync, Grout:
 2. Matches them with corresponding ROMs in RomM
 3. Compares local and remote save files
 4. Syncs saves based on which version is newer
+
+---
+
+## ROM Matching
+
+For Save Sync to work, Grout must match your local ROM files with ROMs in your RomM library. Grout uses several methods
+to find matches, tried in order:
+
+### 1. Filename Match
+
+If the local ROM filename (without extension) exactly matches a ROM's filename in RomM, it's considered a match. This is
+the fastest and most common matching method.
+
+### 2. Hash Match
+
+If filename matching fails, Grout can compute the CRC32 or SHA1 hash of your local ROM file and compare it against hashes
+stored in RomM. This is useful when:
+
+- Your local ROM has a different filename than in RomM
+- You renamed a ROM locally but it's the same file
+
+> [!NOTE]
+> Hash matching must be enabled in **Settings → Advanced → Match Orphans By Hash**. Hash computation can be slow for
+> large ROM files.
+
+### 3. Fuzzy Title Match
+
+If both filename and hash matching fail, Grout attempts to match based on title similarity. This helps when ROM names
+differ slightly between your device and RomM.
+
+**What fuzzy matching handles:**
+
+- **Accented characters** — "Pokémon Red" matches "Pokemon Red"
+- **User-added suffixes** — "Pokemon Red Nuzlocke" matches "Pokemon Red Version" (both share "Pokemon Red" as a common
+  prefix)
+- **Naming convention differences** — "Pokemon - Red Version" matches "Pokemon Red"
+
+When a potential match is found with at least **80% similarity**, Grout displays a confirmation prompt:
+
+```
+┌─────────────────────────────────────┐
+│  Potential Match Found              │
+│                                     │
+│  Local: "Pokemon Red Nuzlocke"      │
+│  Match: "Pokémon Red Version"       │
+│  Similarity: 85%                    │
+│                                     │
+│  Is this the same game?             │
+│                                     │
+│  [B] No    [X] Yes                  │
+└─────────────────────────────────────┘
+```
+
+- Press `X` to confirm the match
+- Press `B` to decline
+
+**Confirmed matches are remembered** — once you confirm a fuzzy match, Grout saves the association and won't ask again
+for that ROM. This is useful for maintaining separate saves (like a Nuzlocke run alongside a regular playthrough).
+
+**Declined matches have a cooldown** — if you decline a fuzzy match, Grout won't prompt you again for 24 hours.
+
+> [!TIP]
+> When you refresh the games cache, any saved matches for ROMs that no longer exist in RomM are automatically cleaned up.
 
 ---
 

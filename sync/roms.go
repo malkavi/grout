@@ -29,16 +29,16 @@ func extractSaveBaseName(fileNameNoExt string) string {
 }
 
 type LocalRomFile struct {
-	RomID       int
-	RomName     string
-	FSSlug      string
-	FileName    string
-	FilePath    string
-	RemoteSaves []romm.Save
-	SaveFile    *LocalSave
+	RomID             int
+	RomName           string
+	FSSlug            string
+	FileName          string
+	FilePath          string
+	RemoteSaves       []romm.Save
+	SaveFile          *LocalSave
+	PendingFuzzyMatch bool
 }
 
-// baseName returns the ROM filename without extension, used for matching saves
 func (lrf LocalRomFile) baseName() string {
 	return strings.TrimSuffix(lrf.FileName, filepath.Ext(lrf.FileName))
 }
@@ -47,7 +47,6 @@ func (lrf LocalRomFile) syncAction() SyncAction {
 	hasLocal := lrf.SaveFile != nil
 	baseName := lrf.baseName()
 
-	// Check for remote saves that match this ROM's base name
 	hasRemote := lrf.hasRemoteSaveForBaseName(baseName)
 
 	switch {
@@ -76,16 +75,11 @@ func (lrf LocalRomFile) syncAction() SyncAction {
 	}
 }
 
-// lastRemoteSaveForBaseName returns the most recent remote save that matches
-// the given base name (after stripping timestamps from remote save filenames).
-// This allows multiple local ROM files with different names but the same CRC32
-// to each sync with their own set of remote saves.
 func (lrf LocalRomFile) lastRemoteSaveForBaseName(baseName string) romm.Save {
 	if len(lrf.RemoteSaves) == 0 {
 		return romm.Save{}
 	}
 
-	// Filter saves to only those matching the base name
 	var matching []romm.Save
 	for _, s := range lrf.RemoteSaves {
 		remoteBaseName := extractSaveBaseName(s.FileNameNoExt)
@@ -105,7 +99,6 @@ func (lrf LocalRomFile) lastRemoteSaveForBaseName(baseName string) romm.Save {
 	return matching[0]
 }
 
-// hasRemoteSaveForBaseName checks if there's any remote save matching the given base name
 func (lrf LocalRomFile) hasRemoteSaveForBaseName(baseName string) bool {
 	for _, s := range lrf.RemoteSaves {
 		if extractSaveBaseName(s.FileNameNoExt) == baseName {
@@ -115,10 +108,8 @@ func (lrf LocalRomFile) hasRemoteSaveForBaseName(baseName string) bool {
 	return false
 }
 
-// LocalRomScan holds the results of scanning local ROMs, keyed by platform fs_slug
 type LocalRomScan map[string][]LocalRomFile
 
-// ScanRoms scans all local ROM directories and matches with save files
 func ScanRoms() LocalRomScan {
 	logger := gaba.GetLogger()
 	result := make(map[string][]LocalRomFile)

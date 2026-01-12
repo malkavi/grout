@@ -81,6 +81,7 @@ func (cm *Manager) populateCache(platforms []romm.Platform, progress *atomic.Flo
 
 	if firstErr == nil {
 		cm.RecordRefreshTime(MetaKeyGamesRefreshedAt)
+		cm.PurgeStaleFilenameMappings()
 	}
 
 	cm.fetchAndCacheCollectionsWithProgress(progress)

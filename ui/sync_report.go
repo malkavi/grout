@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"grout/sync"
 	"path/filepath"
+	"strings"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/i18n"
@@ -129,15 +130,11 @@ func (s *SyncReportScreen) buildSections(results []sync.SyncResult, unmatched []
 				if uploadedFiles != "" {
 					uploadedFiles += "\n"
 				}
-				displayName := r.RomDisplayName
+				// Use save file name (GameName) for uploads - shows user's filename like "Pokemon Red Nuzlocke"
+				displayName := r.GameName
 				if displayName == "" {
-					displayName = filepath.Base(r.FilePath)
+					displayName = strings.TrimSuffix(filepath.Base(r.FilePath), filepath.Ext(r.FilePath))
 				}
-				logger.Debug("Upload result for report",
-					"gameName", r.GameName,
-					"romDisplayName", r.RomDisplayName,
-					"filePath", r.FilePath,
-					"displayName", displayName)
 				uploadedFiles += displayName
 			}
 		}
@@ -154,10 +151,6 @@ func (s *SyncReportScreen) buildSections(results []sync.SyncResult, unmatched []
 				errorMsg := r.Error
 				if errorMsg == "" {
 					errorMsg = i18n.Localize(&goi18n.Message{ID: "save_sync_unknown_error", Other: "Unknown error"}, nil)
-				}
-				// Check for orphan ROM error and provide localized message
-				if errors.Is(r.Err, sync.ErrOrphanRom) {
-					errorMsg = i18n.Localize(&goi18n.Message{ID: "save_sync_orphan_rom_error", Other: "ROM not matched. Use 'Match Orphans By Hash' in Advanced Settings"}, nil)
 				}
 				displayName := r.RomDisplayName
 				if displayName == "" {
@@ -176,7 +169,7 @@ func (s *SyncReportScreen) buildSections(results []sync.SyncResult, unmatched []
 			if unmatchedText != "" {
 				unmatchedText += "\n"
 			}
-			unmatchedText += i18n.Localize(&goi18n.Message{ID: "save_sync_rom_not_found", Other: "{{.Name}} (ROM not found in RomM)"}, map[string]interface{}{"Name": filepath.Base(u.SavePath)})
+			unmatchedText += i18n.Localize(&goi18n.Message{ID: "save_sync_rom_not_found", Other: "{{.Name}} (Not found in RomM)"}, map[string]interface{}{"Name": filepath.Base(u.SavePath)})
 		}
 		sections = append(sections, gaba.NewDescriptionSection(i18n.Localize(&goi18n.Message{ID: "save_sync_unmatched_saves", Other: "Unmatched Saves"}, nil), unmatchedText))
 	}

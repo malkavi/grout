@@ -166,7 +166,6 @@ tasks:
             echo "No missing translations for ${lang}"
           fi
         done
-      - task: i18n:simplify
       - |
         if [ -z "$(ls -A translations_todo 2>/dev/null)" ]; then
           echo "All translations are complete!"

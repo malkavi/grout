@@ -477,6 +477,52 @@ func (cm *Manager) GetCachedGameIDs() map[int]bool {
 	return gameIDs
 }
 
+func (cm *Manager) GetGamesForPlatform(fsSlug string) ([]romm.Rom, error) {
+	if cm == nil || !cm.initialized {
+		return nil, ErrNotInitialized
+	}
+
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	rows, err := cm.db.Query(`SELECT id, name, data_json FROM games WHERE platform_fs_slug = ?`, fsSlug)
+	if err != nil {
+		cm.stats.recordError()
+		return nil, newCacheError("get", "games", fsSlug, err)
+	}
+	defer rows.Close()
+
+	var games []romm.Rom
+	for rows.Next() {
+		var id int
+		var name string
+		var dataJSON string
+		if err := rows.Scan(&id, &name, &dataJSON); err != nil {
+			cm.stats.recordError()
+			return nil, newCacheError("get", "games", fsSlug, err)
+		}
+
+		var game romm.Rom
+		if err := json.Unmarshal([]byte(dataJSON), &game); err != nil {
+			game = romm.Rom{ID: id, Name: name}
+		}
+		games = append(games, game)
+	}
+
+	if err := rows.Err(); err != nil {
+		cm.stats.recordError()
+		return nil, newCacheError("get", "games", fsSlug, err)
+	}
+
+	if len(games) > 0 {
+		cm.stats.recordHit()
+	} else {
+		cm.stats.recordMiss()
+	}
+
+	return games, nil
+}
+
 func (cm *Manager) GetRomIDByFilename(fsSlug, filename string) (int, string, bool) {
 	if cm == nil || !cm.initialized {
 		return 0, "", false
@@ -490,7 +536,6 @@ func (cm *Manager) GetRomIDByFilename(fsSlug, filename string) (int, string, boo
 	var romID int
 	var romName string
 
-	// First, try to find in the games table (exact filename match from RomM)
 	err := cm.db.QueryRow(`
 		SELECT id, name FROM games
 		WHERE platform_fs_slug = ? AND fs_name_no_ext = ?
@@ -507,7 +552,6 @@ func (cm *Manager) GetRomIDByFilename(fsSlug, filename string) (int, string, boo
 		return 0, "", false
 	}
 
-	// Fallback: check filename_mappings table for orphan matches
 	err = cm.db.QueryRow(`
 		SELECT rom_id, rom_name FROM filename_mappings
 		WHERE platform_fs_slug = ? AND local_filename_no_ext = ?
@@ -601,11 +645,141 @@ func GetCachedRomIDByFilename(fsSlug, filename string) (int, string, bool) {
 	return cm.GetRomIDByFilename(fsSlug, filename)
 }
 
-// SaveFilenameMapping is a public wrapper to save a filename-to-ROM mapping
 func SaveFilenameMapping(fsSlug, localFilename string, romID int, romName string) error {
 	cm := GetCacheManager()
 	if cm == nil {
 		return ErrNotInitialized
 	}
 	return cm.SaveFilenameMapping(fsSlug, localFilename, romID, romName)
+}
+
+func (cm *Manager) RecordFailedLookup(fsSlug, localFilename string) error {
+	if cm == nil || !cm.initialized {
+		return ErrNotInitialized
+	}
+
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	key := stringutil.StripExtension(localFilename)
+
+	_, err := cm.db.Exec(`
+		INSERT OR REPLACE INTO failed_lookups (platform_fs_slug, local_filename_no_ext, last_attempt)
+		VALUES (?, ?, CURRENT_TIMESTAMP)
+	`, fsSlug, key)
+
+	if err != nil {
+		return newCacheError("save", "failed_lookup", fmt.Sprintf("%s/%s", fsSlug, key), err)
+	}
+
+	gaba.GetLogger().Debug("Recorded failed lookup", "fsSlug", fsSlug, "localFilename", key)
+	return nil
+}
+
+func (cm *Manager) ShouldAttemptLookup(fsSlug, localFilename string) bool {
+	if cm == nil || !cm.initialized {
+		return true
+	}
+
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	key := stringutil.StripExtension(localFilename)
+
+	var lastAttempt string
+	err := cm.db.QueryRow(`
+		SELECT last_attempt FROM failed_lookups
+		WHERE platform_fs_slug = ? AND local_filename_no_ext = ?
+	`, fsSlug, key).Scan(&lastAttempt)
+
+	if err != nil {
+		return true
+	}
+
+	parsed, err := time.Parse("2006-01-02 15:04:05", lastAttempt)
+	if err != nil {
+		return true
+	}
+
+	return time.Since(parsed) >= 24*time.Hour
+}
+
+func (cm *Manager) ClearFailedLookup(fsSlug, localFilename string) error {
+	if cm == nil || !cm.initialized {
+		return ErrNotInitialized
+	}
+
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	key := stringutil.StripExtension(localFilename)
+
+	_, err := cm.db.Exec(`
+		DELETE FROM failed_lookups
+		WHERE platform_fs_slug = ? AND local_filename_no_ext = ?
+	`, fsSlug, key)
+
+	if err != nil {
+		return newCacheError("delete", "failed_lookup", fmt.Sprintf("%s/%s", fsSlug, key), err)
+	}
+
+	return nil
+}
+
+func RecordFailedLookup(fsSlug, localFilename string) error {
+	cm := GetCacheManager()
+	if cm == nil {
+		return ErrNotInitialized
+	}
+	return cm.RecordFailedLookup(fsSlug, localFilename)
+}
+
+func ShouldAttemptLookup(fsSlug, localFilename string) bool {
+	cm := GetCacheManager()
+	if cm == nil {
+		return true
+	}
+	return cm.ShouldAttemptLookup(fsSlug, localFilename)
+}
+
+func ClearFailedLookup(fsSlug, localFilename string) error {
+	cm := GetCacheManager()
+	if cm == nil {
+		return ErrNotInitialized
+	}
+	return cm.ClearFailedLookup(fsSlug, localFilename)
+}
+
+func GetGamesForPlatform(fsSlug string) ([]romm.Rom, error) {
+	cm := GetCacheManager()
+	if cm == nil {
+		return nil, ErrNotInitialized
+	}
+	return cm.GetGamesForPlatform(fsSlug)
+}
+
+func (cm *Manager) PurgeStaleFilenameMappings() (int64, error) {
+	if cm == nil || !cm.initialized {
+		return 0, ErrNotInitialized
+	}
+
+	logger := gaba.GetLogger()
+
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	result, err := cm.db.Exec(`
+		DELETE FROM filename_mappings
+		WHERE rom_id NOT IN (SELECT id FROM games)
+	`)
+	if err != nil {
+		return 0, newCacheError("delete", "filename_mappings", "stale", err)
+	}
+
+	deleted, _ := result.RowsAffected()
+	if deleted > 0 {
+		logger.Info("Purged stale filename mappings", "count", deleted)
+	}
+
+	return deleted, nil
 }
