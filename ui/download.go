@@ -227,37 +227,47 @@ func (s *DownloadScreen) draw(input downloadInput) (ScreenResult[downloadOutput]
 				}
 			}
 
-			if len(g.Files) > 0 && strings.ToLower(filepath.Ext(g.Files[0].FileName)) == ".zip" {
-				romDirectory := input.Config.GetPlatformRomDirectory(gamePlatform)
-				zipPath := filepath.Join(romDirectory, g.Files[0].FileName)
+			if len(g.Files) > 0 {
+				ext := strings.ToLower(filepath.Ext(g.Files[0].FileName))
+				if ext == ".zip" || ext == ".7z" {
+					romDirectory := input.Config.GetPlatformRomDirectory(gamePlatform)
+					archivePath := filepath.Join(romDirectory, g.Files[0].FileName)
 
-				progress := &atomic.Float64{}
-				_, err := gaba.ProcessMessage(
-					i18n.Localize(&goi18n.Message{ID: "download_extracting", Other: "Extracting {{.Name}}..."}, map[string]interface{}{"Name": g.Name}),
-					gaba.ProcessMessageOptions{
-						ShowThemeBackground: true,
-						ShowProgressBar:     true,
-						Progress:            progress,
-					},
-					func() (interface{}, error) {
-						logger.Debug("Extracting single-file ROM", "game", g.Name, "file", zipPath)
+					progress := &atomic.Float64{}
+					_, err := gaba.ProcessMessage(
+						i18n.Localize(&goi18n.Message{ID: "download_extracting", Other: "Extracting {{.Name}}..."}, map[string]interface{}{"Name": g.Name}),
+						gaba.ProcessMessageOptions{
+							ShowThemeBackground: true,
+							ShowProgressBar:     true,
+							Progress:            progress,
+						},
+						func() (interface{}, error) {
+							logger.Debug("Extracting single-file ROM", "game", g.Name, "file", archivePath)
 
-						if err := fileutil.Unzip(zipPath, romDirectory, progress); err != nil {
-							logger.Error("Failed to extract single-file ROM", "game", g.Name, "error", err)
-							return nil, err
-						}
+							var extractErr error
+							if ext == ".7z" {
+								extractErr = fileutil.Un7zip(archivePath, romDirectory, progress)
+							} else {
+								extractErr = fileutil.Unzip(archivePath, romDirectory, progress)
+							}
 
-						if err := os.Remove(zipPath); err != nil {
-							logger.Warn("Failed to remove zip file after extraction", "path", zipPath, "error", err)
-						}
+							if extractErr != nil {
+								logger.Error("Failed to extract single-file ROM", "game", g.Name, "error", extractErr)
+								return nil, extractErr
+							}
 
-						return nil, nil
-					},
-				)
+							if err := os.Remove(archivePath); err != nil {
+								logger.Warn("Failed to remove archive file after extraction", "path", archivePath, "error", err)
+							}
 
-				if err != nil {
-					logger.Warn("Failed to extract ROM, keeping zip file", "game", g.Name)
-					continue
+							return nil, nil
+						},
+					)
+
+					if err != nil {
+						logger.Warn("Failed to extract ROM, keeping archive file", "game", g.Name)
+						continue
+					}
 				}
 			}
 		}

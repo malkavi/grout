@@ -86,7 +86,7 @@ func (s *GeneralSettingsScreen) buildMenuItems(config *internal.Config) []gaba.I
 			SelectedOption: boolToIndex(!config.DownloadArt),
 		},
 		{
-			Item: gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_compressed_downloads", Other: "Zipped Downloads"}, nil)},
+			Item: gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_compressed_downloads", Other: "Archived Downloads"}, nil)},
 			Options: []gaba.Option{
 				{DisplayName: i18n.Localize(&goi18n.Message{ID: "settings_compressed_downloads_uncompress", Other: "Uncompress"}, nil), Value: true},
 				{DisplayName: i18n.Localize(&goi18n.Message{ID: "settings_compressed_downloads_do_nothing", Other: "Do Nothing"}, nil), Value: false},
@@ -130,7 +130,7 @@ func (s *GeneralSettingsScreen) applySettings(config *internal.Config, items []g
 				config.DownloadArt = val
 			}
 
-		case i18n.Localize(&goi18n.Message{ID: "settings_compressed_downloads", Other: "Zipped Downloads"}, nil):
+		case i18n.Localize(&goi18n.Message{ID: "settings_compressed_downloads", Other: "Archived Downloads"}, nil):
 			if val, ok := item.Options[item.SelectedOption].Value.(bool); ok {
 				config.UnzipDownloads = val
 			}
