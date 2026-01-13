@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	gosync "sync"
+	"time"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
@@ -48,8 +49,17 @@ type SyncResult struct {
 }
 
 type UnmatchedSave struct {
-	SavePath string
-	FSSlug   string
+	SavePath          string
+	FSSlug            string
+	RomFileName       string
+	RomFilePath       string
+	CRC32Hash         string
+	SHA1Hash          string
+	BestFuzzyMatch    string
+	BestFuzzySim      float64
+	CooldownActive    bool
+	CooldownExpiresAt time.Time
+	MatchesAttempted  []string
 }
 
 type PendingFuzzyMatch struct {
@@ -60,6 +70,17 @@ type PendingFuzzyMatch struct {
 	MatchedRomID  int
 	MatchedName   string
 	Similarity    float64
+}
+
+// MatchAttemptResult tracks diagnostic info from ROM matching attempts
+type MatchAttemptResult struct {
+	CRC32Hash         string
+	SHA1Hash          string
+	CooldownActive    bool
+	CooldownExpiresAt time.Time
+	BestFuzzyMatch    string
+	BestFuzzySim      float64
+	MatchesAttempted  []string
 }
 
 func (s *SaveSync) Execute(host romm.Host, config *internal.Config) SyncResult {
@@ -213,28 +234,37 @@ func (s *SaveSync) upload(host romm.Host, config *internal.Config) (string, erro
 }
 
 func lookupRomID(romFile *LocalRomFile) (int, string) {
-	logger := gaba.GetLogger()
-
 	// Look up from the games cache
 	if romID, romName, found := cache.GetCachedRomIDByFilename(romFile.FSSlug, romFile.FileName); found {
-		logger.Debug("ROM lookup from cache", "fsSlug", romFile.FSSlug, "file", romFile.FileName, "romID", romID, "name", romName)
 		return romID, romName
 	}
 
-	logger.Debug("No ROM found for file", "fsSlug", romFile.FSSlug, "file", romFile.FileName)
 	return 0, ""
 }
 
-func lookupRomByHash(rc *romm.Client, romFile *LocalRomFile) (int, string) {
+func lookupRomByHash(rc *romm.Client, romFile *LocalRomFile, matchResult *MatchAttemptResult) (int, string) {
 	logger := gaba.GetLogger()
 
 	if romFile.FilePath == "" {
 		return 0, ""
 	}
 
-	if !cache.ShouldAttemptLookup(romFile.FSSlug, romFile.FileName) {
-		logger.Debug("Skipping hash lookup (cooldown active)", "file", romFile.FileName, "fsSlug", romFile.FSSlug)
+	shouldAttempt, nextRetry := cache.ShouldAttemptLookupWithNextRetry(romFile.FSSlug, romFile.FileName)
+	if !shouldAttempt {
+		logger.Info("Skipping hash lookup (cooldown active)",
+			"file", romFile.FileName,
+			"fsSlug", romFile.FSSlug,
+			"retriesAt", nextRetry.Format(time.RFC3339),
+			"retriesIn", time.Until(nextRetry).Round(time.Minute).String())
+		if matchResult != nil {
+			matchResult.CooldownActive = true
+			matchResult.CooldownExpiresAt = nextRetry
+		}
 		return 0, ""
+	}
+
+	if matchResult != nil {
+		matchResult.MatchesAttempted = append(matchResult.MatchesAttempted, "hash")
 	}
 
 	crcHash, err := fileutil.ComputeCRC32(romFile.FilePath)
@@ -243,7 +273,9 @@ func lookupRomByHash(rc *romm.Client, romFile *LocalRomFile) (int, string) {
 		return 0, ""
 	}
 
-	logger.Debug("Looking up ROM by CRC32 hash", "file", romFile.FileName, "crc", crcHash)
+	if matchResult != nil {
+		matchResult.CRC32Hash = crcHash
+	}
 
 	rom, err := rc.GetRomByHash(romm.GetRomByHashQuery{CrcHash: crcHash})
 	if err == nil && rom.ID > 0 {
@@ -264,7 +296,9 @@ func lookupRomByHash(rc *romm.Client, romFile *LocalRomFile) (int, string) {
 		return 0, ""
 	}
 
-	logger.Debug("Looking up ROM by SHA1 hash", "file", romFile.FileName, "sha1", sha1Hash)
+	if matchResult != nil {
+		matchResult.SHA1Hash = sha1Hash
+	}
 
 	rom, err = rc.GetRomByHash(romm.GetRomByHashQuery{Sha1Hash: sha1Hash})
 	if err == nil && rom.ID > 0 {
@@ -279,26 +313,24 @@ func lookupRomByHash(rc *romm.Client, romFile *LocalRomFile) (int, string) {
 	}
 
 	// Both lookups failed - don't record yet, let fuzzy matching try first
-	logger.Debug("ROM not found by hash", "file", romFile.FileName, "crc", crcHash, "sha1", sha1Hash)
 	return 0, ""
 }
 
 const FuzzyMatchThreshold = 0.80
 
-func lookupRomByFuzzyTitle(romFile *LocalRomFile) *PendingFuzzyMatch {
+func lookupRomByFuzzyTitle(romFile *LocalRomFile, matchResult *MatchAttemptResult) *PendingFuzzyMatch {
 	logger := gaba.GetLogger()
 
 	if romFile.FSSlug == "" || romFile.FileName == "" {
 		return nil
 	}
 
-	logger.Debug("Starting fuzzy title search",
-		"file", romFile.FileName,
-		"fsSlug", romFile.FSSlug)
+	if matchResult != nil {
+		matchResult.MatchesAttempted = append(matchResult.MatchesAttempted, "fuzzy")
+	}
 
 	games, err := cache.GetGamesForPlatform(romFile.FSSlug)
 	if err != nil || len(games) == 0 {
-		logger.Debug("No games in cache for fuzzy matching", "fsSlug", romFile.FSSlug, "error", err)
 		return nil
 	}
 
@@ -307,13 +339,10 @@ func lookupRomByFuzzyTitle(romFile *LocalRomFile) *PendingFuzzyMatch {
 		return nil
 	}
 
-	logger.Debug("Fuzzy search comparing against cached games",
-		"file", romFile.FileName,
-		"normalized", localNormalized,
-		"candidateCount", len(games))
-
 	var bestMatch *PendingFuzzyMatch
 	var bestSimilarity float64
+	var bestBelowThresholdName string
+	var bestBelowThresholdSim float64
 
 	for _, game := range games {
 		remoteNormalized := stringutil.NormalizeForComparison(game.Name)
@@ -322,6 +351,13 @@ func lookupRomByFuzzyTitle(romFile *LocalRomFile) *PendingFuzzyMatch {
 		}
 
 		similarity := stringutil.BestSimilarity(localNormalized, remoteNormalized)
+
+		// Track the best match regardless of threshold for diagnostics
+		if similarity > bestBelowThresholdSim {
+			bestBelowThresholdSim = similarity
+			bestBelowThresholdName = game.Name
+		}
+
 		if similarity >= FuzzyMatchThreshold && similarity > bestSimilarity {
 			bestSimilarity = similarity
 			bestMatch = &PendingFuzzyMatch{
@@ -335,15 +371,17 @@ func lookupRomByFuzzyTitle(romFile *LocalRomFile) *PendingFuzzyMatch {
 		}
 	}
 
+	// Store best match info for diagnostics even if below threshold
+	if matchResult != nil && bestBelowThresholdName != "" {
+		matchResult.BestFuzzyMatch = bestBelowThresholdName
+		matchResult.BestFuzzySim = bestBelowThresholdSim
+	}
+
 	if bestMatch != nil {
 		logger.Info("Fuzzy match found",
 			"local", romFile.FileName,
 			"matched", bestMatch.MatchedName,
 			"similarity", fmt.Sprintf("%.0f%%", bestMatch.Similarity*100))
-	} else {
-		logger.Debug("No fuzzy match found above threshold",
-			"file", romFile.FileName,
-			"threshold", fmt.Sprintf("%.0f%%", FuzzyMatchThreshold*100))
 	}
 
 	return bestMatch
@@ -414,7 +452,7 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 				return
 			}
 			result.saves = platformSaves
-			logger.Debug("FindSaveSyncs: Retrieved saves for platform", "fsSlug", fsSlug, "count", len(platformSaves))
+			logger.Debug("FindSaveSyncs: Retrieved remote saves for platform", "fsSlug", fsSlug, "count", len(platformSaves))
 
 			resultChan <- result
 		}(fsSlug, platformID)
@@ -446,17 +484,21 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 				continue
 			}
 
-			romID, romName := lookupRomID(romFile)
+			// Track match attempts for diagnostics
+			matchResult := &MatchAttemptResult{}
 
-			if romID == 0 && romFile.SaveFile != nil {
-				romID, romName = lookupRomByHash(rc, romFile)
+			romID, romName := lookupRomID(romFile)
+			if romID > 0 {
+				matchResult.MatchesAttempted = append(matchResult.MatchesAttempted, "filename")
 			}
 
 			if romID == 0 && romFile.SaveFile != nil {
-				logger.Debug("Attempting fuzzy title match",
-					"file", romFile.FileName,
-					"fsSlug", romFile.FSSlug)
-				fuzzyMatch := lookupRomByFuzzyTitle(romFile)
+				matchResult.MatchesAttempted = append(matchResult.MatchesAttempted, "filename")
+				romID, romName = lookupRomByHash(rc, romFile, matchResult)
+			}
+
+			if romID == 0 && romFile.SaveFile != nil {
+				fuzzyMatch := lookupRomByFuzzyTitle(romFile, matchResult)
 				if fuzzyMatch != nil {
 					fuzzyMatch.SavePath = romFile.SaveFile.Path
 					pendingFuzzy = append(pendingFuzzy, *fuzzyMatch)
@@ -466,15 +508,57 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 						"matched", fuzzyMatch.MatchedName,
 						"similarity", fmt.Sprintf("%.0f%%", fuzzyMatch.Similarity*100))
 				} else {
-					_ = cache.RecordFailedLookup(romFile.FSSlug, romFile.FileName)
-					unmatched = append(unmatched, UnmatchedSave{
-						SavePath: romFile.SaveFile.Path,
-						FSSlug:   fsSlug,
-					})
-					logger.Info("Save has local ROM but not in RomM",
-						"save", filepath.Base(romFile.SaveFile.Path),
+					if err := cache.RecordFailedLookup(romFile.FSSlug, romFile.FileName); err != nil {
+						logger.Warn("Failed to record failed lookup",
+							"file", romFile.FileName,
+							"fsSlug", romFile.FSSlug,
+							"error", err)
+					}
+
+					unmatchedSave := UnmatchedSave{
+						SavePath:          romFile.SaveFile.Path,
+						FSSlug:            fsSlug,
+						RomFileName:       romFile.FileName,
+						RomFilePath:       romFile.FilePath,
+						CRC32Hash:         matchResult.CRC32Hash,
+						SHA1Hash:          matchResult.SHA1Hash,
+						BestFuzzyMatch:    matchResult.BestFuzzyMatch,
+						BestFuzzySim:      matchResult.BestFuzzySim,
+						CooldownActive:    matchResult.CooldownActive,
+						CooldownExpiresAt: matchResult.CooldownExpiresAt,
+						MatchesAttempted:  matchResult.MatchesAttempted,
+					}
+					unmatched = append(unmatched, unmatchedSave)
+
+					// Enhanced logging with full diagnostic info
+					logFields := []any{
+						"savePath", romFile.SaveFile.Path,
 						"romFile", romFile.FileName,
-						"fsSlug", fsSlug)
+						"romPath", romFile.FilePath,
+						"fsSlug", fsSlug,
+						"matchesAttempted", strings.Join(matchResult.MatchesAttempted, ", "),
+					}
+
+					if matchResult.CooldownActive {
+						timeUntil := time.Until(matchResult.CooldownExpiresAt).Round(time.Minute)
+						logFields = append(logFields,
+							"hashLookupSkipped", "cooldown active",
+							"hashLookupRetriesIn", timeUntil.String(),
+							"hashLookupRetriesAt", matchResult.CooldownExpiresAt.Format(time.RFC3339))
+					}
+					if matchResult.CRC32Hash != "" {
+						logFields = append(logFields, "crc32", matchResult.CRC32Hash)
+					}
+					if matchResult.SHA1Hash != "" {
+						logFields = append(logFields, "sha1", matchResult.SHA1Hash)
+					}
+					if matchResult.BestFuzzyMatch != "" {
+						logFields = append(logFields,
+							"bestFuzzyCandidate", matchResult.BestFuzzyMatch,
+							"bestFuzzySimilarity", fmt.Sprintf("%.0f%%", matchResult.BestFuzzySim*100))
+					}
+
+					logger.Info("Unmatched save: ROM not found in RomM", logFields...)
 				}
 				continue
 			}
@@ -542,7 +626,30 @@ func FindSaveSyncsFromScan(host romm.Host, config *internal.Config, scanLocal Lo
 	}
 
 	if len(unmatched) > 0 {
-		logger.Info("Unmatched saves", "count", len(unmatched))
+		// Count saves with active cooldown
+		cooldownCount := 0
+		var earliestRetry time.Time
+		for _, u := range unmatched {
+			if u.CooldownActive {
+				cooldownCount++
+				if earliestRetry.IsZero() || u.CooldownExpiresAt.Before(earliestRetry) {
+					earliestRetry = u.CooldownExpiresAt
+				}
+			}
+		}
+
+		summaryFields := []any{
+			"count", len(unmatched),
+			"hint", "Check logs above for detailed match attempt info per save",
+		}
+
+		if cooldownCount > 0 {
+			summaryFields = append(summaryFields,
+				"hashLookupSkipped", cooldownCount,
+				"earliestHashRetry", earliestRetry.Format(time.RFC3339))
+		}
+
+		logger.Info("Unmatched saves summary", summaryFields...)
 	}
 
 	if len(pendingFuzzy) > 0 {

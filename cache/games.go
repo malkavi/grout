@@ -672,13 +672,19 @@ func (cm *Manager) RecordFailedLookup(fsSlug, localFilename string) error {
 		return newCacheError("save", "failed_lookup", fmt.Sprintf("%s/%s", fsSlug, key), err)
 	}
 
-	gaba.GetLogger().Debug("Recorded failed lookup", "fsSlug", fsSlug, "localFilename", key)
 	return nil
 }
 
 func (cm *Manager) ShouldAttemptLookup(fsSlug, localFilename string) bool {
+	shouldAttempt, _ := cm.ShouldAttemptLookupWithNextRetry(fsSlug, localFilename)
+	return shouldAttempt
+}
+
+// ShouldAttemptLookupWithNextRetry returns whether a lookup should be attempted
+// and if not, when the next retry will be allowed (after cooldown expires).
+func (cm *Manager) ShouldAttemptLookupWithNextRetry(fsSlug, localFilename string) (bool, time.Time) {
 	if cm == nil || !cm.initialized {
-		return true
+		return true, time.Time{}
 	}
 
 	cm.mu.RLock()
@@ -693,15 +699,31 @@ func (cm *Manager) ShouldAttemptLookup(fsSlug, localFilename string) bool {
 	`, fsSlug, key).Scan(&lastAttempt)
 
 	if err != nil {
-		return true
+		return true, time.Time{}
 	}
 
-	parsed, err := time.Parse("2006-01-02 15:04:05", lastAttempt)
+	// Try multiple timestamp formats since SQLite can store different formats
+	var parsed time.Time
+	for _, format := range []string{
+		time.RFC3339,
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05Z07:00",
+	} {
+		parsed, err = time.Parse(format, lastAttempt)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
-		return true
+		return true, time.Time{}
 	}
 
-	return time.Since(parsed) >= 24*time.Hour
+	if time.Since(parsed) >= 24*time.Hour {
+		return true, time.Time{}
+	}
+
+	nextRetry := parsed.Add(24 * time.Hour)
+	return false, nextRetry
 }
 
 func (cm *Manager) ClearFailedLookup(fsSlug, localFilename string) error {
@@ -740,6 +762,14 @@ func ShouldAttemptLookup(fsSlug, localFilename string) bool {
 		return true
 	}
 	return cm.ShouldAttemptLookup(fsSlug, localFilename)
+}
+
+func ShouldAttemptLookupWithNextRetry(fsSlug, localFilename string) (bool, time.Time) {
+	cm := GetCacheManager()
+	if cm == nil {
+		return true, time.Time{}
+	}
+	return cm.ShouldAttemptLookupWithNextRetry(fsSlug, localFilename)
 }
 
 func ClearFailedLookup(fsSlug, localFilename string) error {
