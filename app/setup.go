@@ -117,7 +117,13 @@ func setup() SetupResult {
 		}
 		logger.Debug("Login successful, saving configuration")
 		config.Hosts = loginConfig.Hosts
+		config.PlatformsBinding = loginConfig.PlatformsBinding
 		internal.SaveConfig(config)
+	} else if len(config.Hosts) > 0 {
+		// Load platform bindings from RomM server for existing config
+		if err := config.LoadPlatformsBinding(config.Hosts[0]); err != nil {
+			logger.Debug("Failed to load platform bindings", "error", err)
+		}
 	}
 
 	if config.LogLevel != "" {
@@ -155,12 +161,13 @@ func setup() SetupResult {
 	if len(config.DirectoryMappings) == 0 {
 		screen := ui.NewPlatformMappingScreen()
 		result, err := screen.Draw(ui.PlatformMappingInput{
-			Host:           config.Hosts[0],
-			ApiTimeout:     config.ApiTimeout,
-			CFW:            currentCFW,
-			RomDirectory:   cfw.GetRomDirectory(),
-			AutoSelect:     false,
-			HideBackButton: true,
+			Host:             config.Hosts[0],
+			ApiTimeout:       config.ApiTimeout,
+			CFW:              currentCFW,
+			RomDirectory:     cfw.GetRomDirectory(),
+			AutoSelect:       false,
+			HideBackButton:   true,
+			PlatformsBinding: config.PlatformsBinding,
 		})
 
 		if err == nil && result.ExitCode == gaba.ExitCodeSuccess {

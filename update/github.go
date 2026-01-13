@@ -73,13 +73,13 @@ func FetchLatestRelease(releaseChannel internal.ReleaseChannel) (*GitHubRelease,
 	}
 
 	if releaseChannel == internal.ReleaseChannelBeta {
-		gaba.GetLogger().Debug("latest release is: %+v", releases[0])
+		gaba.GetLogger().Debug("latest release", "release", releases[0].TagName)
 		return &releases[0], nil
 	}
 
 	for _, release := range releases {
 		if !release.Prerelease && !release.Draft {
-			gaba.GetLogger().Debug("latest stable release is: %+v", release)
+			gaba.GetLogger().Debug("latest stable release", "release", release.TagName)
 			return &release, nil
 		}
 	}

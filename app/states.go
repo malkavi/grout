@@ -673,6 +673,7 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 			AutoSelect:       false,
 			HideBackButton:   false,
 			ExistingMappings: config.DirectoryMappings, // Pass existing mappings for return visits
+			PlatformsBinding: config.PlatformsBinding,
 		})
 
 		if err != nil {
@@ -768,12 +769,13 @@ func buildFSM(config *internal.Config, c cfw.CFW, platforms []romm.Platform, qui
 			if len(config.DirectoryMappings) == 0 {
 				screen := ui.NewPlatformMappingScreen()
 				result, err := screen.Draw(ui.PlatformMappingInput{
-					Host:           config.Hosts[0],
-					ApiTimeout:     config.ApiTimeout,
-					CFW:            currentCFW,
-					RomDirectory:   cfw.GetRomDirectory(),
-					AutoSelect:     false,
-					HideBackButton: true,
+					Host:             config.Hosts[0],
+					ApiTimeout:       config.ApiTimeout,
+					CFW:              currentCFW,
+					RomDirectory:     cfw.GetRomDirectory(),
+					AutoSelect:       false,
+					HideBackButton:   true,
+					PlatformsBinding: config.PlatformsBinding,
 				})
 
 				if err == nil && result.ExitCode == gaba.ExitCodeSuccess {

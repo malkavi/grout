@@ -64,11 +64,7 @@ If filename matching fails, Grout can compute the CRC32 or SHA1 hash of your loc
 stored in RomM. This is useful when:
 
 - Your local ROM has a different filename than in RomM
-- You renamed a ROM locally but it's the same file
-
-> [!NOTE]
-> Hash matching must be enabled in **Settings → Advanced → Match Orphans By Hash**. Hash computation can be slow for
-> large ROM files.
+- You renamed a ROM locally, but it's the same file
 
 ### 3. Fuzzy Title Match
 

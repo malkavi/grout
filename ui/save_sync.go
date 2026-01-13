@@ -33,9 +33,10 @@ func NewSaveSyncScreen() *SaveSyncScreen {
 
 func (s *SaveSyncScreen) Draw(input SaveSyncInput) (ScreenResult[SaveSyncOutput], error) {
 	output := SaveSyncOutput{}
+	config := input.Config
 
 	romScan, _ := gaba.ProcessMessage(i18n.Localize(&goi18n.Message{ID: "save_sync_scanning_roms", Other: "Scanning ROMs..."}, nil), gaba.ProcessMessageOptions{}, func() (interface{}, error) {
-		return sync.ScanRoms(), nil
+		return sync.ScanRoms(config), nil
 	})
 
 	type scanResult struct {

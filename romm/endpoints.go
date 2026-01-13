@@ -3,6 +3,7 @@ package romm
 const (
 	endpointHeartbeat = "/api/heartbeat"
 	endpointLogin     = "/api/login"
+	endpointConfig    = "/api/config"
 
 	endpointPlatforms    = "/api/platforms"
 	endpointPlatformByID = "/api/platforms/%d"

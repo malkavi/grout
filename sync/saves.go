@@ -48,7 +48,12 @@ func ResolveSavePath(fsSlug string, gameID int, config *internal.Config) (string
 	logger.Debug("ResolveSavePath called", "fsSlug", fsSlug, "gameID", gameID)
 	basePath := cfw.BaseSavePath()
 
-	emulatorFolders := cfw.EmulatorFoldersForFSSlug(fsSlug)
+	// Resolve fsSlug through platform binding for CFW lookup
+	effectiveFSSlug := fsSlug
+	if config != nil {
+		effectiveFSSlug = config.ResolveFSSlug(fsSlug)
+	}
+	emulatorFolders := cfw.EmulatorFoldersForFSSlug(effectiveFSSlug)
 
 	if len(emulatorFolders) == 0 {
 		return "", fmt.Errorf("no save folder mapping for fsSlug: %s", fsSlug)
@@ -98,11 +103,17 @@ createDir:
 	return saveDir, nil
 }
 
-func findSaveFiles(fsSlug string) []LocalSave {
+func findSaveFiles(fsSlug string, config *internal.Config) []LocalSave {
 	logger := gaba.GetLogger()
 
 	basePath := cfw.BaseSavePath()
-	emulatorFolders := cfw.EmulatorFoldersForFSSlug(fsSlug)
+
+	// Resolve fsSlug through platform binding for CFW lookup
+	effectiveFSSlug := fsSlug
+	if config != nil {
+		effectiveFSSlug = config.ResolveFSSlug(fsSlug)
+	}
+	emulatorFolders := cfw.EmulatorFoldersForFSSlug(effectiveFSSlug)
 
 	if len(emulatorFolders) == 0 {
 		logger.Debug("No save folder mapping for fsSlug", "fsSlug", fsSlug)

@@ -44,6 +44,8 @@ type Config struct {
 	ReleaseChannel         ReleaseChannel              `json:"release_channel,omitempty"`
 
 	PlatformOrder []string `json:"platform_order,omitempty"`
+
+	PlatformsBinding map[string]string `json:"-"`
 }
 
 type DirectoryMapping struct {
@@ -262,18 +264,70 @@ func GetMappedPlatforms(host romm.Host, mappings map[string]DirectoryMapping, ti
 	return platforms, nil
 }
 
+// LoadPlatformsBinding fetches the PLATFORMS_BINDING from the RomM server
+// and stores it in the config for use in CFW lookups.
+// This requires the pointer receiver!
+//
+//goland:noinspection ALL
+func (c *Config) LoadPlatformsBinding(host romm.Host, timeout ...time.Duration) error {
+	client := romm.NewClientFromHost(host, timeout...)
+
+	rommConfig, err := client.GetConfig()
+	if err != nil {
+		// Non-fatal - older RomM versions may not have this endpoint
+		return err
+	}
+
+	c.PlatformsBinding = rommConfig.PlatformsBinding
+	return nil
+}
+
 // To decouple a circular dependency
 func (c Config) GetApiTimeout() time.Duration    { return c.ApiTimeout }
 func (c Config) GetShowCollections() bool        { return c.ShowRegularCollections }
 func (c Config) GetShowSmartCollections() bool   { return c.ShowSmartCollections }
 func (c Config) GetShowVirtualCollections() bool { return c.ShowVirtualCollections }
 
+// ResolveFSSlug returns the effective fs_slug for CFW lookups.
+// If the fs_slug has a binding in PlatformsBinding, the bound value is returned.
+// Otherwise, the original fs_slug is returned.
+// Example: PlatformsBinding {"ms": "sms"} means RomM "ms" -> CFW "sms"
+// So ResolveFSSlug("ms") returns "sms"
+func (c Config) ResolveFSSlug(fsSlug string) string {
+	if c.PlatformsBinding != nil {
+		if bound, ok := c.PlatformsBinding[fsSlug]; ok {
+			gaba.GetLogger().Debug("Using platform binding for CFW lookup",
+				"fsSlug", fsSlug, "boundTo", bound)
+			return bound
+		}
+	}
+	return fsSlug
+}
+
+// ResolveRommFSSlug returns the RomM fs_slug for a given CFW platform key.
+// This is the inverse of ResolveFSSlug - it finds which RomM fs_slug maps TO the given CFW key.
+// Example: PlatformsBinding {"ms": "sms"} means RomM "ms" -> CFW "sms"
+// So ResolveRommFSSlug("sms") returns "ms"
+func (c Config) ResolveRommFSSlug(cfwKey string) string {
+	if c.PlatformsBinding != nil {
+		for rommSlug, cfwSlug := range c.PlatformsBinding {
+			if cfwSlug == cfwKey {
+				gaba.GetLogger().Debug("Using inverse platform binding",
+					"cfwKey", cfwKey, "rommFSSlug", rommSlug)
+				return rommSlug
+			}
+		}
+	}
+	return cfwKey
+}
+
 func (c Config) GetPlatformRomDirectory(platform romm.Platform) string {
 	rp := platform.FSSlug
 	if mapping, ok := c.DirectoryMappings[platform.FSSlug]; ok && mapping.RelativePath != "" {
 		rp = mapping.RelativePath
 	}
-	return cfw.GetPlatformRomDirectory(rp, platform.FSSlug)
+	effectiveFSSlug := c.ResolveFSSlug(platform.FSSlug)
+	return cfw.GetPlatformRomDirectory(rp, effectiveFSSlug)
 }
 
 func (c Config) GetArtDirectory(platform romm.Platform) string {

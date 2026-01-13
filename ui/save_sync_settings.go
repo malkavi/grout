@@ -96,7 +96,9 @@ func (s *SaveSyncSettingsScreen) buildMenuItems(config *internal.Config) []gaba.
 	sort.Strings(fsSlugs)
 
 	for _, fsSlug := range fsSlugs {
-		saveDirectories := cfw.EmulatorFoldersForFSSlug(fsSlug)
+		// Resolve fsSlug through platform binding for CFW lookup
+		effectiveFSSlug := config.ResolveFSSlug(fsSlug)
+		saveDirectories := cfw.EmulatorFoldersForFSSlug(effectiveFSSlug)
 		if len(saveDirectories) == 0 {
 			continue
 		}

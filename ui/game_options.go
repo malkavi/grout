@@ -75,8 +75,9 @@ func (s *GameOptionsScreen) Draw(input GameOptionsInput) (ScreenResult[GameOptio
 func (s *GameOptionsScreen) buildMenuItems(config *internal.Config, game romm.Rom) []gaba.ItemWithOptions {
 	items := make([]gaba.ItemWithOptions, 0)
 
-	// Save Directory option
-	saveDirectories := cfw.EmulatorFoldersForFSSlug(game.PlatformFSSlug)
+	// Save Directory option - resolve through platform binding for CFW lookup
+	effectiveFSSlug := config.ResolveFSSlug(game.PlatformFSSlug)
+	saveDirectories := cfw.EmulatorFoldersForFSSlug(effectiveFSSlug)
 	if len(saveDirectories) > 0 {
 		options := make([]gaba.Option, 0, len(saveDirectories)+1)
 
@@ -136,7 +137,8 @@ func (s *GameOptionsScreen) applySettings(config *internal.Config, game romm.Rom
 			}
 
 			// Resolve actual directories (empty string means default/first in list)
-			saveDirectories := cfw.EmulatorFoldersForFSSlug(game.PlatformFSSlug)
+			effectiveFSSlug := config.ResolveFSSlug(game.PlatformFSSlug)
+			saveDirectories := cfw.EmulatorFoldersForFSSlug(effectiveFSSlug)
 			if len(saveDirectories) == 0 {
 				continue
 			}

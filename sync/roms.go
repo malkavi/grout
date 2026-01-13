@@ -110,7 +110,7 @@ func (lrf LocalRomFile) hasRemoteSaveForBaseName(baseName string) bool {
 
 type LocalRomScan map[string][]LocalRomFile
 
-func ScanRoms() LocalRomScan {
+func ScanRoms(config *internal.Config) LocalRomScan {
 	logger := gaba.GetLogger()
 	result := make(map[string][]LocalRomFile)
 	currentCFW := cfw.GetCFW()
@@ -124,7 +124,9 @@ func ScanRoms() LocalRomScan {
 	baseRomDir := cfw.GetRomDirectory()
 	logger.Debug("Starting ROM scan", "baseDir", baseRomDir)
 
-	config, _ := internal.LoadConfig()
+	if config == nil {
+		config, _ = internal.LoadConfig()
+	}
 
 	result = scanRomsByPlatform(baseRomDir, platformMap, config, currentCFW)
 
@@ -137,8 +139,8 @@ func ScanRoms() LocalRomScan {
 	return result
 }
 
-func buildSaveFileMap(fsSlug string) map[string]*LocalSave {
-	saveFiles := findSaveFiles(fsSlug)
+func buildSaveFileMap(fsSlug string, config *internal.Config) map[string]*LocalSave {
+	saveFiles := findSaveFiles(fsSlug, config)
 	saveFileMap := make(map[string]*LocalSave)
 	for i := range saveFiles {
 		baseName := strings.TrimSuffix(filepath.Base(saveFiles[i].Path), filepath.Ext(saveFiles[i].Path))
@@ -192,7 +194,7 @@ func scanRomsByPlatform(baseRomDir string, platformMap map[string][]string, conf
 
 				if matched {
 					romDir := filepath.Join(baseRomDir, dirName)
-					saveFileMap := buildSaveFileMap(fsSlug)
+					saveFileMap := buildSaveFileMap(fsSlug, config)
 					roms := scanRomDirectory(fsSlug, romDir, saveFileMap)
 					if len(roms) > 0 {
 						result[fsSlug] = append(result[fsSlug], roms...)
@@ -216,9 +218,16 @@ func scanRomsByPlatform(baseRomDir string, platformMap map[string][]string, conf
 			go func(s string) {
 				defer wg.Done()
 
+				// Resolve CFW platform key to RomM fs_slug via inverse platform binding
+				// e.g., CFW "sms" -> RomM "ms" when binding is {"ms": "sms"}
+				rommFSSlug := s
+				if config != nil {
+					rommFSSlug = config.ResolveRommFSSlug(s)
+				}
+
 				romFolderName := ""
 				if config != nil {
-					if mapping, ok := config.DirectoryMappings[s]; ok && mapping.RelativePath != "" {
+					if mapping, ok := config.DirectoryMappings[rommFSSlug]; ok && mapping.RelativePath != "" {
 						romFolderName = mapping.RelativePath
 					}
 				}
@@ -228,23 +237,23 @@ func scanRomsByPlatform(baseRomDir string, platformMap map[string][]string, conf
 				}
 
 				if romFolderName == "" {
-					logger.Debug("No ROM folder mapping for fsSlug", "fsSlug", s)
-					resultChan <- platformResult{fsSlug: s, roms: nil}
+					logger.Debug("No ROM folder mapping for fsSlug", "fsSlug", rommFSSlug)
+					resultChan <- platformResult{fsSlug: rommFSSlug, roms: nil}
 					return
 				}
 
 				romDir := filepath.Join(baseRomDir, romFolderName)
 
 				if !fileutil.FileExists(romDir) {
-					resultChan <- platformResult{fsSlug: s, roms: nil}
+					resultChan <- platformResult{fsSlug: rommFSSlug, roms: nil}
 					return
 				}
 
-				saveFileMap := buildSaveFileMap(s)
-				roms := scanRomDirectory(s, romDir, saveFileMap)
-				resultChan <- platformResult{fsSlug: s, roms: roms}
+				saveFileMap := buildSaveFileMap(rommFSSlug, config)
+				roms := scanRomDirectory(rommFSSlug, romDir, saveFileMap)
+				resultChan <- platformResult{fsSlug: rommFSSlug, roms: roms}
 				if len(roms) > 0 {
-					logger.Debug("Found ROMs for platform", "fsSlug", s, "count", len(roms))
+					logger.Debug("Found ROMs for platform", "fsSlug", rommFSSlug, "count", len(roms))
 				}
 			}(fsSlug)
 		}

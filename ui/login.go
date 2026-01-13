@@ -226,6 +226,8 @@ func LoginFlow(existingHost romm.Host) (*internal.Config, error) {
 			config := &internal.Config{
 				Hosts: []romm.Host{host},
 			}
+
+			_ = config.LoadPlatformsBinding(host)
 			return config, nil
 		}
 

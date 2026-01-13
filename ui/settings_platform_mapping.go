@@ -27,6 +27,7 @@ type PlatformMappingInput struct {
 	AutoSelect       bool
 	HideBackButton   bool
 	ExistingMappings map[string]internal.DirectoryMapping // For return visits, use existing config
+	PlatformsBinding map[string]string                    // fs_slug -> bound slug for CFW lookups
 }
 
 type PlatformMappingOutput struct {
@@ -145,7 +146,7 @@ func (s *PlatformMappingScreen) buildPlatformOptions(
 	options := []gaba.Option{{DisplayName: i18n.Localize(&goi18n.Message{ID: "common_skip", Other: "Skip"}, nil), Value: ""}}
 	selectedIndex := 0
 
-	cfwDirectories := s.getCFWDirectoriesForPlatform(platform.FSSlug, input.CFW)
+	cfwDirectories := s.getCFWDirectoriesForPlatform(platform.FSSlug, input.CFW, input.PlatformsBinding)
 
 	// Check if this is a return visit with existing mappings
 	hasExistingMappings := len(input.ExistingMappings) > 0
@@ -231,15 +232,25 @@ func (s *PlatformMappingScreen) directoryMatchesPlatform(
 	}
 }
 
-func (s *PlatformMappingScreen) getCFWDirectoriesForPlatform(fsSlug string, c cfw.CFW) []string {
+func (s *PlatformMappingScreen) getCFWDirectoriesForPlatform(fsSlug string, c cfw.CFW, platformsBinding map[string]string) []string {
+	// Resolve fsSlug through platform binding if available
+	effectiveSlug := fsSlug
+	if platformsBinding != nil {
+		if bound, ok := platformsBinding[fsSlug]; ok {
+			gaba.GetLogger().Debug("Using platform binding for CFW lookup",
+				"fsSlug", fsSlug, "boundTo", bound)
+			effectiveSlug = bound
+		}
+	}
+
 	platformMap := cfw.GetPlatformMap(c)
 	if platformMap != nil {
-		if dirs, ok := platformMap[fsSlug]; ok && len(dirs) > 0 {
+		if dirs, ok := platformMap[effectiveSlug]; ok && len(dirs) > 0 {
 			return dirs
 		}
 	}
-	// Fall back to FSSlug if no CFW-specific mapping exists
-	return []string{fsSlug}
+	// Fall back to effective slug if no CFW-specific mapping exists
+	return []string{effectiveSlug}
 }
 
 func (s *PlatformMappingScreen) directoriesMatch(dir1, dir2 string, c cfw.CFW) bool {
