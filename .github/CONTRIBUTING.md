@@ -49,4 +49,4 @@ Please [create an issue](https://github.com/rommapp/grout/issues/new/choose) wit
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the same license as the project (GPL-3.0).
+By contributing, you agree that your contributions will be licensed under the MIT License.
