@@ -10,11 +10,10 @@ import (
 )
 
 const (
-	GroutKnulliGamelistPath = "tools/gamelist.xml"
-	GroutEntryGameListName  = "Grout"
+	GroutEntryGameListName = "Grout"
 )
 
-func FirstRunSetup(romDir string) {
+func FirstLaunchSetup(romDir string) {
 	path := filepath.Join(romDir, "tools", "gamelist.xml")
 	gl := gamelist.New()
 

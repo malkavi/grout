@@ -365,7 +365,7 @@ func RomFolderBase(path string, tagParser func(string) string) string {
 func FirstLaunchSetup() {
 	switch GetCFW() {
 	case Knulli:
-		knulli.FirstRunSetup(GetRomDirectory())
+		knulli.FirstLaunchSetup(GetRomDirectory())
 	default:
 		return
 	}
