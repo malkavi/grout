@@ -317,9 +317,9 @@ func (cm *Manager) GetAllRefreshTimes() map[string]time.Time {
 	return result
 }
 
-func (cm *Manager) PopulateFullCacheWithProgress(platforms []romm.Platform, progress *atomic.Float64) error {
+func (cm *Manager) PopulateFullCacheWithProgress(platforms []romm.Platform, progress *atomic.Float64) (SyncStats, error) {
 	if cm == nil || !cm.initialized {
-		return ErrNotInitialized
+		return SyncStats{}, ErrNotInitialized
 	}
 
 	return cm.populateCache(platforms, progress)

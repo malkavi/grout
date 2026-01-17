@@ -247,10 +247,12 @@ func logLevelToIndex(level string) int {
 	switch level {
 	case "DEBUG":
 		return 0
-	case "ERROR":
+	case "INFO":
 		return 1
+	case "ERROR":
+		return 2
 	default:
-		return 0
+		return 1 // Default to INFO
 	}
 }
 
