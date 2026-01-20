@@ -153,7 +153,7 @@ You can change these mappings later from [Settings](SETTINGS.md).
 
 ## Background Cache Sync
 
-> [!INFO]
+> [!WARNING]
 > Grout currently does not gracefully handle deletions.
 > 
 > Deleted games, platforms and collections will continue to be shown until the [local cache is rebuilt](SETTINGS.md#rebuild-cache).
