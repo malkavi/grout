@@ -57,7 +57,7 @@ func GetInfoDirectory() string {
 }
 
 func GetBaseSavePath() string {
-	return filepath.Join(GetBasePath(), "MUOS", "save", "file")
+	return filepath.Join(GetBasePath(), "MUOS", "save")
 }
 
 func GetArtDirectory(platformFSSlug, platformName string) string {
