@@ -247,19 +247,23 @@ func logLevelToIndex(level string) int {
 	switch level {
 	case "DEBUG":
 		return 0
-	case "ERROR":
+	case "INFO":
 		return 1
+	case "ERROR":
+		return 2
 	default:
-		return 0
+		return 1 // Default to INFO
 	}
 }
 
 func releaseChannelToIndex(releaseChannel internal.ReleaseChannel) int {
 	switch releaseChannel {
-	case internal.ReleaseChannelStable:
+	case internal.ReleaseChannelMatchRomM:
 		return 0
-	case internal.ReleaseChannelBeta:
+	case internal.ReleaseChannelStable:
 		return 1
+	case internal.ReleaseChannelBeta:
+		return 2
 	default:
 		return 0
 	}

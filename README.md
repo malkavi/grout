@@ -23,6 +23,16 @@ A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.o
 
 ---
 
+> [!IMPORTANT]                                                                                                                                                                                                                                     
+> Grout aggressively adopts new RomM features.
+>
+> The required RomM version matches the first three components of Grout's version number.                                                                                                                                                          
+> The fourth component is for Grout-specific patches.
+>
+> Grout may still function on older RomM versions, but support will not be provided.
+
+---
+
 ## Features at a Glance
 
 - Download games wirelessly from your RomM instance

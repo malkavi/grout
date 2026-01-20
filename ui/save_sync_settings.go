@@ -6,6 +6,7 @@ import (
 	"grout/cfw"
 	"grout/internal"
 	"sort"
+	"strings"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/i18n"
@@ -105,16 +106,21 @@ func (s *SaveSyncSettingsScreen) buildMenuItems(config *internal.Config) []gaba.
 
 		options := make([]gaba.Option, 0, len(saveDirectories)+1)
 
-		// Add "Default" option first
 		options = append(options, gaba.Option{
 			DisplayName: i18n.Localize(&goi18n.Message{ID: "common_default", Other: "Default"}, nil),
 			Value:       "",
 		})
 
-		// Add each emulator directory as an option
 		for _, dir := range saveDirectories {
+			dn := dir
+
+			if cfw.GetCFW() == cfw.MuOS {
+				dn = strings.ReplaceAll(dn, "file/", "")   // remove leading file path (caused by fixing #89)
+				dn = strings.ReplaceAll(dn, "/backup", "") // remove trailing backup path (caused by fixing #89)
+			}
+
 			options = append(options, gaba.Option{
-				DisplayName: dir,
+				DisplayName: dn,
 				Value:       dir,
 			})
 		}

@@ -3,6 +3,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
+	"grout/cache"
 	"grout/cfw"
 	"grout/romm"
 	"os"
@@ -16,8 +17,9 @@ import (
 type ReleaseChannel string
 
 const (
-	ReleaseChannelStable ReleaseChannel = "stable"
-	ReleaseChannelBeta   ReleaseChannel = "beta"
+	ReleaseChannelMatchRomM ReleaseChannel = "match_romm"
+	ReleaseChannelStable    ReleaseChannel = "stable"
+	ReleaseChannelBeta      ReleaseChannel = "beta"
 )
 
 var kidModeEnabled atomic.Bool
@@ -137,7 +139,7 @@ func SaveConfig(config *Config) error {
 	}
 
 	if config.ReleaseChannel == "" {
-		config.ReleaseChannel = ReleaseChannelStable
+		config.ReleaseChannel = ReleaseChannelMatchRomM
 	}
 
 	gaba.SetRawLogLevel(config.LogLevel)
@@ -243,11 +245,18 @@ func SetKidMode(enabled bool) {
 }
 
 func GetMappedPlatforms(host romm.Host, mappings map[string]DirectoryMapping, timeout ...time.Duration) ([]romm.Platform, error) {
-	c := romm.NewClientFromHost(host, timeout...)
+	var rommPlatforms []romm.Platform
+	var err error
 
-	rommPlatforms, err := c.GetPlatforms()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get platforms from RomM: %w", err)
+	if cm := cache.GetCacheManager(); cm != nil {
+		rommPlatforms, err = cm.GetPlatforms()
+	}
+	if len(rommPlatforms) == 0 {
+		c := romm.NewClientFromHost(host, timeout...)
+		rommPlatforms, err = c.GetPlatforms()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get platforms from RomM: %w", err)
+		}
 	}
 
 	romm.DisambiguatePlatformNames(rommPlatforms)
@@ -340,6 +349,12 @@ func (c Config) ShowCollections(host romm.Host) bool {
 		return false
 	}
 
+	// Check cache first
+	if cm := cache.GetCacheManager(); cm != nil && cm.HasCollections() {
+		return true
+	}
+
+	// Fallback to network check
 	rc := romm.NewClientFromHost(host, c.ApiTimeout)
 
 	if c.ShowRegularCollections {

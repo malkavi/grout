@@ -33,9 +33,23 @@ func (p Platform) DisplayName() string {
 	return p.Name
 }
 
-func (c *Client) GetPlatforms() ([]Platform, error) {
+type GetPlatformsQuery struct {
+	UpdatedAfter string `qs:"updated_after,omitempty"` // ISO8601 timestamp with timezone
+}
+
+func (q GetPlatformsQuery) Valid() bool {
+	return q.UpdatedAfter != ""
+}
+
+func (c *Client) GetPlatforms(query ...GetPlatformsQuery) ([]Platform, error) {
 	var platforms []Platform
-	err := c.doRequest("GET", endpointPlatforms, nil, nil, &platforms)
+
+	var q GetPlatformsQuery
+	if len(query) > 0 {
+		q = query[0]
+	}
+
+	err := c.doRequest("GET", endpointPlatforms, q, nil, &platforms)
 	return platforms, err
 }
 
