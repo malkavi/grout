@@ -15,8 +15,8 @@ const (
 	flagPath               = "./knulli_restart_request"
 )
 
-func AddToToolsGameList(romDir string) {
-	path := filepath.Join(romDir, "tools", "gamelist.xml")
+func AddToToolsGameList() {
+	path := filepath.Join(GetRomDirectory(), "tools", "gamelist.xml")
 	gaba.GetLogger().Debug("using filepath for knulli gamelist.xml", "path", path)
 	gl := gamelist.New()
 

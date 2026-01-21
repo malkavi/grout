@@ -84,7 +84,7 @@ func setup() SetupResult {
 	}
 
 	if cfw.GetCFW() == cfw.Knulli {
-		knulli.AddToToolsGameList(cfw.GetRomDirectory())
+		knulli.AddToToolsGameList()
 	}
 
 	config, err := internal.LoadConfig()
