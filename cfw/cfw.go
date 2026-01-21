@@ -1,7 +1,6 @@
 package cfw
 
 import (
-	"grout/cfw/knulli"
 	"grout/internal/fileutil"
 	"log"
 	"os"
@@ -359,14 +358,5 @@ func RomFolderBase(path string, tagParser func(string) string) string {
 		return path
 	default:
 		return path
-	}
-}
-
-func FirstLaunchSetup() {
-	switch GetCFW() {
-	case Knulli:
-		knulli.FirstLaunchSetup(GetRomDirectory())
-	default:
-		return
 	}
 }
