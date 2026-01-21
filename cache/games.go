@@ -3,6 +3,7 @@ package cache
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"grout/cfw"
 	"grout/internal/stringutil"
@@ -279,7 +280,7 @@ func (cm *Manager) getCollectionInternalID(collection romm.Collection) (int64, e
 		err = cm.db.QueryRow(`SELECT id FROM collections WHERE romm_id = ? AND type = ?`, collection.ID, collType).Scan(&id)
 	}
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		cm.stats.recordMiss()
 		return 0, ErrCacheMiss
 	}
@@ -559,7 +560,7 @@ func (cm *Manager) GetRomIDByFilename(fsSlug, filename string) (int, string, boo
 			return romID, romName, true
 		}
 
-		if err != sql.ErrNoRows {
+		if !errors.Is(err, sql.ErrNoRows) {
 			cm.stats.recordError()
 			gaba.GetLogger().Debug("ROM lookup error", "fsSlug", slug, "filename", filename, "error", err)
 		}
@@ -576,7 +577,7 @@ func (cm *Manager) GetRomIDByFilename(fsSlug, filename string) (int, string, boo
 			return romID, romName, true
 		}
 
-		if err != sql.ErrNoRows {
+		if !errors.Is(err, sql.ErrNoRows) {
 			cm.stats.recordError()
 			gaba.GetLogger().Debug("Filename mapping lookup error", "fsSlug", slug, "filename", filename, "error", err)
 		}

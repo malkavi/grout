@@ -184,7 +184,6 @@ func (c *Config) LoadPlatformsBinding(host romm.Host, timeout ...time.Duration) 
 	return nil
 }
 
-// To decouple a circular dependency
 func (c Config) GetApiTimeout() time.Duration    { return c.ApiTimeout }
 func (c Config) GetShowCollections() bool        { return c.ShowRegularCollections }
 func (c Config) GetShowSmartCollections() bool   { return c.ShowSmartCollections }
