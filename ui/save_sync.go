@@ -31,7 +31,7 @@ func NewSaveSyncScreen() *SaveSyncScreen {
 	return &SaveSyncScreen{}
 }
 
-func (s *SaveSyncScreen) Draw(input SaveSyncInput) (ScreenResult[SaveSyncOutput], error) {
+func (s *SaveSyncScreen) Draw(input SaveSyncInput) (SaveSyncOutput, error) {
 	output := SaveSyncOutput{}
 	config := input.Config
 
@@ -145,7 +145,7 @@ func (s *SaveSyncScreen) Draw(input SaveSyncInput) (ScreenResult[SaveSyncOutput]
 		})
 	}
 
-	return back(output), nil
+	return output, nil
 }
 
 func showFuzzyMatchConfirmation(fm sync.PendingFuzzyMatch) bool {

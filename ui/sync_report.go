@@ -25,7 +25,7 @@ func newSyncReportScreen() *SyncReportScreen {
 	return &SyncReportScreen{}
 }
 
-func (s *SyncReportScreen) draw(input syncReportInput) (ScreenResult[syncReportOutput], error) {
+func (s *SyncReportScreen) draw(input syncReportInput) (syncReportOutput, error) {
 	logger := gaba.GetLogger()
 	output := syncReportOutput{}
 
@@ -42,17 +42,17 @@ func (s *SyncReportScreen) draw(input syncReportInput) (ScreenResult[syncReportO
 
 	if err != nil {
 		if errors.Is(err, gaba.ErrCancelled) {
-			return back(output), nil
+			return output, nil
 		}
 		logger.Error("Detail screen error", "error", err)
-		return withCode(output, gaba.ExitCodeError), err
+		return output, err
 	}
 
 	if result.Action == gaba.DetailActionCancelled {
-		return back(output), nil
+		return output, nil
 	}
 
-	return success(output), nil
+	return output, nil
 }
 
 func (s *SyncReportScreen) buildSections(results []sync.SyncResult, unmatched []sync.UnmatchedSave) []gaba.Section {

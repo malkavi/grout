@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"grout/cfw"
 	"grout/internal"
-	"grout/internal/constants"
 	"grout/romm"
 	"grout/version"
 	"io"
@@ -149,7 +148,7 @@ func PerformUpdate(downloadURL string, progress *atomic.Float64) error {
 
 func downloadBinary(url, destPath string, progress *atomic.Float64) error {
 	client := &http.Client{
-		Timeout: constants.UpdaterTimeout,
+		Timeout: internal.UpdaterTimeout,
 	}
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

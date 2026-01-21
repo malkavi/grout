@@ -19,6 +19,7 @@ type SaveSyncSettingsInput struct {
 }
 
 type SaveSyncSettingsOutput struct {
+	Action SaveSyncSettingsAction
 	Config *internal.Config
 }
 
@@ -30,15 +31,15 @@ func NewSaveSyncSettingsScreen() *SaveSyncSettingsScreen {
 	return &SaveSyncSettingsScreen{}
 }
 
-func (s *SaveSyncSettingsScreen) Draw(input SaveSyncSettingsInput) (ScreenResult[SaveSyncSettingsOutput], error) {
+func (s *SaveSyncSettingsScreen) Draw(input SaveSyncSettingsInput) (SaveSyncSettingsOutput, error) {
 	config := input.Config
-	output := SaveSyncSettingsOutput{Config: config}
+	output := SaveSyncSettingsOutput{Action: SaveSyncSettingsActionBack, Config: config}
 
 	items := s.buildMenuItems(config)
 
 	if len(items) == 0 {
 		gaba.GetLogger().Warn("No platforms configured for save sync settings")
-		return back(output), nil
+		return output, nil
 	}
 
 	result, err := gaba.OptionsList(
@@ -51,17 +52,17 @@ func (s *SaveSyncSettingsScreen) Draw(input SaveSyncSettingsInput) (ScreenResult
 			},
 			InitialSelectedIndex: 0,
 			StatusBar:            StatusBar(),
-			SmallTitle:           true,
+			UseSmallTitle:        true,
 		},
 		items,
 	)
 
 	if err != nil {
 		if errors.Is(err, gaba.ErrCancelled) {
-			return back(output), nil
+			return output, nil
 		}
 		gaba.GetLogger().Error("Save sync settings error", "error", err)
-		return withCode(output, gaba.ExitCodeError), err
+		return output, err
 	}
 
 	s.applySettings(config, result.Items)
@@ -69,10 +70,11 @@ func (s *SaveSyncSettingsScreen) Draw(input SaveSyncSettingsInput) (ScreenResult
 	err = internal.SaveConfig(config)
 	if err != nil {
 		gaba.GetLogger().Error("Error saving save sync settings", "error", err)
-		return withCode(output, gaba.ExitCodeError), err
+		return output, err
 	}
 
-	return success(output), nil
+	output.Action = SaveSyncSettingsActionSaved
+	return output, nil
 }
 
 func (s *SaveSyncSettingsScreen) buildMenuItems(config *internal.Config) []gaba.ItemWithOptions {

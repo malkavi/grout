@@ -4,7 +4,7 @@ go 1.24.2
 
 require (
 	github.com/BrandonKowalski/certifiable v1.3.0
-	github.com/BrandonKowalski/gabagool/v2 v2.6.4
+	github.com/BrandonKowalski/gabagool/v2 v2.7.0
 	github.com/beevik/etree v1.6.0
 	github.com/bodgit/sevenzip v1.6.1
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
@@ -13,7 +13,7 @@ require (
 	go.uber.org/atomic v1.11.0
 	golang.org/x/image v0.35.0
 	golang.org/x/text v0.33.0
-	modernc.org/sqlite v1.44.2
+	modernc.org/sqlite v1.44.3
 )
 
 require (
