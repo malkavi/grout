@@ -23,6 +23,8 @@ github.com/BrandonKowalski/gabagool/v2 v2.6.4 h1:yMvcDFgNnIBpuKnLuAllZpNX0dMYijy
 github.com/BrandonKowalski/gabagool/v2 v2.6.4/go.mod h1:Iq/YFTz7+w8O78IE21kOkHbg3a4ZD2mjcd0S/jVhI94=
 github.com/BrandonKowalski/gabagool/v2 v2.7.0 h1:M6WfMTCDtdTa6B3vPlhTB+3GlE9bpBd3gfCWIa0ncJ4=
 github.com/BrandonKowalski/gabagool/v2 v2.7.0/go.mod h1:Iq/YFTz7+w8O78IE21kOkHbg3a4ZD2mjcd0S/jVhI94=
+github.com/BrandonKowalski/gabagool/v2 v2.7.1 h1:dKzPkC/UF0GVMxftOHl9x25FxuKp9oXxrQ2WGaRrmsQ=
+github.com/BrandonKowalski/gabagool/v2 v2.7.1/go.mod h1:Iq/YFTz7+w8O78IE21kOkHbg3a4ZD2mjcd0S/jVhI94=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
