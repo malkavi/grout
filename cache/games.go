@@ -3,6 +3,7 @@ package cache
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"grout/cfw"
 	"grout/internal/stringutil"
@@ -93,8 +94,6 @@ func (cm *Manager) SavePlatformGames(platformID int, games []romm.Rom) error {
 		return ErrNotInitialized
 	}
 
-	logger := gaba.GetLogger()
-
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -143,7 +142,6 @@ func (cm *Manager) SavePlatformGames(platformID int, games []romm.Rom) error {
 		return newCacheError("save", "games", GetPlatformCacheKey(platformID), err)
 	}
 
-	logger.Debug("Saved platform games to cache", "platformID", platformID, "count", len(games))
 	return nil
 }
 
@@ -282,7 +280,7 @@ func (cm *Manager) getCollectionInternalID(collection romm.Collection) (int64, e
 		err = cm.db.QueryRow(`SELECT id FROM collections WHERE romm_id = ? AND type = ?`, collection.ID, collType).Scan(&id)
 	}
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		cm.stats.recordMiss()
 		return 0, ErrCacheMiss
 	}
@@ -562,7 +560,7 @@ func (cm *Manager) GetRomIDByFilename(fsSlug, filename string) (int, string, boo
 			return romID, romName, true
 		}
 
-		if err != sql.ErrNoRows {
+		if !errors.Is(err, sql.ErrNoRows) {
 			cm.stats.recordError()
 			gaba.GetLogger().Debug("ROM lookup error", "fsSlug", slug, "filename", filename, "error", err)
 		}
@@ -579,7 +577,7 @@ func (cm *Manager) GetRomIDByFilename(fsSlug, filename string) (int, string, boo
 			return romID, romName, true
 		}
 
-		if err != sql.ErrNoRows {
+		if !errors.Is(err, sql.ErrNoRows) {
 			cm.stats.recordError()
 			gaba.GetLogger().Debug("Filename mapping lookup error", "fsSlug", slug, "filename", filename, "error", err)
 		}
@@ -773,14 +771,6 @@ func RecordFailedLookup(fsSlug, localFilename string) error {
 		return ErrNotInitialized
 	}
 	return cm.RecordFailedLookup(fsSlug, localFilename)
-}
-
-func ShouldAttemptLookup(fsSlug, localFilename string) bool {
-	cm := GetCacheManager()
-	if cm == nil {
-		return true
-	}
-	return cm.ShouldAttemptLookup(fsSlug, localFilename)
 }
 
 func ShouldAttemptLookupWithNextRetry(fsSlug, localFilename string) (bool, time.Time) {

@@ -13,7 +13,10 @@ type CollectionsSettingsInput struct {
 	Config *internal.Config
 }
 
-type CollectionsSettingsOutput struct{}
+type CollectionsSettingsOutput struct {
+	Action     CollectionsSettingsAction
+	SyncNeeded bool
+}
 
 type CollectionsSettingsScreen struct{}
 
@@ -21,9 +24,13 @@ func NewCollectionsSettingsScreen() *CollectionsSettingsScreen {
 	return &CollectionsSettingsScreen{}
 }
 
-func (s *CollectionsSettingsScreen) Draw(input CollectionsSettingsInput) (ScreenResult[CollectionsSettingsOutput], error) {
+func (s *CollectionsSettingsScreen) Draw(input CollectionsSettingsInput) (CollectionsSettingsOutput, error) {
 	config := input.Config
-	output := CollectionsSettingsOutput{}
+	output := CollectionsSettingsOutput{Action: CollectionsSettingsActionBack}
+
+	prevRegular := config.ShowRegularCollections
+	prevSmart := config.ShowSmartCollections
+	prevVirtual := config.ShowVirtualCollections
 
 	items := s.buildMenuItems(config)
 
@@ -37,28 +44,35 @@ func (s *CollectionsSettingsScreen) Draw(input CollectionsSettingsInput) (Screen
 			},
 			InitialSelectedIndex: 0,
 			StatusBar:            StatusBar(),
-			SmallTitle:           true,
+			UseSmallTitle:        true,
 		},
 		items,
 	)
 
 	if err != nil {
 		if errors.Is(err, gaba.ErrCancelled) {
-			return back(output), nil
+			return output, nil
 		}
 		gaba.GetLogger().Error("Collections settings error", "error", err)
-		return withCode(output, gaba.ExitCodeError), err
+		return output, err
 	}
 
 	s.applySettings(config, result.Items)
 
+	if (!prevRegular && config.ShowRegularCollections) ||
+		(!prevSmart && config.ShowSmartCollections) ||
+		(!prevVirtual && config.ShowVirtualCollections) {
+		output.SyncNeeded = true
+	}
+
 	err = internal.SaveConfig(config)
 	if err != nil {
 		gaba.GetLogger().Error("Error saving collections settings", "error", err)
-		return withCode(output, gaba.ExitCodeError), err
+		return output, err
 	}
 
-	return success(output), nil
+	output.Action = CollectionsSettingsActionSaved
+	return output, nil
 }
 
 func (s *CollectionsSettingsScreen) buildMenuItems(config *internal.Config) []gaba.ItemWithOptions {
@@ -90,8 +104,8 @@ func (s *CollectionsSettingsScreen) buildMenuItems(config *internal.Config) []ga
 		{
 			Item: gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "settings_collection_view", Other: "Collection View"}, nil)},
 			Options: []gaba.Option{
-				{DisplayName: i18n.Localize(&goi18n.Message{ID: "collection_view_platform", Other: "Platform"}, nil), Value: "platform"},
-				{DisplayName: i18n.Localize(&goi18n.Message{ID: "collection_view_unified", Other: "Unified"}, nil), Value: "unified"},
+				{DisplayName: i18n.Localize(&goi18n.Message{ID: "collection_view_platform", Other: "Platform"}, nil), Value: internal.CollectionViewPlatform},
+				{DisplayName: i18n.Localize(&goi18n.Message{ID: "collection_view_unified", Other: "Unified"}, nil), Value: internal.CollectionViewUnified},
 			},
 			SelectedOption: collectionViewToIndex(config.CollectionView),
 		},
@@ -119,7 +133,7 @@ func (s *CollectionsSettingsScreen) applySettings(config *internal.Config, items
 			}
 
 		case i18n.Localize(&goi18n.Message{ID: "settings_collection_view", Other: "Collection View"}, nil):
-			if val, ok := item.Options[item.SelectedOption].Value.(string); ok {
+			if val, ok := item.Options[item.SelectedOption].Value.(internal.CollectionView); ok {
 				config.CollectionView = val
 			}
 		}
