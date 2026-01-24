@@ -3,6 +3,7 @@ package main
 import (
 	"grout/cfw"
 	"os"
+	"runtime"
 
 	_ "github.com/BrandonKowalski/certifiable"
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
@@ -11,6 +12,9 @@ import (
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.LockOSThread()
+
 	defer cleanup()
 
 	result := setup()

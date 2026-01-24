@@ -2,6 +2,7 @@ package cache
 
 import (
 	"grout/romm"
+	"runtime"
 	"sync"
 	"time"
 
@@ -9,9 +10,86 @@ import (
 	"go.uber.org/atomic"
 )
 
+// smoothProgress wraps a progress atomic with smoothing. Workers update the
+// target, and the display value lerps towards it for smooth animation.
+type smoothProgress struct {
+	target  *atomic.Float64 // Updated by workers
+	display *atomic.Float64 // Read by UI, smoothed towards target
+}
+
+func newSmoothProgress(display *atomic.Float64) *smoothProgress {
+	return &smoothProgress{
+		target:  atomic.NewFloat64(0),
+		display: display,
+	}
+}
+
+func (sp *smoothProgress) update(delta float64) {
+	if sp == nil || sp.target == nil {
+		return
+	}
+	for {
+		old := sp.target.Load()
+		new := old + delta
+		if sp.target.CompareAndSwap(old, new) {
+			break
+		}
+	}
+}
+
+func (sp *smoothProgress) set(value float64) {
+	if sp == nil || sp.target == nil {
+		return
+	}
+	sp.target.Store(value)
+}
+
+func (sp *smoothProgress) smooth() {
+	if sp == nil || sp.display == nil {
+		return
+	}
+	target := sp.target.Load()
+	current := sp.display.Load()
+	// Lerp 20% towards target each frame for smooth animation
+	newVal := current + (target-current)*0.2
+	// Snap if very close to avoid endless tiny updates
+	if target-newVal < 0.001 {
+		newVal = target
+	}
+	sp.display.Store(newVal)
+}
+
+// waitWithYield waits for a WaitGroup while periodically yielding to the
+// scheduler and smoothing progress updates for the UI.
+func waitWithYield(wg *sync.WaitGroup, sp *smoothProgress) {
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	ticker := time.NewTicker(16 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-done:
+			// Final smooth to reach target
+			if sp != nil {
+				sp.display.Store(sp.target.Load())
+			}
+			return
+		case <-ticker.C:
+			if sp != nil {
+				sp.smooth()
+			}
+			runtime.Gosched()
+		}
+	}
+}
+
 const (
-	DefaultRomPageSize           = 200
-	MaxConcurrentPlatformFetches = 5
+	DefaultRomPageSize           = 1000
+	MaxConcurrentPlatformFetches = 10
 )
 
 type SyncStats struct {
@@ -31,10 +109,15 @@ func (cm *Manager) populateCache(platforms []romm.Platform, progress *atomic.Flo
 		return stats, nil
 	}
 
+	// Create a single HTTP client for all requests
+	client := romm.NewClientFromHost(cm.host, cm.config.GetApiTimeout())
+
 	// Get the last refresh time to use for incremental updates
 	// Only use incremental update if cache has games, otherwise do full refresh
 	var updatedAfter string
-	if cm.HasCache() {
+	isBulkLoad := !cm.HasCache()
+
+	if !isBulkLoad {
 		if lastRefresh, err := cm.GetLastRefreshTime(MetaKeyGamesRefreshedAt); err == nil {
 			updatedAfter = lastRefresh.Format(time.RFC3339)
 			logger.Debug("Using incremental cache update", "updated_after", updatedAfter)
@@ -42,7 +125,6 @@ func (cm *Manager) populateCache(platforms []romm.Platform, progress *atomic.Flo
 
 		// Fetch only updated platforms if we have a previous refresh time
 		if platformsRefresh, err := cm.GetLastRefreshTime(MetaKeyPlatformsRefreshedAt); err == nil {
-			client := romm.NewClientFromHost(cm.host, cm.config.GetApiTimeout())
 			updatedPlatforms, err := client.GetPlatforms(romm.GetPlatformsQuery{UpdatedAfter: platformsRefresh.Format(time.RFC3339)})
 			if err != nil {
 				logger.Error("Failed to fetch updated platforms", "error", err)
@@ -61,9 +143,12 @@ func (cm *Manager) populateCache(platforms []romm.Platform, progress *atomic.Flo
 			cm.RecordRefreshTime(MetaKeyPlatformsRefreshedAt)
 		}
 	} else {
+		// Bulk load optimizations for fresh cache
+		cm.enableBulkLoadMode()
+		defer cm.disableBulkLoadMode()
+
 		// Save all platforms on first run / empty cache
 		// Fetch all platforms from API, not just mapped ones
-		client := romm.NewClientFromHost(cm.host, cm.config.GetApiTimeout())
 		allPlatforms, err := client.GetPlatforms()
 		if err != nil {
 			logger.Error("Failed to fetch all platforms", "error", err)
@@ -87,59 +172,90 @@ func (cm *Manager) populateCache(platforms []romm.Platform, progress *atomic.Flo
 		totalExpectedGames = int64(len(platforms))
 	}
 
+	// Create smooth progress wrapper for animated progress bar
+	var sp *smoothProgress
+	if progress != nil {
+		sp = newSmoothProgress(progress)
+	}
+
+	// Progress budget:
+	// - Games fetch: 0-85%
+	// - DB cleanup: 85-88%
+	// - Collections: 88-98%
+	// - Final: 98-100%
+	const (
+		progressGamesEnd       = 0.85
+		progressCleanupEnd     = 0.88
+		progressCollectionsEnd = 0.98
+	)
+
 	gamesFetched := &atomic.Int64{}
 	updateProgress := func(count int) {
-		if progress != nil {
+		if sp != nil {
 			fetched := gamesFetched.Add(int64(count))
-			// Cap at 90% for games phase, reserve 10% for collections
-			pct := float64(fetched) / float64(totalExpectedGames) * 0.9
-			if pct > 0.9 {
-				pct = 0.9
+			pct := float64(fetched) / float64(totalExpectedGames) * progressGamesEnd
+			if pct > progressGamesEnd {
+				pct = progressGamesEnd
 			}
-			progress.Store(pct)
+			sp.set(pct)
 		}
 	}
 
-	sem := make(chan struct{}, MaxConcurrentPlatformFetches)
-	var wg sync.WaitGroup
+	// Start collections fetch early (parallel with games) - they're independent
+	collectionsDone := make(chan int, 1)
+	go func() {
+		collectionsDone <- cm.fetchAndCacheCollectionsWithProgress(sp, progressCleanupEnd, progressCollectionsEnd)
+	}()
+
+	// BIOS availability is non-blocking - fire and forget
+	go cm.fetchBIOSAvailability(platforms, client)
+
+	// Fetch all games in bulk (much faster than per-platform)
 	var firstErr error
-	var errMu sync.Mutex
+	allGames, err := cm.fetchAllGames(client, updatedAfter, updateProgress)
+	if err != nil {
+		logger.Error("Failed to fetch games", "error", err)
+		firstErr = err
+	} else {
+		// Group games by platform and save
+		gamesByPlatform := make(map[int][]romm.Rom)
+		for _, game := range allGames {
+			gamesByPlatform[game.PlatformID] = append(gamesByPlatform[game.PlatformID], game)
+		}
 
-	for _, platform := range platforms {
-		wg.Add(1)
-		go func(p romm.Platform) {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
-			if err := cm.fetchPlatformGames(p, &fetchOpts{onProgress: updateProgress, updatedAfter: updatedAfter}); err != nil {
-				logger.Error("Failed to cache platform", "platform", p.Name, "error", err)
-				cm.RecordPlatformSyncFailure(p.ID)
-				errMu.Lock()
+		for platformID, games := range gamesByPlatform {
+			if err := cm.SavePlatformGames(platformID, games); err != nil {
+				logger.Error("Failed to save platform games", "platformID", platformID, "error", err)
+				cm.RecordPlatformSyncFailure(platformID)
 				if firstErr == nil {
 					firstErr = err
 				}
-				errMu.Unlock()
 			} else {
-				cm.RecordPlatformSyncSuccess(p.ID, p.ROMCount)
+				cm.RecordPlatformSyncSuccess(platformID, len(games))
 			}
-		}(platform)
+		}
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		cm.fetchBIOSAvailability(platforms)
-	}()
-
-	wg.Wait()
-
+	// DB cleanup phase (85-88%)
 	if firstErr == nil {
+		if sp != nil {
+			sp.set(0.86)
+		}
 		cm.RecordRefreshTime(MetaKeyGamesRefreshedAt)
-		cm.PurgeStaleFilenameMappings()
+		// Only purge stale mappings during incremental updates - fresh builds have no stale data
+		if updatedAfter != "" {
+			if sp != nil {
+				sp.set(0.87)
+			}
+			cm.PurgeStaleFilenameMappings()
+		}
+		if sp != nil {
+			sp.set(progressCleanupEnd)
+		}
 	}
 
-	stats.Collectionssynced = cm.fetchAndCacheCollectionsWithProgress(progress)
+	// Wait for collections to complete
+	stats.Collectionssynced = <-collectionsDone
 
 	cm.RecordRefreshTime(MetaKeyCollectionsRefreshedAt)
 
@@ -153,6 +269,7 @@ func (cm *Manager) populateCache(platforms []romm.Platform, progress *atomic.Flo
 }
 
 type fetchOpts struct {
+	client        *romm.Client    // Reusable HTTP client
 	onProgress    func(count int) // Called with count of games fetched (for batch progress)
 	onPctProgress *atomic.Float64 // Set with percentage 0.0-1.0 (for UI progress bars)
 	updatedAfter  string
@@ -164,7 +281,10 @@ func (cm *Manager) fetchPlatformGames(platform romm.Platform, opts *fetchOpts) e
 	}
 
 	logger := gaba.GetLogger()
-	client := romm.NewClientFromHost(cm.host, cm.config.GetApiTimeout())
+	client := opts.client
+	if client == nil {
+		client = romm.NewClientFromHost(cm.host, cm.config.GetApiTimeout())
+	}
 
 	var allGames []romm.Rom
 	offset := 0
@@ -225,7 +345,54 @@ func (cm *Manager) fetchPlatformGames(platform romm.Platform, opts *fetchOpts) e
 	return cm.SavePlatformGames(platform.ID, allGames)
 }
 
-func (cm *Manager) fetchAndCacheCollectionsWithProgress(progress *atomic.Float64) int {
+// fetchAllGames fetches all games from the API in bulk (without platform filter)
+func (cm *Manager) fetchAllGames(client *romm.Client, updatedAfter string, onProgress func(count int)) ([]romm.Rom, error) {
+	logger := gaba.GetLogger()
+
+	if client == nil {
+		client = romm.NewClientFromHost(cm.host, cm.config.GetApiTimeout())
+	}
+
+	var allGames []romm.Rom
+	offset := 0
+	expectedTotal := 0
+
+	for {
+		q := romm.GetRomsQuery{
+			Offset:       offset,
+			Limit:        DefaultRomPageSize,
+			UpdatedAfter: updatedAfter,
+		}
+
+		res, err := client.GetRoms(q)
+		if err != nil {
+			logger.Error("Failed to fetch games", "offset", offset, "error", err)
+			return allGames, err
+		}
+
+		if offset == 0 {
+			expectedTotal = res.Total
+			logger.Debug("Fetching all games", "total", expectedTotal)
+		}
+
+		allGames = append(allGames, res.Items...)
+
+		if onProgress != nil && len(res.Items) > 0 {
+			onProgress(len(res.Items))
+		}
+
+		if len(allGames) >= expectedTotal || len(res.Items) == 0 || len(res.Items) < DefaultRomPageSize {
+			break
+		}
+
+		offset += len(res.Items)
+	}
+
+	logger.Debug("Fetched all games", "count", len(allGames))
+	return allGames, nil
+}
+
+func (cm *Manager) fetchAndCacheCollectionsWithProgress(sp *smoothProgress, progressStart, progressEnd float64) int {
 	logger := gaba.GetLogger()
 
 	showRegular := cm.config.GetShowCollections()
@@ -234,8 +401,8 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(progress *atomic.Float64
 
 	if !showRegular && !showSmart && !showVirtual {
 		logger.Debug("Skipping collection sync - no collection types enabled")
-		if progress != nil {
-			progress.Store(0.98)
+		if sp != nil {
+			sp.set(progressEnd)
 		}
 		return 0
 	}
@@ -257,7 +424,12 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(progress *atomic.Float64
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	// Calculate progress increment per collection type (90% to 92% range)
+	// Progress range for this phase
+	progressRange := progressEnd - progressStart
+	fetchPhase := progressRange * 0.4 // 40% for fetching
+	savePhase := progressRange * 0.6  // 60% for saving
+
+	// Calculate progress increment per collection type
 	enabledCount := 0
 	if showRegular {
 		enabledCount++
@@ -268,13 +440,13 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(progress *atomic.Float64
 	if showVirtual {
 		enabledCount++
 	}
-	progressPerType := 0.02 / float64(enabledCount) // 2% divided among enabled types
+	progressPerType := fetchPhase / float64(enabledCount)
 	completed := &atomic.Int32{}
 
 	updateFetchProgress := func() {
-		if progress != nil {
+		if sp != nil {
 			done := completed.Add(1)
-			progress.Store(0.90 + float64(done)*progressPerType)
+			sp.set(progressStart + float64(done)*progressPerType)
 		}
 	}
 
@@ -334,36 +506,44 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(progress *atomic.Float64
 		}()
 	}
 
-	wg.Wait()
+	waitWithYield(&wg, sp)
 
 	if len(allCollections) == 0 {
+		if sp != nil {
+			sp.set(progressEnd)
+		}
 		return 0
 	}
+
+	// Save phase starts after fetch phase
+	saveStart := progressStart + fetchPhase
 
 	if err := cm.SaveCollections(allCollections); err != nil {
 		logger.Error("Failed to save collections", "error", err)
 	}
 
-	if progress != nil {
-		progress.Store(0.94)
+	if sp != nil {
+		sp.set(saveStart + savePhase*0.5)
 	}
 
 	if err := cm.SaveAllCollectionMappings(allCollections); err != nil {
 		logger.Error("Failed to save collection mappings", "error", err)
 	}
 
-	if progress != nil {
-		progress.Store(0.98)
+	if sp != nil {
+		sp.set(progressEnd)
 	}
 
 	logger.Debug("Cached collections", "count", len(allCollections))
 	return len(allCollections)
 }
 
-func (cm *Manager) fetchBIOSAvailability(platforms []romm.Platform) {
+func (cm *Manager) fetchBIOSAvailability(platforms []romm.Platform, client *romm.Client) {
 	logger := gaba.GetLogger()
 
-	client := romm.NewClientFromHost(cm.host, cm.config.GetApiTimeout())
+	if client == nil {
+		client = romm.NewClientFromHost(cm.host, cm.config.GetApiTimeout())
+	}
 
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, MaxConcurrentPlatformFetches)
