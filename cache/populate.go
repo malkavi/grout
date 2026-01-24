@@ -2,90 +2,12 @@ package cache
 
 import (
 	"grout/romm"
-	"runtime"
 	"sync"
 	"time"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	"go.uber.org/atomic"
 )
-
-// smoothProgress wraps a progress atomic with smoothing. Workers update the
-// target, and the display value lerps towards it for smooth animation.
-type smoothProgress struct {
-	target  *atomic.Float64 // Updated by workers
-	display *atomic.Float64 // Read by UI, smoothed towards target
-}
-
-func newSmoothProgress(display *atomic.Float64) *smoothProgress {
-	return &smoothProgress{
-		target:  atomic.NewFloat64(0),
-		display: display,
-	}
-}
-
-func (sp *smoothProgress) update(delta float64) {
-	if sp == nil || sp.target == nil {
-		return
-	}
-	for {
-		old := sp.target.Load()
-		new := old + delta
-		if sp.target.CompareAndSwap(old, new) {
-			break
-		}
-	}
-}
-
-func (sp *smoothProgress) set(value float64) {
-	if sp == nil || sp.target == nil {
-		return
-	}
-	sp.target.Store(value)
-}
-
-func (sp *smoothProgress) smooth() {
-	if sp == nil || sp.display == nil {
-		return
-	}
-	target := sp.target.Load()
-	current := sp.display.Load()
-	// Lerp 20% towards target each frame for smooth animation
-	newVal := current + (target-current)*0.2
-	// Snap if very close to avoid endless tiny updates
-	if target-newVal < 0.001 {
-		newVal = target
-	}
-	sp.display.Store(newVal)
-}
-
-// waitWithYield waits for a WaitGroup while periodically yielding to the
-// scheduler and smoothing progress updates for the UI.
-func waitWithYield(wg *sync.WaitGroup, sp *smoothProgress) {
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
-	ticker := time.NewTicker(16 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-done:
-			// Final smooth to reach target
-			if sp != nil {
-				sp.display.Store(sp.target.Load())
-			}
-			return
-		case <-ticker.C:
-			if sp != nil {
-				sp.smooth()
-			}
-			runtime.Gosched()
-		}
-	}
-}
 
 const (
 	DefaultRomPageSize           = 1000
@@ -172,57 +94,40 @@ func (cm *Manager) populateCache(platforms []romm.Platform, progress *atomic.Flo
 		totalExpectedGames = int64(len(platforms))
 	}
 
-	// Create smooth progress wrapper for animated progress bar
-	var sp *smoothProgress
-	if progress != nil {
-		sp = newSmoothProgress(progress)
-	}
-
-	// Progress budget:
-	// - Games fetch: 0-85%
-	// - DB cleanup: 85-88%
-	// - Collections: 88-98%
-	// - Final: 98-100%
-	const (
-		progressGamesEnd       = 0.85
-		progressCleanupEnd     = 0.88
-		progressCollectionsEnd = 0.98
-	)
-
+	// Progress: games 0-85%, collections 85-98%, done 100%
 	gamesFetched := &atomic.Int64{}
 	updateProgress := func(count int) {
-		if sp != nil {
+		if progress != nil {
 			fetched := gamesFetched.Add(int64(count))
-			pct := float64(fetched) / float64(totalExpectedGames) * progressGamesEnd
-			if pct > progressGamesEnd {
-				pct = progressGamesEnd
+			pct := float64(fetched) / float64(totalExpectedGames) * 0.85
+			if pct > 0.85 {
+				pct = 0.85
 			}
-			sp.set(pct)
+			progress.Store(pct)
 		}
 	}
 
-	// Start collections fetch early (parallel with games) - they're independent
-	collectionsDone := make(chan int, 1)
-	go func() {
-		collectionsDone <- cm.fetchAndCacheCollectionsWithProgress(sp, progressCleanupEnd, progressCollectionsEnd)
-	}()
-
-	// BIOS availability is non-blocking - fire and forget
+	// BIOS availability - fire and forget
 	go cm.fetchBIOSAvailability(platforms, client)
 
-	// Fetch all games in bulk (much faster than per-platform)
+	// Fetch all games in bulk (in goroutine so UI can update)
+	var wg sync.WaitGroup
 	var firstErr error
-	allGames, err := cm.fetchAllGames(client, updatedAfter, updateProgress)
-	if err != nil {
-		logger.Error("Failed to fetch games", "error", err)
-		firstErr = err
-	} else {
-		// Group games by platform and save
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		allGames, err := cm.fetchAllGames(client, updatedAfter, updateProgress)
+		if err != nil {
+			logger.Error("Failed to fetch games", "error", err)
+			firstErr = err
+			return
+		}
+		// Group by platform and save
 		gamesByPlatform := make(map[int][]romm.Rom)
 		for _, game := range allGames {
 			gamesByPlatform[game.PlatformID] = append(gamesByPlatform[game.PlatformID], game)
 		}
-
 		for platformID, games := range gamesByPlatform {
 			if err := cm.SavePlatformGames(platformID, games); err != nil {
 				logger.Error("Failed to save platform games", "platformID", platformID, "error", err)
@@ -234,28 +139,20 @@ func (cm *Manager) populateCache(platforms []romm.Platform, progress *atomic.Flo
 				cm.RecordPlatformSyncSuccess(platformID, len(games))
 			}
 		}
-	}
+	}()
 
-	// DB cleanup phase (85-88%)
+	wg.Wait()
+
+	// Record refresh time
 	if firstErr == nil {
-		if sp != nil {
-			sp.set(0.86)
-		}
 		cm.RecordRefreshTime(MetaKeyGamesRefreshedAt)
-		// Only purge stale mappings during incremental updates - fresh builds have no stale data
 		if updatedAfter != "" {
-			if sp != nil {
-				sp.set(0.87)
-			}
 			cm.PurgeStaleFilenameMappings()
 		}
-		if sp != nil {
-			sp.set(progressCleanupEnd)
-		}
 	}
 
-	// Wait for collections to complete
-	stats.Collectionssynced = <-collectionsDone
+	// Collections (85-98%)
+	stats.Collectionssynced = cm.fetchAndCacheCollectionsWithProgress(progress, 0.85, 0.98)
 
 	cm.RecordRefreshTime(MetaKeyCollectionsRefreshedAt)
 
@@ -392,7 +289,7 @@ func (cm *Manager) fetchAllGames(client *romm.Client, updatedAfter string, onPro
 	return allGames, nil
 }
 
-func (cm *Manager) fetchAndCacheCollectionsWithProgress(sp *smoothProgress, progressStart, progressEnd float64) int {
+func (cm *Manager) fetchAndCacheCollectionsWithProgress(progress *atomic.Float64, progressStart, progressEnd float64) int {
 	logger := gaba.GetLogger()
 
 	showRegular := cm.config.GetShowCollections()
@@ -401,8 +298,8 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(sp *smoothProgress, prog
 
 	if !showRegular && !showSmart && !showVirtual {
 		logger.Debug("Skipping collection sync - no collection types enabled")
-		if sp != nil {
-			sp.set(progressEnd)
+		if progress != nil {
+			progress.Store(progressEnd)
 		}
 		return 0
 	}
@@ -424,32 +321,6 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(sp *smoothProgress, prog
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	// Progress range for this phase
-	progressRange := progressEnd - progressStart
-	fetchPhase := progressRange * 0.4 // 40% for fetching
-	savePhase := progressRange * 0.6  // 60% for saving
-
-	// Calculate progress increment per collection type
-	enabledCount := 0
-	if showRegular {
-		enabledCount++
-	}
-	if showSmart {
-		enabledCount++
-	}
-	if showVirtual {
-		enabledCount++
-	}
-	progressPerType := fetchPhase / float64(enabledCount)
-	completed := &atomic.Int32{}
-
-	updateFetchProgress := func() {
-		if sp != nil {
-			done := completed.Add(1)
-			sp.set(progressStart + float64(done)*progressPerType)
-		}
-	}
-
 	if showRegular {
 		wg.Add(1)
 		go func() {
@@ -457,13 +328,11 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(sp *smoothProgress, prog
 			collections, err := client.GetCollections(query)
 			if err != nil {
 				logger.Error("Failed to fetch regular collections", "error", err)
-				updateFetchProgress()
 				return
 			}
 			mu.Lock()
 			allCollections = append(allCollections, collections...)
 			mu.Unlock()
-			updateFetchProgress()
 		}()
 	}
 
@@ -474,7 +343,6 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(sp *smoothProgress, prog
 			collections, err := client.GetSmartCollections(query)
 			if err != nil {
 				logger.Error("Failed to fetch smart collections", "error", err)
-				updateFetchProgress()
 				return
 			}
 			for i := range collections {
@@ -483,7 +351,6 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(sp *smoothProgress, prog
 			mu.Lock()
 			allCollections = append(allCollections, collections...)
 			mu.Unlock()
-			updateFetchProgress()
 		}()
 	}
 
@@ -494,7 +361,6 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(sp *smoothProgress, prog
 			virtualCollections, err := client.GetVirtualCollections()
 			if err != nil {
 				logger.Error("Failed to fetch virtual collections", "error", err)
-				updateFetchProgress()
 				return
 			}
 			mu.Lock()
@@ -502,36 +368,32 @@ func (cm *Manager) fetchAndCacheCollectionsWithProgress(sp *smoothProgress, prog
 				allCollections = append(allCollections, vc.ToCollection())
 			}
 			mu.Unlock()
-			updateFetchProgress()
 		}()
 	}
 
-	waitWithYield(&wg, sp)
+	wg.Wait()
+
+	if progress != nil {
+		progress.Store(progressStart + (progressEnd-progressStart)*0.5)
+	}
 
 	if len(allCollections) == 0 {
-		if sp != nil {
-			sp.set(progressEnd)
+		if progress != nil {
+			progress.Store(progressEnd)
 		}
 		return 0
 	}
 
-	// Save phase starts after fetch phase
-	saveStart := progressStart + fetchPhase
-
 	if err := cm.SaveCollections(allCollections); err != nil {
 		logger.Error("Failed to save collections", "error", err)
-	}
-
-	if sp != nil {
-		sp.set(saveStart + savePhase*0.5)
 	}
 
 	if err := cm.SaveAllCollectionMappings(allCollections); err != nil {
 		logger.Error("Failed to save collection mappings", "error", err)
 	}
 
-	if sp != nil {
-		sp.set(progressEnd)
+	if progress != nil {
+		progress.Store(progressEnd)
 	}
 
 	logger.Debug("Cached collections", "count", len(allCollections))
