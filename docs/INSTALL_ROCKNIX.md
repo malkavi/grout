@@ -38,7 +38,7 @@ Grout has a built-in update mechanism. To update Grout, launch the application a
 select `Check for Updates`. If a new version is available, follow the on-screen prompts to download and install the update.
 
 ### Manual update
-To update Grout, simply download the latest release and replace the existing Grout folder in your Tools directory (`/games-external/roms/tools`). If you
+To update Grout, simply download the latest release and replace the existing Grout folder in your Tools directory (`/games-external/roms/ports`). If you
 have made any custom configurations, ensure to back them up before replacing the folder. Be sure to keep the `config.json`
 file if you do not want to authenticate again, and configure platforms folder mappings again.
 

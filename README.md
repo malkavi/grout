@@ -69,7 +69,9 @@ Please [create an issue](https://github.com/rommapp/grout/issues/new/choose) and
 
 ## Contributors
 
-Grout is built by the community for the community. Thank you to everyone who has helped make this project better!
+Grout is built by the community for the community. 
+
+Thank you to everyone who has helped make this project better!
 
 See the full list of [Contributors](.github/CONTRIBUTORS.md).
 
