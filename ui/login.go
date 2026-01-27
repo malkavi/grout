@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"grout/internal"
-	"grout/internal/constants"
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"grout/romm"
@@ -23,8 +23,9 @@ type loginInput struct {
 }
 
 type loginOutput struct {
-	Host   romm.Host
-	Config *internal.Config
+	Host      romm.Host
+	Config    *internal.Config
+	Cancelled bool
 }
 
 type loginAttemptResult struct {
@@ -39,8 +40,12 @@ func newLoginScreen() *LoginScreen {
 	return &LoginScreen{}
 }
 
-func (s *LoginScreen) draw(input loginInput) (ScreenResult[loginOutput], error) {
+func (s *LoginScreen) draw(input loginInput) (loginOutput, error) {
 	host := input.ExistingHost
+
+	// SSL option visibility - only show when HTTPS is selected
+	sslVisible := &atomic.Bool{}
+	sslVisible.Store(strings.Contains(host.RootURI, "https"))
 
 	items := []gabagool.ItemWithOptions{
 		{
@@ -48,8 +53,16 @@ func (s *LoginScreen) draw(input loginInput) (ScreenResult[loginOutput], error) 
 				Text: i18n.Localize(&goi18n.Message{ID: "login_protocol", Other: "Protocol"}, nil),
 			},
 			Options: []gabagool.Option{
-				{DisplayName: i18n.Localize(&goi18n.Message{ID: "login_protocol_http", Other: "HTTP"}, nil), Value: "http://"},
-				{DisplayName: i18n.Localize(&goi18n.Message{ID: "login_protocol_https", Other: "HTTPS"}, nil), Value: "https://"},
+				{
+					DisplayName: i18n.Localize(&goi18n.Message{ID: "login_protocol_http", Other: "HTTP"}, nil),
+					Value:       "http://",
+					OnUpdate:    func(v interface{}) { sslVisible.Store(false) },
+				},
+				{
+					DisplayName: i18n.Localize(&goi18n.Message{ID: "login_protocol_https", Other: "HTTPS"}, nil),
+					Value:       "https://",
+					OnUpdate:    func(v interface{}) { sslVisible.Store(true) },
+				},
 			},
 			SelectedOption: func() int {
 				if strings.Contains(host.RootURI, "https") {
@@ -135,6 +148,22 @@ func (s *LoginScreen) draw(input loginInput) (ScreenResult[loginOutput], error) 
 				},
 			},
 		},
+		{
+			Item: gabagool.MenuItem{
+				Text: i18n.Localize(&goi18n.Message{ID: "login_ssl_certificates", Other: "SSL Certificates"}, nil),
+			},
+			Options: []gabagool.Option{
+				{DisplayName: i18n.Localize(&goi18n.Message{ID: "login_ssl_verify", Other: "Verify"}, nil), Value: false},
+				{DisplayName: i18n.Localize(&goi18n.Message{ID: "login_ssl_skip", Other: "Skip Verification"}, nil), Value: true},
+			},
+			SelectedOption: func() int {
+				if host.InsecureSkipVerify {
+					return 1
+				}
+				return 0
+			}(),
+			VisibleWhen: sslVisible,
+		},
 	}
 
 	res, err := gabagool.OptionsList(
@@ -151,7 +180,7 @@ func (s *LoginScreen) draw(input loginInput) (ScreenResult[loginOutput], error) 
 	)
 
 	if err != nil {
-		return withCode(loginOutput{}, gabagool.ExitCodeCancel), nil
+		return loginOutput{Cancelled: true}, nil
 	}
 
 	loginSettings := res.Items
@@ -164,11 +193,12 @@ func (s *LoginScreen) draw(input loginInput) (ScreenResult[loginOutput], error) 
 			}
 			return 0
 		}(loginSettings[2].Value().(string)),
-		Username: loginSettings[3].Options[0].Value.(string),
-		Password: loginSettings[4].Options[0].Value.(string),
+		Username:           loginSettings[3].Options[0].Value.(string),
+		Password:           loginSettings[4].Options[0].Value.(string),
+		InsecureSkipVerify: loginSettings[5].Options[loginSettings[5].SelectedOption].Value.(bool),
 	}
 
-	return success(loginOutput{Host: newHost}), nil
+	return loginOutput{Host: newHost}, nil
 }
 
 func LoginFlow(existingHost romm.Host) (*internal.Config, error) {
@@ -184,11 +214,11 @@ func LoginFlow(existingHost romm.Host) (*internal.Config, error) {
 			return nil, fmt.Errorf("unable to get login information: %w", err)
 		}
 
-		if result.ExitCode == gabagool.ExitCodeBack || result.ExitCode == gabagool.ExitCodeCancel {
+		if result.Cancelled {
 			os.Exit(1)
 		}
 
-		host := result.Value.Host
+		host := result.Host
 
 		loginResult := attemptLogin(host)
 
@@ -196,6 +226,8 @@ func LoginFlow(existingHost romm.Host) (*internal.Config, error) {
 			config := &internal.Config{
 				Hosts: []romm.Host{host},
 			}
+
+			_ = config.LoadPlatformsBinding(host)
 			return config, nil
 		}
 
@@ -211,7 +243,7 @@ func LoginFlow(existingHost romm.Host) (*internal.Config, error) {
 }
 
 func attemptLogin(host romm.Host) loginAttemptResult {
-	validationClient := romm.NewClientFromHost(host, constants.ValidationTimeout)
+	validationClient := romm.NewClientFromHost(host, internal.ValidationTimeout)
 
 	result, _ := gabagool.ProcessMessage(
 		i18n.Localize(&goi18n.Message{ID: "login_validating", Other: "Validating connection..."}, nil),
@@ -222,7 +254,7 @@ func attemptLogin(host romm.Host) loginAttemptResult {
 				return classifyLoginError(err), nil
 			}
 
-			loginClient := romm.NewClientFromHost(host, constants.LoginTimeout)
+			loginClient := romm.NewClientFromHost(host, internal.LoginTimeout)
 			err = loginClient.Login(host.Username, host.Password)
 			if err != nil {
 				return classifyLoginError(err), nil

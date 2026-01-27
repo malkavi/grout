@@ -3,6 +3,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
+	"grout/cache"
 	"grout/cfw"
 	"grout/romm"
 	"os"
@@ -18,7 +19,7 @@ var kidModeEnabled atomic.Bool
 type Config struct {
 	Hosts                  []romm.Host                 `json:"hosts,omitempty"`
 	DirectoryMappings      map[string]DirectoryMapping `json:"directory_mappings,omitempty"`
-	SaveSyncMode           string                      `json:"save_sync_mode"`
+	SaveSyncMode           SaveSyncMode                `json:"save_sync_mode"`
 	SaveDirectoryMappings  map[string]string           `json:"save_directory_mappings,omitempty"`
 	GameSaveOverrides      map[int]string              `json:"game_save_overrides,omitempty"`
 	DownloadArt            bool                        `json:"download_art,omitempty"`
@@ -27,15 +28,18 @@ type Config struct {
 	ShowRegularCollections bool                        `json:"show_collections"`
 	ShowSmartCollections   bool                        `json:"show_smart_collections"`
 	ShowVirtualCollections bool                        `json:"show_virtual_collections"`
-	DownloadedGames        string                      `json:"downloaded_games,omitempty"`
+	DownloadedGames        DownloadedGamesMode         `json:"downloaded_games,omitempty"`
 	ApiTimeout             time.Duration               `json:"api_timeout"`
 	DownloadTimeout        time.Duration               `json:"download_timeout"`
-	LogLevel               string                      `json:"log_level,omitempty"`
+	LogLevel               LogLevel                    `json:"log_level,omitempty"`
 	Language               string                      `json:"language,omitempty"`
-	CollectionView         string                      `json:"collection_view,omitempty"`
+	CollectionView         CollectionView              `json:"collection_view,omitempty"`
 	KidMode                bool                        `json:"kid_mode,omitempty"`
+	ReleaseChannel         ReleaseChannel              `json:"release_channel,omitempty"`
 
 	PlatformOrder []string `json:"platform_order,omitempty"`
+
+	PlatformsBinding map[string]string `json:"-"`
 }
 
 type DirectoryMapping struct {
@@ -91,15 +95,15 @@ func LoadConfig() (*Config, error) {
 	}
 
 	if config.DownloadedGames == "" {
-		config.DownloadedGames = "do_nothing"
+		config.DownloadedGames = DownloadedGamesModeDoNothing
 	}
 
 	if config.CollectionView == "" {
-		config.CollectionView = "platform"
+		config.CollectionView = CollectionViewPlatform
 	}
 
 	if config.SaveSyncMode == "" {
-		config.SaveSyncMode = "off"
+		config.SaveSyncMode = SaveSyncModeOff
 	}
 
 	return &config, nil
@@ -107,7 +111,7 @@ func LoadConfig() (*Config, error) {
 
 func SaveConfig(config *Config) error {
 	if config.LogLevel == "" {
-		config.LogLevel = "ERROR"
+		config.LogLevel = LogLevelError
 	}
 
 	if config.Language == "" {
@@ -115,18 +119,22 @@ func SaveConfig(config *Config) error {
 	}
 
 	if config.DownloadedGames == "" {
-		config.DownloadedGames = "do_nothing"
+		config.DownloadedGames = DownloadedGamesModeDoNothing
 	}
 
 	if config.CollectionView == "" {
-		config.CollectionView = "platform"
+		config.CollectionView = CollectionViewPlatform
 	}
 
 	if config.SaveSyncMode == "" {
-		config.SaveSyncMode = "off"
+		config.SaveSyncMode = SaveSyncModeOff
 	}
 
-	gaba.SetRawLogLevel(config.LogLevel)
+	if config.ReleaseChannel == "" {
+		config.ReleaseChannel = ReleaseChannelMatchRomM
+	}
+
+	gaba.SetRawLogLevel(string(config.LogLevel))
 
 	if err := i18n.SetWithCode(config.Language); err != nil {
 		gaba.GetLogger().Error("Failed to set language", "error", err, "language", config.Language)
@@ -146,76 +154,6 @@ func SaveConfig(config *Config) error {
 	return nil
 }
 
-// SortPlatformsByOrder sorts platforms based on the saved order in config.
-// If no order is saved, platforms are sorted alphabetically.
-func SortPlatformsByOrder(platforms []romm.Platform, order []string) []romm.Platform {
-	if len(order) == 0 {
-		// No saved order, return alphabetically sorted
-		return SortPlatformsAlphabetically(platforms)
-	}
-
-	// Create a map of fs_slug to platform for quick lookup
-	platformMap := make(map[string]romm.Platform)
-	for _, p := range platforms {
-		platformMap[p.FSSlug] = p
-	}
-
-	// Create result slice with platforms in saved order
-	var result []romm.Platform
-	usedSlugs := make(map[string]bool)
-
-	// Add platforms in saved order
-	for _, fsSlug := range order {
-		if platform, exists := platformMap[fsSlug]; exists {
-			result = append(result, platform)
-			usedSlugs[fsSlug] = true
-		}
-	}
-
-	// Add any new platforms that aren't in the saved order (alphabetically)
-	var newPlatforms []romm.Platform
-	for _, p := range platforms {
-		if !usedSlugs[p.FSSlug] {
-			newPlatforms = append(newPlatforms, p)
-		}
-	}
-	newPlatforms = SortPlatformsAlphabetically(newPlatforms)
-	result = append(result, newPlatforms...)
-
-	return result
-}
-
-// SortPlatformsAlphabetically sorts platforms by name
-func SortPlatformsAlphabetically(platforms []romm.Platform) []romm.Platform {
-	sorted := make([]romm.Platform, len(platforms))
-	copy(sorted, platforms)
-
-	for i := 0; i < len(sorted); i++ {
-		for j := i + 1; j < len(sorted); j++ {
-			if sorted[i].Name > sorted[j].Name {
-				sorted[i], sorted[j] = sorted[j], sorted[i]
-			}
-		}
-	}
-
-	return sorted
-}
-
-func PrunePlatformOrder(order []string, mappings map[string]DirectoryMapping) []string {
-	if len(order) == 0 {
-		return order
-	}
-
-	pruned := make([]string, 0, len(order))
-	for _, fsSlug := range order {
-		if _, exists := mappings[fsSlug]; exists {
-			pruned = append(pruned, fsSlug)
-		}
-	}
-
-	return pruned
-}
-
 func InitKidMode(config *Config) {
 	kidModeEnabled.Store(config.KidMode)
 }
@@ -228,40 +166,69 @@ func SetKidMode(enabled bool) {
 	kidModeEnabled.Store(enabled)
 }
 
-func GetMappedPlatforms(host romm.Host, mappings map[string]DirectoryMapping, timeout ...time.Duration) ([]romm.Platform, error) {
-	c := romm.NewClientFromHost(host, timeout...)
+// LoadPlatformsBinding fetches the PLATFORMS_BINDING from the RomM server
+// and stores it in the config for use in CFW lookups.
+// This requires the pointer receiver!
+//
+//goland:noinspection ALL
+func (c *Config) LoadPlatformsBinding(host romm.Host, timeout ...time.Duration) error {
+	client := romm.NewClientFromHost(host, timeout...)
 
-	rommPlatforms, err := c.GetPlatforms()
+	rommConfig, err := client.GetConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get platforms from RomM: %w", err)
+		// Non-fatal - older RomM versions may not have this endpoint
+		return err
 	}
 
-	romm.DisambiguatePlatformNames(rommPlatforms)
-
-	var platforms []romm.Platform
-
-	for _, platform := range rommPlatforms {
-		_, exists := mappings[platform.FSSlug]
-		if exists {
-			platforms = append(platforms, platform)
-		}
-	}
-
-	return platforms, nil
+	c.PlatformsBinding = rommConfig.PlatformsBinding
+	return nil
 }
 
-// To decouple a circular dependency
 func (c Config) GetApiTimeout() time.Duration    { return c.ApiTimeout }
 func (c Config) GetShowCollections() bool        { return c.ShowRegularCollections }
 func (c Config) GetShowSmartCollections() bool   { return c.ShowSmartCollections }
 func (c Config) GetShowVirtualCollections() bool { return c.ShowVirtualCollections }
+
+// ResolveFSSlug returns the effective fs_slug for CFW lookups.
+// If the fs_slug has a binding in PlatformsBinding, the bound value is returned.
+// Otherwise, the original fs_slug is returned.
+// Example: PlatformsBinding {"ms": "sms"} means RomM "ms" -> CFW "sms"
+// So ResolveFSSlug("ms") returns "sms"
+func (c Config) ResolveFSSlug(fsSlug string) string {
+	if c.PlatformsBinding != nil {
+		if bound, ok := c.PlatformsBinding[fsSlug]; ok {
+			gaba.GetLogger().Debug("Using platform binding for CFW lookup",
+				"fsSlug", fsSlug, "boundTo", bound)
+			return bound
+		}
+	}
+	return fsSlug
+}
+
+// ResolveRommFSSlug returns the RomM fs_slug for a given CFW platform key.
+// This is the inverse of ResolveFSSlug - it finds which RomM fs_slug maps TO the given CFW key.
+// Example: PlatformsBinding {"ms": "sms"} means RomM "ms" -> CFW "sms"
+// So ResolveRommFSSlug("sms") returns "ms"
+func (c Config) ResolveRommFSSlug(cfwKey string) string {
+	if c.PlatformsBinding != nil {
+		for rommSlug, cfwSlug := range c.PlatformsBinding {
+			if cfwSlug == cfwKey {
+				gaba.GetLogger().Debug("Using inverse platform binding",
+					"cfwKey", cfwKey, "rommFSSlug", rommSlug)
+				return rommSlug
+			}
+		}
+	}
+	return cfwKey
+}
 
 func (c Config) GetPlatformRomDirectory(platform romm.Platform) string {
 	rp := platform.FSSlug
 	if mapping, ok := c.DirectoryMappings[platform.FSSlug]; ok && mapping.RelativePath != "" {
 		rp = mapping.RelativePath
 	}
-	return cfw.GetPlatformRomDirectory(rp, platform.FSSlug)
+	effectiveFSSlug := c.ResolveFSSlug(platform.FSSlug)
+	return cfw.GetPlatformRomDirectory(rp, effectiveFSSlug)
 }
 
 func (c Config) GetArtDirectory(platform romm.Platform) string {
@@ -274,6 +241,12 @@ func (c Config) ShowCollections(host romm.Host) bool {
 		return false
 	}
 
+	// Check cache first
+	if cm := cache.GetCacheManager(); cm != nil && cm.HasCollections() {
+		return true
+	}
+
+	// Fallback to network check
 	rc := romm.NewClientFromHost(host, c.ApiTimeout)
 
 	if c.ShowRegularCollections {

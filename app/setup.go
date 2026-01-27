@@ -2,7 +2,9 @@ package main
 
 import (
 	"errors"
+	"grout/cache"
 	"grout/cfw"
+	"grout/cfw/knulli"
 	"grout/cfw/muos"
 	"grout/internal"
 	"grout/internal/environment"
@@ -81,6 +83,15 @@ func setup() SetupResult {
 		log.Fatalf("Failed to initialize i18n: %v", err)
 	}
 
+	if cfw.GetCFW() == cfw.Knulli {
+		knulli.AddToToolsGameList()
+	}
+
+	// TODO: Enable gamelist management for ROCKNIX once tested
+	// if cfw.GetCFW() == cfw.ROCKNIX {
+	// 	rocknix.AddToPortsGameList()
+	// }
+
 	config, err := internal.LoadConfig()
 	isFirstLaunch := err != nil || (len(config.Hosts) == 0 && config.Language == "")
 
@@ -101,6 +112,8 @@ func setup() SetupResult {
 		if config == nil {
 			config = &internal.Config{
 				ShowRegularCollections: true,
+				ApiTimeout:             30 * time.Minute,
+				DownloadTimeout:        60 * time.Minute,
 			}
 		}
 		config.Language = selectedLanguage
@@ -117,11 +130,12 @@ func setup() SetupResult {
 		}
 		logger.Debug("Login successful, saving configuration")
 		config.Hosts = loginConfig.Hosts
+		config.PlatformsBinding = loginConfig.PlatformsBinding
 		internal.SaveConfig(config)
 	}
 
 	if config.LogLevel != "" {
-		gaba.SetRawLogLevel(config.LogLevel)
+		gaba.SetRawLogLevel(string(config.LogLevel))
 	}
 
 	if config.Language != "" && !isFirstLaunch {
@@ -155,21 +169,27 @@ func setup() SetupResult {
 	if len(config.DirectoryMappings) == 0 {
 		screen := ui.NewPlatformMappingScreen()
 		result, err := screen.Draw(ui.PlatformMappingInput{
-			Host:           config.Hosts[0],
-			ApiTimeout:     config.ApiTimeout,
-			CFW:            currentCFW,
-			RomDirectory:   cfw.GetRomDirectory(),
-			AutoSelect:     false,
-			HideBackButton: true,
+			Host:             config.Hosts[0],
+			ApiTimeout:       config.ApiTimeout,
+			CFW:              currentCFW,
+			RomDirectory:     cfw.GetRomDirectory(),
+			AutoSelect:       false,
+			HideBackButton:   true,
+			PlatformsBinding: config.PlatformsBinding,
 		})
 
-		if err == nil && result.ExitCode == gaba.ExitCodeSuccess {
-			config.DirectoryMappings = result.Value.Mappings
+		if err == nil && result.Action == ui.PlatformMappingActionSaved {
+			config.DirectoryMappings = result.Mappings
 			internal.SaveConfig(config)
 		}
 	}
 
 	logger.Debug("Configuration Loaded!", "config", config.ToLoggable())
+
+	// Initialize cache manager early so platforms can be loaded from cache
+	if err := cache.InitCacheManager(config.Hosts[0], config); err != nil {
+		logger.Error("Failed to initialize cache manager", "error", err)
+	}
 
 	var platforms []romm.Platform
 	var loadErr error
@@ -182,6 +202,11 @@ func setup() SetupResult {
 			ImageWidth:  768,
 			ImageHeight: 540,
 		}, func() (interface{}, error) {
+			// Load platform bindings from RomM server (non-fatal if it fails)
+			if err := config.LoadPlatformsBinding(config.Hosts[0], config.ApiTimeout); err != nil {
+				logger.Debug("Failed to load platform bindings", "error", err)
+			}
+
 			var err error
 			platforms, err = internal.GetMappedPlatforms(config.Hosts[0], config.DirectoryMappings, config.ApiTimeout)
 			if err != nil {

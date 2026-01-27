@@ -10,13 +10,20 @@ func TestParseVersion(t *testing.T) {
 		expected Version
 		wantErr  bool
 	}{
-		{"v1.2.3", Version{Major: 1, Minor: 2, Patch: 3, Prerelease: ""}, false},
-		{"1.2.3", Version{Major: 1, Minor: 2, Patch: 3, Prerelease: ""}, false},
-		{"v1.2.0-beta.1", Version{Major: 1, Minor: 2, Patch: 0, Prerelease: "beta.1"}, false},
-		{"1.2.0-beta.1", Version{Major: 1, Minor: 2, Patch: 0, Prerelease: "beta.1"}, false},
-		{"v1.0.0-alpha", Version{Major: 1, Minor: 0, Patch: 0, Prerelease: "alpha"}, false},
-		{"1.0", Version{Major: 1, Minor: 0, Patch: 0, Prerelease: ""}, false},
-		{"1", Version{Major: 1, Minor: 0, Patch: 0, Prerelease: ""}, false},
+		{"v1.2.3", Version{Major: 1, Minor: 2, Patch: 3, Build: 0, Prerelease: ""}, false},
+		{"1.2.3", Version{Major: 1, Minor: 2, Patch: 3, Build: 0, Prerelease: ""}, false},
+		{"v1.2.0-beta.1", Version{Major: 1, Minor: 2, Patch: 0, Build: 0, Prerelease: "beta.1"}, false},
+		{"1.2.0-beta.1", Version{Major: 1, Minor: 2, Patch: 0, Build: 0, Prerelease: "beta.1"}, false},
+		{"v1.0.0-alpha", Version{Major: 1, Minor: 0, Patch: 0, Build: 0, Prerelease: "alpha"}, false},
+		{"1.0", Version{Major: 1, Minor: 0, Patch: 0, Build: 0, Prerelease: ""}, false},
+		{"1", Version{Major: 1, Minor: 0, Patch: 0, Build: 0, Prerelease: ""}, false},
+		// 4-component versions
+		{"4.6.1.0", Version{Major: 4, Minor: 6, Patch: 1, Build: 0, Prerelease: ""}, false},
+		{"v4.6.1.0", Version{Major: 4, Minor: 6, Patch: 1, Build: 0, Prerelease: ""}, false},
+		{"4.6.1.1", Version{Major: 4, Minor: 6, Patch: 1, Build: 1, Prerelease: ""}, false},
+		{"4.6.0.0-beta.1", Version{Major: 4, Minor: 6, Patch: 0, Build: 0, Prerelease: "beta.1"}, false},
+		{"v4.6.0.0-beta.1", Version{Major: 4, Minor: 6, Patch: 0, Build: 0, Prerelease: "beta.1"}, false},
+		{"4.6.1.2-rc.1", Version{Major: 4, Minor: 6, Patch: 1, Build: 2, Prerelease: "rc.1"}, false},
 	}
 
 	for _, tt := range tests {
@@ -51,7 +58,7 @@ func TestCompareVersions(t *testing.T) {
 		{"2.0.0", "1.0.0", 1, "major version older"},
 		{"1.0.0", "1.0.0", 0, "same version"},
 
-		// Beta vs full release - THE KEY FIX
+		// Beta vs full release
 		{"v1.2.0-beta.1", "v1.2.0", -1, "beta should recognize full release as newer"},
 		{"v1.2.0", "v1.2.0-beta.1", 1, "full release should be newer than beta"},
 		{"1.2.0-beta.1", "1.2.0", -1, "beta should recognize full release as newer (no v prefix)"},
@@ -71,6 +78,25 @@ func TestCompareVersions(t *testing.T) {
 		{"v1.2.1", "v1.2.0-beta.1", 1, "higher patch should be newer than beta"},
 		{"v1.2.0-beta.1", "v1.3.0", -1, "beta should recognize higher minor as newer"},
 		{"v1.3.0", "v1.2.0-beta.1", 1, "higher minor should be newer than beta"},
+
+		// 4-component version comparisons
+		{"4.6.1.0", "4.6.1.1", -1, "build version newer"},
+		{"4.6.1.1", "4.6.1.0", 1, "build version older"},
+		{"4.6.1.0", "4.6.1.0", 0, "same 4-component version"},
+		{"4.6.1.5", "4.6.2.0", -1, "higher patch beats higher build"},
+		{"4.6.2.0", "4.6.1.5", 1, "higher patch beats higher build (reverse)"},
+
+		// 4-component with prerelease
+		{"4.6.0.0-beta.1", "4.6.0.0", -1, "4-component beta vs full release"},
+		{"4.6.0.0", "4.6.0.0-beta.1", 1, "4-component full release vs beta"},
+		{"4.6.0.0-beta.1", "4.6.0.0-beta.2", -1, "4-component beta comparison"},
+		{"4.6.0.0-beta.1", "4.6.0.1", -1, "4-component beta vs higher build"},
+		{"4.6.0.1", "4.6.0.0-beta.1", 1, "4-component higher build vs beta"},
+
+		// Mixed 3 and 4 component (3-component defaults build to 0)
+		{"1.2.3", "1.2.3.0", 0, "3-component equals 4-component with build 0"},
+		{"1.2.3", "1.2.3.1", -1, "3-component older than 4-component with build 1"},
+		{"1.2.3.1", "1.2.3", 1, "4-component with build 1 newer than 3-component"},
 	}
 
 	for _, tt := range tests {
@@ -95,6 +121,11 @@ func TestIsNewerVersion(t *testing.T) {
 		{"v1.1.0", "v1.2.0", true, "older version should see newer as newer"},
 		{"v1.2.0", "v1.1.0", false, "newer version should not see older as newer"},
 		{"v1.2.0", "v1.2.0", false, "same version should not be newer"},
+
+		// 4-component versions
+		{"4.6.1.0", "4.6.1.1", true, "build 0 should see build 1 as newer"},
+		{"4.6.1.1", "4.6.1.0", false, "build 1 should not see build 0 as newer"},
+		{"4.6.0.0-beta.1", "4.6.0.0", true, "4-component beta should see full release as newer"},
 	}
 
 	for _, tt := range tests {
@@ -106,4 +137,3 @@ func TestIsNewerVersion(t *testing.T) {
 		})
 	}
 }
-

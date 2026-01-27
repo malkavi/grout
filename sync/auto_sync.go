@@ -79,7 +79,7 @@ func (a *AutoSync) run() {
 	a.icon.SetText(icons.CloudRefresh)
 	logger.Debug("AutoSync: Starting save sync scan")
 
-	syncs, _, err := FindSaveSyncs(a.host, a.config)
+	syncs, unmatched, _, err := FindSaveSyncs(a.host, a.config)
 	if err != nil {
 		logger.Error("AutoSync: Failed to find save syncs", "error", err)
 		a.icon.SetText(icons.CloudAlert)
@@ -87,12 +87,17 @@ func (a *AutoSync) run() {
 	}
 
 	if len(syncs) == 0 {
-		a.icon.SetText(icons.CloudCheck)
-		logger.Debug("AutoSync: No syncs needed")
+		if len(unmatched) > 0 {
+			a.icon.SetText(icons.CloudAlert)
+			logger.Debug("AutoSync: No syncs needed but has unmatched saves", "unmatched", len(unmatched))
+		} else {
+			a.icon.SetText(icons.CloudCheck)
+			logger.Debug("AutoSync: No syncs needed")
+		}
 		return
-	} else {
-		logger.Debug("AutoSync: Found syncs", "count", len(syncs))
 	}
+
+	logger.Debug("AutoSync: Found syncs", "count", len(syncs))
 
 	hadError := false
 
@@ -119,9 +124,13 @@ func (a *AutoSync) run() {
 		}
 	}
 
-	if hadError {
+	if hadError || len(unmatched) > 0 {
 		a.icon.SetText(icons.CloudAlert)
-		logger.Debug("AutoSync: Completed with errors")
+		if hadError {
+			logger.Debug("AutoSync: Completed with errors")
+		} else {
+			logger.Debug("AutoSync: Completed with unmatched saves", "unmatched", len(unmatched))
+		}
 	} else {
 		a.icon.SetText(icons.CloudCheck)
 		logger.Debug("AutoSync: Completed successfully")

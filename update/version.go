@@ -10,7 +10,8 @@ type Version struct {
 	Major      int
 	Minor      int
 	Patch      int
-	Prerelease string // e.g., "beta.1" from "1.2.0-beta.1"
+	Build      int    // Fourth component for Grout-specific releases
+	Prerelease string // e.g., "beta.1" from "4.6.0.0-beta.1"
 }
 
 func ParseVersion(v string) (Version, error) {
@@ -24,7 +25,7 @@ func ParseVersion(v string) (Version, error) {
 	}
 
 	segments := strings.Split(versionStr, ".")
-	if len(segments) < 1 || len(segments) > 3 {
+	if len(segments) < 1 || len(segments) > 4 {
 		return Version{}, fmt.Errorf("invalid version format: %s", v)
 	}
 
@@ -53,6 +54,14 @@ func ParseVersion(v string) (Version, error) {
 			return Version{}, fmt.Errorf("invalid patch version: %s", segments[2])
 		}
 		version.Patch = patch
+	}
+
+	if len(segments) >= 4 {
+		build, err := strconv.Atoi(segments[3])
+		if err != nil {
+			return Version{}, fmt.Errorf("invalid build version: %s", segments[3])
+		}
+		version.Build = build
 	}
 
 	return version, nil
@@ -90,6 +99,13 @@ func CompareVersions(current, latest string) int {
 		return 1
 	}
 
+	if currentVer.Build < latestVer.Build {
+		return -1
+	}
+	if currentVer.Build > latestVer.Build {
+		return 1
+	}
+
 	// If numeric versions are equal, compare prerelease status
 	// According to semver: a version without a prerelease is newer than one with a prerelease
 	currentHasPrerelease := currentVer.Prerelease != ""
@@ -103,7 +119,7 @@ func CompareVersions(current, latest string) int {
 		// Current is prerelease, latest is full release - latest is newer
 		return -1
 	}
-	if currentHasPrerelease && latestHasPrerelease {
+	if currentHasPrerelease {
 		// Both are prereleases - compare prerelease strings lexicographically
 		// For simplicity, we'll just do a string comparison
 		// In practice, this handles cases like "beta.1" vs "beta.2"
@@ -123,5 +139,9 @@ func IsNewerVersion(current, latest string) bool {
 }
 
 func (v Version) String() string {
-	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+	base := fmt.Sprintf("%d.%d.%d.%d", v.Major, v.Minor, v.Patch, v.Build)
+	if v.Prerelease != "" {
+		return base + "-" + v.Prerelease
+	}
+	return base
 }

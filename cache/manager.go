@@ -22,10 +22,10 @@ type Manager struct {
 	config      Config
 	initialized bool
 
-	stats *CacheStats
+	stats *Stats
 }
 
-type CacheStats struct {
+type Stats struct {
 	mu         sync.Mutex
 	Hits       int64
 	Misses     int64
@@ -33,21 +33,21 @@ type CacheStats struct {
 	LastAccess time.Time
 }
 
-func (s *CacheStats) recordHit() {
+func (s *Stats) recordHit() {
 	s.mu.Lock()
 	s.Hits++
 	s.LastAccess = time.Now()
 	s.mu.Unlock()
 }
 
-func (s *CacheStats) recordMiss() {
+func (s *Stats) recordMiss() {
 	s.mu.Lock()
 	s.Misses++
 	s.LastAccess = time.Now()
 	s.mu.Unlock()
 }
 
-func (s *CacheStats) recordError() {
+func (s *Stats) recordError() {
 	s.mu.Lock()
 	s.Errors++
 	s.mu.Unlock()
@@ -101,10 +101,10 @@ func newCacheManager(host romm.Host, config Config) (*Manager, error) {
 		host:        host,
 		config:      config,
 		initialized: true,
-		stats:       &CacheStats{},
+		stats:       &Stats{},
 	}
 
-	logger.Info("Cache manager initialized", "path", dbPath)
+	logger.Debug("Cache manager initialized", "path", dbPath)
 	return cm, nil
 }
 
@@ -118,6 +118,30 @@ func (cm *Manager) Close() error {
 
 	cm.initialized = false
 	return cm.db.Close()
+}
+
+// enableBulkLoadMode optimizes SQLite for bulk inserts by reducing durability
+func (cm *Manager) enableBulkLoadMode() {
+	if cm == nil || cm.db == nil {
+		return
+	}
+	cm.db.Exec("PRAGMA synchronous = OFF")
+	cm.db.Exec("PRAGMA journal_mode = OFF")
+	cm.db.Exec("PRAGMA cache_size = 100000")
+	cm.db.Exec("PRAGMA temp_store = MEMORY")
+	cm.db.Exec("PRAGMA locking_mode = EXCLUSIVE")
+}
+
+// disableBulkLoadMode restores normal SQLite durability settings
+func (cm *Manager) disableBulkLoadMode() {
+	if cm == nil || cm.db == nil {
+		return
+	}
+	cm.db.Exec("PRAGMA locking_mode = NORMAL")
+	cm.db.Exec("PRAGMA journal_mode = WAL")
+	cm.db.Exec("PRAGMA synchronous = NORMAL")
+	cm.db.Exec("PRAGMA temp_store = DEFAULT")
+	cm.db.Exec("PRAGMA cache_size = -2000")
 }
 
 func (cm *Manager) IsFirstRun() bool {
@@ -160,7 +184,7 @@ func (cm *Manager) Clear() error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	tables := []string{"games", "game_collections", "collections", "platforms", "bios_availability"}
+	tables := []string{"games", "game_collections", "collections", "platforms", "bios_availability", "filename_mappings"}
 
 	tx, err := cm.db.Begin()
 	if err != nil {
@@ -251,6 +275,7 @@ func (cm *Manager) HasCollections() bool {
 }
 
 const (
+	MetaKeyPlatformsRefreshedAt   = "platforms_refreshed_at"
 	MetaKeyGamesRefreshedAt       = "games_refreshed_at"
 	MetaKeyCollectionsRefreshedAt = "collections_refreshed_at"
 )
@@ -265,8 +290,8 @@ func (cm *Manager) SetMetadata(key, value string) error {
 
 	_, err := cm.db.Exec(`
 		INSERT OR REPLACE INTO cache_metadata (key, value, updated_at)
-		VALUES (?, ?, CURRENT_TIMESTAMP)
-	`, key, value)
+		VALUES (?, ?, ?)
+	`, key, value, nowUTC())
 	if err != nil {
 		return newCacheError("set_metadata", key, "", err)
 	}
@@ -301,13 +326,13 @@ func (cm *Manager) GetLastRefreshTime(key string) (time.Time, error) {
 }
 
 func (cm *Manager) RecordRefreshTime(key string) error {
-	return cm.SetMetadata(key, time.Now().Format(time.RFC3339))
+	return cm.SetMetadata(key, nowUTC())
 }
 
 func (cm *Manager) GetAllRefreshTimes() map[string]time.Time {
 	result := make(map[string]time.Time)
 
-	keys := []string{MetaKeyGamesRefreshedAt, MetaKeyCollectionsRefreshedAt}
+	keys := []string{MetaKeyPlatformsRefreshedAt, MetaKeyGamesRefreshedAt, MetaKeyCollectionsRefreshedAt}
 	for _, key := range keys {
 		if t, err := cm.GetLastRefreshTime(key); err == nil {
 			result[key] = t
@@ -317,12 +342,42 @@ func (cm *Manager) GetAllRefreshTimes() map[string]time.Time {
 	return result
 }
 
-func (cm *Manager) PopulateFullCacheWithProgress(platforms []romm.Platform, progress *atomic.Float64) error {
+func (cm *Manager) PopulateFullCacheWithProgress(platforms []romm.Platform, progress *atomic.Float64) (SyncStats, error) {
 	if cm == nil || !cm.initialized {
-		return ErrNotInitialized
+		return SyncStats{}, ErrNotInitialized
 	}
 
 	return cm.populateCache(platforms, progress)
+}
+
+func (cm *Manager) SyncCollectionsOnly() (int, error) {
+	if cm == nil || !cm.initialized {
+		return 0, ErrNotInitialized
+	}
+
+	return cm.fetchAndCacheCollectionsWithProgress(nil, 0.0, 1.0), nil
+}
+
+func (cm *Manager) SyncPlatformGames(platforms []romm.Platform) (int, error) {
+	if cm == nil || !cm.initialized {
+		return 0, ErrNotInitialized
+	}
+
+	logger := gaba.GetLogger()
+	totalGames := 0
+
+	for _, platform := range platforms {
+		if err := cm.fetchPlatformGames(platform, nil); err != nil {
+			logger.Error("Failed to sync platform games", "platform", platform.Name, "error", err)
+			cm.RecordPlatformSyncFailure(platform.ID)
+			continue
+		}
+		cm.RecordPlatformSyncSuccess(platform.ID, platform.ROMCount)
+		totalGames += platform.ROMCount
+		logger.Debug("Synced platform games", "platform", platform.Name)
+	}
+
+	return totalGames, nil
 }
 
 func getCacheDBPath() string {

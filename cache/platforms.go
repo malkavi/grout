@@ -3,8 +3,8 @@ package cache
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"grout/romm"
-	"time"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 )
@@ -82,7 +82,7 @@ func (cm *Manager) SavePlatforms(platforms []romm.Platform) error {
 	}
 	defer stmt.Close()
 
-	now := time.Now()
+	now := nowUTC()
 	for _, p := range platforms {
 		dataJSON, err := json.Marshal(p)
 		if err != nil {
@@ -133,7 +133,7 @@ func (cm *Manager) HasBIOS(platformID int) (bool, bool) {
 		SELECT has_bios FROM bios_availability WHERE platform_id = ?
 	`, platformID).Scan(&hasBIOS)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return false, false
 	}
 	if err != nil {
@@ -158,12 +158,98 @@ func (cm *Manager) SetBIOSAvailability(platformID int, hasBIOS bool) error {
 
 	_, err := cm.db.Exec(`
 		INSERT OR REPLACE INTO bios_availability (platform_id, has_bios, checked_at)
-		VALUES (?, ?, CURRENT_TIMESTAMP)
-	`, platformID, biosInt)
+		VALUES (?, ?, ?)
+	`, platformID, biosInt, nowUTC())
 
 	if err != nil {
 		return newCacheError("save", "bios", "", err)
 	}
 
 	return nil
+}
+
+// RecordPlatformSyncSuccess records a successful game sync for a platform
+func (cm *Manager) RecordPlatformSyncSuccess(platformID int, gamesCount int) error {
+	if cm == nil || !cm.initialized {
+		return ErrNotInitialized
+	}
+
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	now := nowUTC()
+	_, err := cm.db.Exec(`
+		INSERT OR REPLACE INTO platform_sync_status
+		(platform_id, last_successful_sync, last_attempt, games_synced, status)
+		VALUES (?, ?, ?, ?, 'success')
+	`, platformID, now, now, gamesCount)
+
+	if err != nil {
+		return newCacheError("save", "platform_sync_status", "", err)
+	}
+
+	return nil
+}
+
+// RecordPlatformSyncFailure records a failed sync attempt for a platform
+func (cm *Manager) RecordPlatformSyncFailure(platformID int) error {
+	if cm == nil || !cm.initialized {
+		return ErrNotInitialized
+	}
+
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	// Use INSERT OR REPLACE but preserve last_successful_sync if it exists
+	now := nowUTC()
+	_, err := cm.db.Exec(`
+		INSERT INTO platform_sync_status (platform_id, last_attempt, status)
+		VALUES (?, ?, 'failed')
+		ON CONFLICT(platform_id) DO UPDATE SET
+			last_attempt = ?,
+			status = 'failed'
+	`, platformID, now, now)
+
+	if err != nil {
+		return newCacheError("save", "platform_sync_status", "", err)
+	}
+
+	return nil
+}
+
+// GetPlatformsNeedingSync returns platforms that failed their last sync or have never been synced
+func (cm *Manager) GetPlatformsNeedingSync(allPlatforms []romm.Platform) []romm.Platform {
+	if cm == nil || !cm.initialized {
+		return allPlatforms
+	}
+
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	// Get platforms with successful syncs
+	rows, err := cm.db.Query(`
+		SELECT platform_id FROM platform_sync_status WHERE status = 'success'
+	`)
+	if err != nil {
+		return allPlatforms
+	}
+	defer rows.Close()
+
+	syncedPlatforms := make(map[int]bool)
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err == nil {
+			syncedPlatforms[id] = true
+		}
+	}
+
+	// Return platforms that haven't been successfully synced
+	var needSync []romm.Platform
+	for _, p := range allPlatforms {
+		if !syncedPlatforms[p.ID] {
+			needSync = append(needSync, p)
+		}
+	}
+
+	return needSync
 }

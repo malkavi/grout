@@ -2,7 +2,6 @@ package ui
 
 import (
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
-	icons "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/constants"
 )
 
 var defaultStatusBar = gaba.StatusBarOptions{
@@ -10,9 +9,7 @@ var defaultStatusBar = gaba.StatusBarOptions{
 	ShowTime:   true,
 	TimeFormat: gaba.TimeFormat24Hour,
 	Icons: []gaba.StatusBarIcon{
-		{
-			Text: icons.WiFi,
-		},
+		{},
 	},
 }
 

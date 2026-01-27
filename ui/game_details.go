@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"grout/cache"
 	"grout/internal"
-	constants2 "grout/internal/constants"
+	"grout/internal/fileutil"
 	"grout/internal/imageutil"
 	"grout/internal/stringutil"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,7 +32,9 @@ type GameDetailsInput struct {
 }
 
 type GameDetailsOutput struct {
+	Action            GameDetailsAction
 	DownloadRequested bool
+	SelectedFileID    int
 	Game              romm.Rom
 	Platform          romm.Platform
 }
@@ -41,9 +45,10 @@ func NewGameDetailsScreen() *GameDetailsScreen {
 	return &GameDetailsScreen{}
 }
 
-func (s *GameDetailsScreen) Draw(input GameDetailsInput) (ScreenResult[GameDetailsOutput], error) {
+func (s *GameDetailsScreen) Draw(input GameDetailsInput) (GameDetailsOutput, error) {
 	logger := gaba.GetLogger()
 	output := GameDetailsOutput{
+		Action:   GameDetailsActionBack,
 		Game:     input.Game,
 		Platform: input.Platform,
 	}
@@ -54,39 +59,62 @@ func (s *GameDetailsScreen) Draw(input GameDetailsInput) (ScreenResult[GameDetai
 	options.Sections = sections
 	options.ShowThemeBackground = false
 	options.ShowScrollbar = true
+	hasMultipleFiles := input.Game.HasNestedSingleFile && len(input.Game.Files) > 1
+	if hasMultipleFiles {
+		options.ConfirmButton = constants.VirtualButtonX
+	}
 	if !internal.IsKidModeEnabled() {
-		options.ActionButton = constants.VirtualButtonX
-		options.EnableAction = true
+		options.ActionButton = constants.VirtualButtonY
+		options.AllowAction = true
 	}
 
 	footerItems := []gaba.FooterHelpItem{
 		{ButtonName: "B", HelpText: i18n.Localize(&goi18n.Message{ID: "button_back", Other: "Back"}, nil)},
 	}
 	if !internal.IsKidModeEnabled() {
-		footerItems = append(footerItems, gaba.FooterHelpItem{ButtonName: "X", HelpText: i18n.Localize(&goi18n.Message{ID: "button_options", Other: "Options"}, nil)})
+		footerItems = append(footerItems, gaba.FooterHelpItem{ButtonName: "Y", HelpText: i18n.Localize(&goi18n.Message{ID: "button_options", Other: "Options"}, nil)})
 	}
-	footerItems = append(footerItems, gaba.FooterHelpItem{ButtonName: "A", HelpText: i18n.Localize(&goi18n.Message{ID: "button_download", Other: "Download"}, nil)})
+	downloadButton := "A"
+	if hasMultipleFiles {
+		downloadButton = "X"
+	}
+	downloadText := i18n.Localize(&goi18n.Message{ID: "button_download", Other: "Download"}, nil)
+	if input.Game.IsDownloaded(input.Config) {
+		downloadText = i18n.Localize(&goi18n.Message{ID: "button_redownload", Other: "Redownload"}, nil)
+	}
+	footerItems = append(footerItems, gaba.FooterHelpItem{ButtonName: downloadButton, HelpText: downloadText})
 
 	result, err := gaba.DetailScreen(input.Game.Name, options, footerItems)
 
 	if err != nil {
 		if errors.Is(err, gaba.ErrCancelled) {
-			return back(output), nil
+			return output, nil
 		}
 		logger.Error("Detail screen error", "error", err)
-		return withCode(output, gaba.ExitCodeError), err
+		return output, err
 	}
 
 	if result.Action == gaba.DetailActionConfirmed {
+		output.Action = GameDetailsActionDownload
 		output.DownloadRequested = true
-		return success(output), nil
+		// Check if a specific file was selected from the dropdown
+		for _, selection := range result.DropdownSelections {
+			if selection.ID == "file_version" {
+				if fileID, err := strconv.Atoi(selection.Option.Value); err == nil {
+					output.SelectedFileID = fileID
+				}
+				break
+			}
+		}
+		return output, nil
 	}
 
 	if result.Action == gaba.DetailActionTriggered {
-		return withCode(output, constants2.ExitCodeGameOptions), nil
+		output.Action = GameDetailsActionOptions
+		return output, nil
 	}
 
-	return back(output), nil
+	return output, nil
 }
 
 func (s *GameDetailsScreen) buildSections(input GameDetailsInput) []gaba.Section {
@@ -99,6 +127,29 @@ func (s *GameDetailsScreen) buildSections(input GameDetailsInput) []gaba.Section
 		sections = append(sections, gaba.NewImageSection("", coverImagePath, 640, 480, constants.TextAlignCenter))
 	} else {
 		logger.Debug("No cover image available", "game", game.Name)
+	}
+
+	// Show file selection dropdown for games with nested single file (multiple versions)
+	if game.HasNestedSingleFile && len(game.Files) > 1 {
+		fileOptions := make([]gaba.DropdownOption, len(game.Files))
+		romDirectory := input.Config.GetPlatformRomDirectory(input.Platform)
+		for i, file := range game.Files {
+			label := file.FileName
+			filePath := filepath.Join(romDirectory, file.FileName)
+			if fileutil.FileExists(filePath) {
+				label = constants.Download + " " + label
+			}
+			fileOptions[i] = gaba.DropdownOption{
+				Label: label,
+				Value: fmt.Sprintf("%d", file.ID),
+			}
+		}
+		sections = append(sections, gaba.NewDropdownSection(
+			i18n.Localize(&goi18n.Message{ID: "game_details_file_version", Other: "File Version"}, nil),
+			"file_version",
+			fileOptions,
+			0,
+		))
 	}
 
 	if game.Summary != "" {
@@ -253,7 +304,7 @@ func (s *GameDetailsScreen) fetchImageFromURL(host romm.Host, imageURL string) [
 
 	req.SetBasicAuth(host.Username, host.Password)
 
-	client := &http.Client{Timeout: constants2.DefaultHTTPTimeout}
+	client := &http.Client{Timeout: internal.DefaultHTTPTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		logger.Warn("Failed to fetch image", "url", imageURL, "error", err)

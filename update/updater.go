@@ -3,13 +3,15 @@ package update
 import (
 	"fmt"
 	"grout/cfw"
-	"grout/internal/constants"
+	"grout/internal"
+	"grout/romm"
 	"grout/version"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	"go.uber.org/atomic"
 )
 
@@ -24,14 +26,17 @@ type Info struct {
 
 func GetAssetName(c cfw.CFW) string {
 	switch c {
-	case cfw.MuOS, cfw.Knulli:
+	case cfw.MuOS, cfw.Knulli, cfw.Spruce, cfw.NextUI, cfw.ROCKNIX:
 		return "grout"
 	default:
 		return ""
 	}
 }
 
-func CheckForUpdate(c cfw.CFW) (*Info, error) {
+// CheckForUpdate checks for available updates based on the release channel.
+// For ReleaseChannelMatchRomM, the host parameter is required to fetch the RomM version.
+// For other channels, the host parameter is optional and ignored.
+func CheckForUpdate(c cfw.CFW, releaseChannel internal.ReleaseChannel, host *romm.Host) (*Info, error) {
 	currentVersion := version.Get().Version
 
 	if currentVersion == "dev" {
@@ -41,9 +46,33 @@ func CheckForUpdate(c cfw.CFW) (*Info, error) {
 		}, nil
 	}
 
-	release, err := FetchLatestRelease()
-	if err != nil {
-		return nil, fmt.Errorf("failed to check for updates: %w", err)
+	var release *GitHubRelease
+	var err error
+
+	if releaseChannel == internal.ReleaseChannelMatchRomM {
+		if host == nil {
+			return nil, fmt.Errorf("host is required for Match RomM release channel")
+		}
+
+		// Fetch RomM version from heartbeat
+		client := romm.NewClientFromHost(*host)
+		heartbeat, err := client.GetHeartbeat()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get RomM version: %w", err)
+		}
+
+		gaba.GetLogger().Debug("fetched RomM version for update check", "version", heartbeat.System.Version)
+
+		// Find a Grout release matching the RomM version
+		release, err = FetchReleaseForRomMVersion(heartbeat.System.Version)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find matching release: %w", err)
+		}
+	} else {
+		release, err = FetchLatestRelease(releaseChannel)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check for updates: %w", err)
+		}
 	}
 
 	info := &Info{
@@ -119,7 +148,7 @@ func PerformUpdate(downloadURL string, progress *atomic.Float64) error {
 
 func downloadBinary(url, destPath string, progress *atomic.Float64) error {
 	client := &http.Client{
-		Timeout: constants.UpdaterTimeout,
+		Timeout: internal.UpdaterTimeout,
 	}
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

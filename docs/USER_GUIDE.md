@@ -2,10 +2,59 @@
 
 This guide walks you through using Grout to download games from your RomM instance.
 
+## Button Reference
+
+Grout attempts to be consistent with its controls. Here's a quick reference:
+
+| Button       | Description                               |
+|--------------|-------------------------------------------|
+| `A`          | Confirm / Select                          |
+| `B`          | Back / Cancel                             |
+| `X`          | Secondary action (Search, Settings)       |
+| `Y`          | Tertiary action (Save Sync, Game Options) |
+| `Start`      | Confirm / Save settings                   |
+| `Select`     | Toggle list mode (multi-select, reorder)  |
+| `L1` / `R1`  | Shoulder buttons (used in button combos)  |
+| `Menu`       | Help menu (also used in button combos)    |
+| `Up/Down`    | Navigate lists                            |
+| `Left/Right` | Cycle options / Jump pages in list        |
+
+---
+
+## Status Bar Icons
+
+The status bar displays icons to indicate background activity. Here's what each icon means:
+
+### Cache Sync Icons
+
+These icons appear during the [background cache sync](#background-cache-sync) process:
+
+| Icon                                                                                    | Description                       |
+|-----------------------------------------------------------------------------------------|-----------------------------------|
+| ![Database Sync](../.github/resources/user_guide/statusbar_icons/Database%20Sync.png)   | Cache sync in progress            |
+| ![Database Check](../.github/resources/user_guide/statusbar_icons/Database%20Check.png) | Cache sync completed successfully |
+| ![Database Alert](../.github/resources/user_guide/statusbar_icons/Database%20Alert.png) | Cache sync encountered an error   |
+
+### Save Sync Icons
+
+These icons appear during [Save Sync](#save-sync) operations:
+
+| Icon                                                                                    | Description                                                         |
+|-----------------------------------------------------------------------------------------|---------------------------------------------------------------------|
+| ![Cloud Sync](../.github/resources/user_guide/statusbar_icons/Cloud%20Sync.png)         | Save sync in progress                                               |
+| ![Cloud Upload](../.github/resources/user_guide/statusbar_icons/Cloud%20Upload.png)     | Uploading saves to RomM                                             |
+| ![Cloud Download](../.github/resources/user_guide/statusbar_icons/Cloud%20Download.png) | Downloading saves from RomM                                         |
+| ![Cloud Check](../.github/resources/user_guide/statusbar_icons/Cloud%20Check.png)       | Save sync completed successfully                                    |
+| ![Cloud Alert](../.github/resources/user_guide/statusbar_icons/Cloud%20Alert.png)       | Save sync encountered an error, go check the log file for more info |
+
+---
+
 ## Table of Contents
 
+- [Status Bar Icons](#status-bar-icons)
 - [First Launch and Login](#first-launch-and-login)
 - [Platform Directory Mapping](#platform-directory-mapping)
+- [Background Cache Sync](#background-cache-sync)
 - [Main Menu - Platform Selection](#main-menu--platform-selection)
 - [Collections](#collections)
 - [Game List](#game-list)
@@ -14,11 +63,14 @@ This guide walks you through using Grout to download games from your RomM instan
 - [Downloading Games](#downloading-games)
 - [BIOS Files](#bios-files)
 - [Settings](#settings)
-    - [General Settings](#general-settings)
-    - [Collections Settings](#collections-settings)
-    - [Advanced Settings](#advanced-settings)
 - [Save Sync](#save-sync)
 - [Advanced Configuration](#advanced-configuration)
+
+**See Also:**
+
+- [Quick Start Guide](QUICK_START.md) - Get up and running in 5 steps
+- [Settings Reference](SETTINGS.md) - Complete settings documentation
+- [Save Sync Guide](SAVE_SYNC.md) - Detailed save synchronization guide
 
 ---
 
@@ -41,7 +93,7 @@ When you first launch Grout, you'll be asked to select your preferred language. 
 
 Use `Left/Right` to cycle through the available languages. Press `A` to confirm your selection.
 
-You can change your language later from the Settings menu.
+You can change your language later from the [Settings](SETTINGS.md#language).
 
 ---
 
@@ -54,6 +106,9 @@ You can change your language later from the Settings menu.
 3. **Port (optional)** – If your RomM instance runs on a non-standard port, enter it here.
 4. **Username** - Your RomM username.
 5. **Password** - Your RomM password.
+6. **SSL Certificates** (HTTPS only) – Choose whether to verify SSL certificates:
+    - **Verify** – Validate SSL certificates (recommended)
+    - **Skip Verification** – Skip SSL certificate validation (useful for self-signed certificates or internal CAs)
 
 Use the left and right buttons to cycle through options for Protocol. For the text fields (Hostname, Username,
 Password), pressing `A` will open an on-screen keyboard.
@@ -61,7 +116,11 @@ Password), pressing `A` will open an on-screen keyboard.
 Press `Start` to login. If your credentials are correct and Grout can reach your server, you'll move
 to the next step. If something goes wrong, you'll get a message telling you what happened, and you can try again.
 
-> [!NOTE]
+> [!TIP]
+> If you're using a self-signed certificate or a certificate from an internal Certificate Authority, set
+> **SSL Certificates** to **Skip Verification** to avoid connection errors.
+
+> [!IMPORTANT]
 > **OIDC Users:** If your RomM instance uses OIDC authentication, you can still use Grout by setting a password for your
 > user account. Grout will support API Keys once they are available in RomM. For more details,
 > see [this GitHub issue](https://github.com/rommapp/romm/issues/1767#issuecomment-2744215262).
@@ -88,7 +147,37 @@ pre-selected. If not, it'll suggest creating one with the correct name for your 
 Use left/right to cycle through the options for each platform. When you're happy with your mappings, press `Start` to
 save. Grout will create any new directories you selected.
 
-You can change these mappings later from the Settings menu.
+You can change these mappings later from [Settings](SETTINGS.md).
+
+---
+
+## Background Cache Sync
+
+> [!WARNING]
+> Grout currently does not gracefully handle deletions.
+> 
+> Deleted games, platforms and collections will continue to be shown until the [local cache is rebuilt](SETTINGS.md#rebuild-cache).
+> 
+> We are waiting for updated API endpoints that will allow Grout to remove deleted items from the cache without a rebuild. You can track the progress of this in [this issue](https://github.com/rommapp/grout/issues/83).
+
+Grout maintains a local cache of your RomM library data (platforms, games, and collections) to provide a fast,
+responsive browsing experience. This cache syncs automatically in the background each time you launch Grout.
+
+**How it works:**
+
+- On startup, Grout begins syncing in the background while you can immediately start browsing
+- A sync icon appears in the status bar during the sync process
+- Grout uses incremental updates, only fetching data that has changed since your last session
+- When complete, the sync icon updates to indicate success
+
+**First launch:**
+
+On your very first launch (after platform mapping), Grout builds the initial cache. This may take a moment
+depending on the size of your library.
+
+> [!TIP]
+> If you need to completely rebuild the cache from scratch, use **Rebuild Cache** in
+> [Advanced Settings](SETTINGS.md#rebuild-cache).
 
 ---
 
@@ -144,7 +233,8 @@ shown as prefixes (e.g., `[nes] Tetris`, `[snes] Tetris Battle Gaiden`)
 > If you skipped a platform in the mapping screen, you won't see games for that platform in your collections.
 
 > [!TIP]
-> Regular collections, smart collections, and virtual collections can be toggled on/off in settings.
+> Regular collections, smart collections, and virtual collections can be toggled on/off
+> in [Settings](SETTINGS.md#collections-settings).
 
 ---
 
@@ -177,7 +267,7 @@ Check all the ones you want, then press `Start` to confirm your selections.
 ![Grout preview, games multi select](../.github/resources/user_guide/multi_select.png "Grout preview, games multi select")
 
 > [!TIP]
-> Box art must be enabled in settings for it to appear.
+> Box art must be enabled in [Settings](SETTINGS.md#box-art) for it to appear.
 
 ---
 
@@ -204,6 +294,8 @@ To clear a search and return to the full list, press `B`.
 You'll see:
 
 - **Cover art** – The game's box art (if available)
+- **File Version dropdown** – If the game has multiple file versions (like different regions or revisions), use this
+  dropdown to select which version to download. Already-downloaded versions are marked with a download icon.
 - **Summary** – A description of the game
 - **Metadata** – Release date, genres, developers/publishers, game modes, regions, languages, and file size
 - **Multi-file indicator** – If the game has multiple files (like multi-disc PlayStation games)
@@ -211,11 +303,26 @@ You'll see:
 
 From here:
 
-- `A` to download the game
-- `X` to open Game Options
+- `A` to download the game (or `X` if a file version dropdown is present)
+- `Y` to open Game Options
 - `B` to go back without downloading
 
+### File Version Selection
+
+Some games in RomM may have multiple file versions – for example, different regional releases (USA, Europe, Japan) or
+different revisions (Rev A, Rev B). When a game has multiple versions available:
+
+1. A **File Version** dropdown appears on the game details screen
+2. Use `Up/Down` to scroll to the dropdown, then press `A` to expand it
+3. Select the version you want to download
+4. Versions you've already downloaded are marked with a download icon prefix
+5. Press `X` to download the selected version
+
 ### Game Options
+
+> [!IMPORTANT]
+> **Kids Mode Impact:** When Kids Mode is enabled, the Game Options screen is hidden.
+> See [Settings Reference](SETTINGS.md#kids-mode) to learn how to temporarily or permanently disable Kids Mode.
 
 - **Save Directory** – Choose which emulator's save folder this game should use. This overrides the platform-wide
   setting configured in Save Sync Mappings. When changed, Grout automatically moves existing save files to the new
@@ -242,8 +349,8 @@ appropriate directory on your device. Press `Y` to cancel the download.
 3. **Artwork is downloaded** – If "Download Art" is enabled in Settings, Grout downloads box art for each game to your
    artwork directory after the ROMs finish.
 
-4. **Zipped files are extracted automatically** – If "Zipped Downloads" is set to "Uncompress" in Settings, Grout
-   will extract the files to the configured ROM directory and then delete the zip file.
+4. **Archived files are extracted automatically** – If "Archived Downloads" is set to "Uncompress" in Settings, Grout
+   will extract zip and 7z files to the configured ROM directory and then delete the archive.
 
 If a download fails, Grout will show you which games had problems and clean up any leftover cruft.
 
@@ -257,124 +364,40 @@ ready to play.
 Many emulators require BIOS files to function properly. Grout can download these files directly from your RomM server to
 the correct location on your device.
 
+> [!IMPORTANT]
+> **Kids Mode Impact:** When Kids Mode is enabled, the BIOS download screen is hidden.
+> See [Settings Reference](SETTINGS.md#kids-mode) to learn how to temporarily or permanently disable Kids Mode.
+
 ![Grout preview, BIOS download](../.github/resources/user_guide/bios_download.png "Grout preview, BIOS download")
 
 ### Accessing BIOS Downloads
 
-From the main main menu, press `A` on a platform that requires BIOS files. If BIOS files are available for that
+From the main menu, press `A` on a platform that requires BIOS files. If BIOS files are available for that
 platform in your RomM library, you'll see a "BIOS" option in the platform submenu.
 
 ---
 
 ## Settings
 
-Press `X` from the main main menu to access Settings.
+Press `X` from the main menu to access Settings.
+
+> [!IMPORTANT]
+> **Kids Mode Impact:** When Kids Mode is enabled, the Settings screen is hidden entirely. To access settings
+> temporarily, press `L1` + `R1` + `Menu` during the Grout splash screen.
 
 ![Grout preview, settings](../.github/resources/user_guide/settings.png "Grout preview, settings")
 
-### Main Settings
+Settings are organized into several categories:
 
-**General** - Opens a sub-menu for general display and download options.
-See [General Settings](#general-settings) below.
-
-**Collections** - Opens a sub-menu for configuring collection display options.
-See [Collections Settings](#collections-settings) below.
-
-**Directory Mappings** – Change which device directories are mapped to which RomM platforms. This takes you back to
-the platform mapping screen that appeared during setup.
-
-**Save Sync** - Controls save synchronization behavior:
-
-- **Off** – Save sync is completely disabled
-- **Manual** – Save sync is available via the `Y` button from the main menu
-- **Automatic** – Grout automatically syncs saves in the background when you launch the app. A cloud icon in the status
-  bar shows sync progress. If issues are detected, a `Y` button appears to access manual sync.
-
-**Save Sync Mappings** - Opens a sub-menu where you can configure the default save directory for each platform. This is
-useful for platforms with multiple emulators (e.g., GBA on muOS), allowing you to set which emulator's save folder
-should be used for syncing. Only visible when Save Sync is enabled. Individual games can override this setting via
-Game Options.
-
-![Grout preview, save sync mapping](../.github/resources/user_guide/sync_mappings.png "Grout preview, save sync mapping")
-
-**Advanced** - Opens a sub-menu for advanced configuration options. See [Advanced Settings](#advanced-settings) below.
-
-**Grout Info** – View version information, build details, server connection info, and the GitHub repository QR code.
-
-**Check for Updates** - Will allow Grout to update itself. This feature is only present on muOS and Knulli as NextUI has
-the Pak Store.
-
-### General Settings
-
-This sub-menu contains general display and download settings:
-
-**Box Art** - When set to show, Grout displays cover art thumbnails next to game names in the game list. Artwork is
-automatically cached in the background as you browse. This provides a visual preview similar to your frontend's game
-library view.
-
-**Game Details** - When enabled, selecting a game shows a detailed information screen with cover art, summary,
-metadata, and game options before downloading. When disabled, selecting a game immediately starts the download.
-
-**Downloaded Games** - Controls how already-downloaded games appear in game lists:
-
-- **Do Nothing** – No special treatment for downloaded games
-- **Mark** – Downloaded games are marked with a download icon
-- **Filter** – Downloaded games are hidden from the list entirely
-
-**Download Art** – When enabled, Grout downloads box art for games after downloading the ROMs. The art goes into your
-artwork directory so your frontend can display it.
-
-**Zipped Downloads** - Controls what happens when downloading zipped ROM files:
-
-- **Uncompress** – Grout automatically extracts zipped ROMs after downloading. The zip file is deleted after extraction.
-- **Do Nothing** – Keep the downloaded zip file as-is without extracting.
-
-**Language** – Grout is localized! Choose from English, Deutsch, Español, Français, Italiano, Português, Русский, or
-日本語. If you notice an issue with a translation or want to help by translating, please let us know!
-
-### Collections Settings
-
-This sub-menu contains all collection-related configuration:
-
-**Collections** - When set to show, Grout displays regular collections in the main menu.
-
-**Smart Collections** - When set to show, Grout displays smart collections in the main menu.
-
-**Virtual Collections** - When set to show, Grout displays virtual collections in the main menu.
-
-**Collection View** - Controls how collections display their games:
-
-- **Platform** – After selecting a collection, you'll see a platform selection screen showing all platforms in that
-  collection. Select a platform to view games from only that platform.
-- **Unified** – After selecting a collection, you'll immediately see all games from all platforms with platform slugs
-  shown as prefixes (e.g., `[nes] Tecmo Bowl`, `[snes] Super Mario World`)
-
-### Advanced Settings
-
-This sub-menu contains advanced configuration and system settings:
-
-**Preload Artwork** - Pre-cache artwork for all games across all mapped platforms. Grout scans your platforms, identifies
-games without cached artwork, and downloads cover art from RomM. Useful for pre-caching after adding new games.
-
-**Refresh Cache** - Re-sync cached data from RomM. Select which caches to refresh: Games Cache (platform and ROM data)
-or Collections Cache. Shows when each cache was last refreshed.
-
-**Download Timeout** – How long Grout waits for a single ROM to download before giving up. Useful for large files or
-slow connections. Options range from 15 to 120 minutes.
-
-**API Timeout** – How long Grout waits for responses from your RomM server before giving up. If you have a slow
-connection or are a completionist with a heavily loaded server, increase this. Options range from 15 to 300 seconds.
-
-**Kid Mode** – Hides some of the more advanced settings. When enabled, kid mode will hide the settings screen, BIOS
-screen, and game option screen. You can turn this off on a per-session basis by pressing `L1`, `R1` and `Menu` during
-the
-Grout splash screen. To turn off permanently, return to this menu.
-
-**Log Level** – Set to Debug if you're troubleshooting issues and want detailed logs. Otherwise, Error is fine.
-
----
+- **General** - Display options (box art, game details), download behavior, artwork, language
+- **Collections** - Toggle collection types, choose unified vs. platform view
+- **Directory Mappings** - Remap platforms to different folders
+- **Save Sync** - Off, Manual, or Automatic sync modes
+- **Advanced** - Cache management, timeouts, Kids Mode, logging
 
 Use `Left/Right` to cycle through options. Press `Start` to save your changes, or `B` to cancel.
+
+For complete documentation on all settings, see the **[Settings Reference](SETTINGS.md)**.
 
 ---
 
@@ -382,74 +405,22 @@ Use `Left/Right` to cycle through options. Press `Start` to save your changes, o
 
 Save Sync keeps your game saves synchronized between your RomM server and your handheld device.
 
-### Sync Modes
-
-Grout offers two sync modes, configurable in Settings:
-
-**Manual Mode:**
-
-- Press `Y` from the main menu to access save sync
-- You control when syncing happens
-- A sync summary is displayed after completion
-
-**Automatic Mode:**
-
-- Grout automatically syncs saves in the background when you launch the app
-- A cloud icon appears in the status bar showing sync progress:
-    - **Cloud with up arrow** – Upload in progress
-    - **Cloud with down arrow** - Download in progress
-    - **Cloud with checkmark** – Sync completed successfully
-
-### How It Works
-
-When you run Save Sync, Grout:
-
-1. Scans your device for games and their save files
-2. Matches them with corresponding ROMs in RomM
-3. Compares local and remote save files
-4. Syncs saves based on which version is newer
-
-### Sync Logic
-
-For each mapped ROM file found on your device, Grout determines what action to take:
-
-**When RomM has no save:**
-
-- Your local save, if present, is uploaded to RomM (with timestamp appended to filename)
-
-**When you have no local save:**
-
-- RomM's save, if present, is downloaded to your device
-
-**When both exist:**
-
-- The newer save (based on last modified time) determines the action.
-- If the local save is newer, it is uploaded to RomM with the last modified timestamp appended to the filename
-- If the RomM save is newer
-    - The current local save is backed up to `.backup/` within the platform's save directory
-    - The RomM save is downloaded to your device
-
-**When there's no matching ROM in RomM:**
-
-- The save file is reported as "unmatched" in the sync results
-
-### Sync Results
-
 ![Grout preview, sync summary](../.github/resources/user_guide/sync_summary.png "Grout preview, sync summary")
 
-After syncing, you'll see a summary showing:
+**Quick Overview:**
 
-- Downloaded saves (from RomM to device)
-- Uploaded saves (from device to RomM)
-- Unmatched saves (local saves without corresponding ROMs in RomM)
-- Any errors that occurred
+- **Manual Mode** - Press `Y` from the main menu to sync on demand
+- **Automatic Mode** - Syncs in the background when Grout launches
 
-### Important Notes
+Save Sync compares your local saves with RomM and transfers whichever version is newer. Local saves are backed up before
+being overwritten.
 
-- **Save files only:** This works with save files, **NOT** save states
-- **Save states conflict:** If you use save states with autoload enabled, disable autoload or delete the state after
-  downloading a save, otherwise the emulator will load the state instead
-- **User-specific:** Saves are tied to your RomM user account – keep this in mind if you share your RomM account
+> [!WARNING]
+> Save Sync works with save files only, **NOT** save states. If you use save states with autoload, the emulator may load
+> the state instead of your synced save.
+
+For complete documentation including sync logic, per-game settings, and troubleshooting, see the *
+*[Save Sync Guide](SAVE_SYNC.md)**.
 
 ---
 

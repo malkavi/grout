@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"grout/sync"
 	"path/filepath"
+	"strings"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/i18n"
@@ -12,7 +13,7 @@ import (
 )
 
 type syncReportInput struct {
-	Results   []sync.SyncResult
+	Results   []sync.Result
 	Unmatched []sync.UnmatchedSave
 }
 
@@ -24,7 +25,7 @@ func newSyncReportScreen() *SyncReportScreen {
 	return &SyncReportScreen{}
 }
 
-func (s *SyncReportScreen) draw(input syncReportInput) (ScreenResult[syncReportOutput], error) {
+func (s *SyncReportScreen) draw(input syncReportInput) (syncReportOutput, error) {
 	logger := gaba.GetLogger()
 	output := syncReportOutput{}
 
@@ -41,20 +42,20 @@ func (s *SyncReportScreen) draw(input syncReportInput) (ScreenResult[syncReportO
 
 	if err != nil {
 		if errors.Is(err, gaba.ErrCancelled) {
-			return back(output), nil
+			return output, nil
 		}
 		logger.Error("Detail screen error", "error", err)
-		return withCode(output, gaba.ExitCodeError), err
+		return output, err
 	}
 
 	if result.Action == gaba.DetailActionCancelled {
-		return back(output), nil
+		return output, nil
 	}
 
-	return success(output), nil
+	return output, nil
 }
 
-func (s *SyncReportScreen) buildSections(results []sync.SyncResult, unmatched []sync.UnmatchedSave) []gaba.Section {
+func (s *SyncReportScreen) buildSections(results []sync.Result, unmatched []sync.UnmatchedSave) []gaba.Section {
 	logger := gaba.GetLogger()
 	logger.Debug("Building sync report", "totalResults", len(results), "unmatched", len(unmatched))
 
@@ -129,15 +130,11 @@ func (s *SyncReportScreen) buildSections(results []sync.SyncResult, unmatched []
 				if uploadedFiles != "" {
 					uploadedFiles += "\n"
 				}
-				displayName := r.RomDisplayName
+				// Use save file name (GameName) for uploads - shows user's filename like "Pokemon Red Nuzlocke"
+				displayName := r.GameName
 				if displayName == "" {
-					displayName = filepath.Base(r.FilePath)
+					displayName = strings.TrimSuffix(filepath.Base(r.FilePath), filepath.Ext(r.FilePath))
 				}
-				logger.Debug("Upload result for report",
-					"gameName", r.GameName,
-					"romDisplayName", r.RomDisplayName,
-					"filePath", r.FilePath,
-					"displayName", displayName)
 				uploadedFiles += displayName
 			}
 		}
@@ -172,7 +169,7 @@ func (s *SyncReportScreen) buildSections(results []sync.SyncResult, unmatched []
 			if unmatchedText != "" {
 				unmatchedText += "\n"
 			}
-			unmatchedText += i18n.Localize(&goi18n.Message{ID: "save_sync_rom_not_found", Other: "{{.Name}} (ROM not found in RomM)"}, map[string]interface{}{"Name": filepath.Base(u.SavePath)})
+			unmatchedText += i18n.Localize(&goi18n.Message{ID: "save_sync_rom_not_found", Other: "{{.Name}} (Not found in RomM)"}, map[string]interface{}{"Name": filepath.Base(u.SavePath)})
 		}
 		sections = append(sections, gaba.NewDescriptionSection(i18n.Localize(&goi18n.Message{ID: "save_sync_unmatched_saves", Other: "Unmatched Saves"}, nil), unmatchedText))
 	}

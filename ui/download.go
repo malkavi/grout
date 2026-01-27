@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"grout/cfw"
@@ -26,16 +27,17 @@ import (
 	"go.uber.org/atomic"
 )
 
-type downloadInput struct {
-	Config        internal.Config
-	Host          romm.Host
-	Platform      romm.Platform
-	SelectedGames []romm.Rom
-	AllGames      []romm.Rom
-	SearchFilter  string
+type DownloadInput struct {
+	Config         internal.Config
+	Host           romm.Host
+	Platform       romm.Platform
+	SelectedGames  []romm.Rom
+	AllGames       []romm.Rom
+	SearchFilter   string
+	SelectedFileID int
 }
 
-type downloadOutput struct {
+type DownloadOutput struct {
 	DownloadedGames []romm.Rom
 	Platform        romm.Platform
 	AllGames        []romm.Rom
@@ -54,42 +56,43 @@ func NewDownloadScreen() *DownloadScreen {
 	return &DownloadScreen{}
 }
 
-func (s *DownloadScreen) Execute(config internal.Config, host romm.Host, platform romm.Platform, selectedGames []romm.Rom, allGames []romm.Rom, searchFilter string) downloadOutput {
-	result, err := s.draw(downloadInput{
-		Config:        config,
-		Host:          host,
-		Platform:      platform,
-		SelectedGames: selectedGames,
-		AllGames:      allGames,
-		SearchFilter:  searchFilter,
+func (s *DownloadScreen) Execute(config internal.Config, host romm.Host, platform romm.Platform, selectedGames []romm.Rom, allGames []romm.Rom, searchFilter string, selectedFileID int) DownloadOutput {
+	result, err := s.draw(DownloadInput{
+		Config:         config,
+		Host:           host,
+		Platform:       platform,
+		SelectedGames:  selectedGames,
+		AllGames:       allGames,
+		SelectedFileID: selectedFileID,
+		SearchFilter:   searchFilter,
 	})
 
 	if err != nil {
 		gaba.GetLogger().Error("Download failed", "error", err)
-		return downloadOutput{
+		return DownloadOutput{
 			AllGames:     allGames,
 			Platform:     platform,
 			SearchFilter: searchFilter,
 		}
 	}
 
-	if result.ExitCode == gaba.ExitCodeSuccess && len(result.Value.DownloadedGames) > 0 {
-		gaba.GetLogger().Debug("Successfully downloaded games", "count", len(result.Value.DownloadedGames))
+	if len(result.DownloadedGames) > 0 {
+		gaba.GetLogger().Debug("Successfully downloaded games", "count", len(result.DownloadedGames))
 	}
 
-	return result.Value
+	return result
 }
 
-func (s *DownloadScreen) draw(input downloadInput) (ScreenResult[downloadOutput], error) {
+func (s *DownloadScreen) draw(input DownloadInput) (DownloadOutput, error) {
 	logger := gaba.GetLogger()
 
-	output := downloadOutput{
+	output := DownloadOutput{
 		Platform:     input.Platform,
 		AllGames:     input.AllGames,
 		SearchFilter: input.SearchFilter,
 	}
 
-	downloads, artDownloads := s.buildDownloads(input.Config, input.Host, input.Platform, input.SelectedGames)
+	downloads, artDownloads := s.buildDownloads(input.Config, input.Host, input.Platform, input.SelectedGames, input.SelectedFileID)
 
 	headers := make(map[string]string)
 	headers["Authorization"] = input.Host.BasicAuthHeader()
@@ -101,7 +104,8 @@ func (s *DownloadScreen) draw(input downloadInput) (ScreenResult[downloadOutput]
 	logger.Debug("Starting ROM download", "downloads", downloads)
 
 	res, err := gaba.DownloadManager(downloads, headers, gaba.DownloadManagerOptions{
-		AutoContinue: input.Config.DownloadArt,
+		AutoContinueOnComplete: input.Config.DownloadArt,
+		SkipSSLVerification:    input.Host.InsecureSkipVerify,
 	})
 	if err != nil {
 		logger.Error("Error downloading", "error", err)
@@ -113,7 +117,7 @@ func (s *DownloadScreen) draw(input downloadInput) (ScreenResult[downloadOutput]
 			}
 		}
 
-		return withCode(output, gaba.ExitCodeError), err
+		return output, err
 	}
 
 	logger.Debug("Download results", "completed", len(res.Completed), "failed", len(res.Failed))
@@ -134,7 +138,7 @@ func (s *DownloadScreen) draw(input downloadInput) (ScreenResult[downloadOutput]
 	}
 
 	if len(res.Completed) == 0 {
-		return withCode(output, gaba.ExitCodeError), nil
+		return output, nil
 	}
 
 	for _, g := range input.SelectedGames {
@@ -223,37 +227,47 @@ func (s *DownloadScreen) draw(input downloadInput) (ScreenResult[downloadOutput]
 				}
 			}
 
-			if len(g.Files) > 0 && strings.ToLower(filepath.Ext(g.Files[0].FileName)) == ".zip" {
-				romDirectory := input.Config.GetPlatformRomDirectory(gamePlatform)
-				zipPath := filepath.Join(romDirectory, g.Files[0].FileName)
+			if len(g.Files) > 0 {
+				ext := strings.ToLower(filepath.Ext(g.Files[0].FileName))
+				if ext == ".zip" || ext == ".7z" {
+					romDirectory := input.Config.GetPlatformRomDirectory(gamePlatform)
+					archivePath := filepath.Join(romDirectory, g.Files[0].FileName)
 
-				progress := &atomic.Float64{}
-				_, err := gaba.ProcessMessage(
-					i18n.Localize(&goi18n.Message{ID: "download_extracting", Other: "Extracting {{.Name}}..."}, map[string]interface{}{"Name": g.Name}),
-					gaba.ProcessMessageOptions{
-						ShowThemeBackground: true,
-						ShowProgressBar:     true,
-						Progress:            progress,
-					},
-					func() (interface{}, error) {
-						logger.Debug("Extracting single-file ROM", "game", g.Name, "file", zipPath)
+					progress := &atomic.Float64{}
+					_, err := gaba.ProcessMessage(
+						i18n.Localize(&goi18n.Message{ID: "download_extracting", Other: "Extracting {{.Name}}..."}, map[string]interface{}{"Name": g.Name}),
+						gaba.ProcessMessageOptions{
+							ShowThemeBackground: true,
+							ShowProgressBar:     true,
+							Progress:            progress,
+						},
+						func() (interface{}, error) {
+							logger.Debug("Extracting single-file ROM", "game", g.Name, "file", archivePath)
 
-						if err := fileutil.Unzip(zipPath, romDirectory, progress); err != nil {
-							logger.Error("Failed to extract single-file ROM", "game", g.Name, "error", err)
-							return nil, err
-						}
+							var extractErr error
+							if ext == ".7z" {
+								extractErr = fileutil.Un7zip(archivePath, romDirectory, progress)
+							} else {
+								extractErr = fileutil.Unzip(archivePath, romDirectory, progress)
+							}
 
-						if err := os.Remove(zipPath); err != nil {
-							logger.Warn("Failed to remove zip file after extraction", "path", zipPath, "error", err)
-						}
+							if extractErr != nil {
+								logger.Error("Failed to extract single-file ROM", "game", g.Name, "error", extractErr)
+								return nil, extractErr
+							}
 
-						return nil, nil
-					},
-				)
+							if err := os.Remove(archivePath); err != nil {
+								logger.Warn("Failed to remove archive file after extraction", "path", archivePath, "error", err)
+							}
 
-				if err != nil {
-					logger.Warn("Failed to extract ROM, keeping zip file", "game", g.Name)
-					continue
+							return nil, nil
+						},
+					)
+
+					if err != nil {
+						logger.Warn("Failed to extract ROM, keeping archive file", "game", g.Name)
+						continue
+					}
 				}
 			}
 		}
@@ -280,7 +294,7 @@ func (s *DownloadScreen) draw(input downloadInput) (ScreenResult[downloadOutput]
 				Progress:            progress,
 			},
 			func() (interface{}, error) {
-				s.downloadArt(artDownloads, downloadedGames, headers, progress)
+				s.downloadArt(artDownloads, downloadedGames, headers, progress, input.Host.InsecureSkipVerify)
 				return nil, nil
 			},
 		)
@@ -291,10 +305,10 @@ func (s *DownloadScreen) draw(input downloadInput) (ScreenResult[downloadOutput]
 	}
 
 	output.DownloadedGames = downloadedGames
-	return success(output), nil
+	return output, nil
 }
 
-func (s *DownloadScreen) buildDownloads(config internal.Config, host romm.Host, platform romm.Platform, games []romm.Rom) ([]gaba.Download, []artDownload) {
+func (s *DownloadScreen) buildDownloads(config internal.Config, host romm.Host, platform romm.Platform, games []romm.Rom, selectedFileID int) ([]gaba.Download, []artDownload) {
 	downloads := make([]gaba.Download, 0, len(games))
 	artDownloads := make([]artDownload, 0, len(games))
 
@@ -318,8 +332,18 @@ func (s *DownloadScreen) buildDownloads(config internal.Config, host romm.Host, 
 			downloadLocation = filepath.Join(tmpDir, fmt.Sprintf("grout_multirom_%d.zip", g.ID))
 			sourceURL, _ = url.JoinPath(host.URL(), "/api/roms/", strconv.Itoa(g.ID), "content", g.FsName)
 		} else {
-			downloadLocation = filepath.Join(romDirectory, g.Files[0].FileName)
-			sourceURL, _ = url.JoinPath(host.URL(), "/api/roms/", strconv.Itoa(g.ID), "content", g.Files[0].FileName)
+			// Find the file to download - use selected file if specified, otherwise first file
+			fileToDownload := g.Files[0]
+			if selectedFileID > 0 {
+				for _, f := range g.Files {
+					if f.ID == selectedFileID {
+						fileToDownload = f
+						break
+					}
+				}
+			}
+			downloadLocation = filepath.Join(romDirectory, fileToDownload.FileName)
+			sourceURL, _ = url.JoinPath(host.URL(), "/api/roms/", strconv.Itoa(g.ID), "content", fileToDownload.FileName)
 		}
 
 		downloads = append(downloads, gaba.Download{
@@ -357,7 +381,7 @@ func (s *DownloadScreen) buildDownloads(config internal.Config, host romm.Host, 
 	return downloads, artDownloads
 }
 
-func (s *DownloadScreen) downloadArt(artDownloads []artDownload, downloadedGames []romm.Rom, headers map[string]string, progress *atomic.Float64) {
+func (s *DownloadScreen) downloadArt(artDownloads []artDownload, downloadedGames []romm.Rom, headers map[string]string, progress *atomic.Float64, insecureSkipVerify bool) {
 	logger := gaba.GetLogger()
 
 	downloadedGameNames := make(map[string]bool)
@@ -408,6 +432,11 @@ func (s *DownloadScreen) downloadArt(artDownloads []artDownload, downloadedGames
 		}
 
 		client := &http.Client{Timeout: romm.DefaultClientTimeout}
+		if insecureSkipVerify {
+			client.Transport = &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			}
+		}
 		resp, err := client.Do(req)
 		if err != nil {
 			logger.Warn("Failed to download art", "game", art.GameName, "url", art.URL, "error", err)

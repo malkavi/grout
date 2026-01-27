@@ -10,6 +10,10 @@ other = "%d個のゲームのアートワークをダウンロードしますか
 hash = "sha1-869ec904d8bde854dcf9489791abb3eef66818f9"
 other = "%d個のアートワーク画像のダウンロードに失敗しました。"
 
+[artwork_sync_no_artwork]
+hash = "sha1-b6f701dde7bd2fbefb5a16031b840ce953d89d98"
+other = "ダウンロード可能なアートワークがありません。"
+
 [artwork_sync_no_platforms]
 hash = "sha1-b9b27ff510e8ba88853b517993776a9b867c1e40"
 other = "ディレクトリマッピングのあるプラットフォームが見つかりません。"
@@ -25,10 +29,6 @@ other = "プラットフォームをスキャン中 %d/%d: %s..."
 [artwork_sync_up_to_date]
 hash = "sha1-ef880c0f2577f0a9fb8ca21f2ed3710e5aef1376"
 other = "すべてのアートワークは既にキャッシュされています！"
-
-[artwork_sync_no_artwork]
-hash = "sha1-447a12c1a94ffbcefafc528ff6de40d16b247a7d"
-other = "ダウンロード可能なアートワークがありません。"
 
 [auto_sync_waiting]
 hash = "sha1-c005f14e70da37982e2152d3af9d29a58ea8f01c"
@@ -99,6 +99,7 @@ hash = "sha1-a479c9c34e878d07b4d67a73a48f432ad7dc53c8"
 other = "ダウンロード"
 
 [button_exit]
+hash = "sha1-f83b6fe3aebf13744e866019556d9129cd7a55be"
 other = "終了"
 
 [button_help]
@@ -125,9 +126,9 @@ other = "オプション"
 hash = "sha1-1a2285d8881f226e13430515a9dd2b9fb6294200"
 other = "終了"
 
-[button_save]
-hash = "sha1-efc007a393f66cdb14d57d385822a3d9e36ef873"
-other = "保存"
+[button_redownload]
+hash = "sha1-3d0a3c6e0fd5672b0e3e33bbef33dff73a5f0a8c"
+other = "再ダウンロード"
 
 [button_save_sync]
 hash = "sha1-905f63092ff26517a7aa8083857b3c8af9707002"
@@ -145,16 +146,25 @@ other = "選択"
 hash = "sha1-c7f73bb54d928922c3838bb789ee9fb8a5b1eb37"
 other = "設定"
 
+[cache_building]
+hash = "sha1-5c797965ec584713643883f81dd4a7b4c965791e"
+other = "キャッシュを構築中..."
+
 [cache_collections]
+hash = "sha1-5359505ab9b75bcd412f099c13ee7d4eb5b0a509"
 other = "コレクションキャッシュ"
 
 [cache_games]
 hash = "sha1-1e7dbd606b8bad53986d06fd58c9d73dcad67d64"
 other = "ゲームキャッシュ"
 
+[collection_cache_missing]
+hash = "sha1-fb424e624d844a5fbbb880c35b7d2867f03333e6"
+other = "コレクションがキャッシュされていません。\nキャッシュを更新してください。"
+
 [collection_platform_no_mapped]
-hash = "sha1-423fa43d1088dbfa790bd41466ee1193947902cd"
-other = "{{.Name}}にマッピングされたゲームのある\nプラットフォームがありません"
+hash = "sha1-2f8be3f019d99fb303f563b5f4c39c5389e14932"
+other = "{{.Name}}にマッピングされたゲームのあるプラットフォームがありません"
 
 [collection_platform_title]
 hash = "sha1-25fc1e1fe85a7d0bdd754ac216606e704ee2dd9a"
@@ -221,8 +231,36 @@ hash = "sha1-aab54f8a5ad80b3bc4ea366c6795ff53b769f785"
 other = "{{.Platform}}エミュレータを選択"
 
 [error_loading_platforms]
-hash = "sha1-696ffca4ce38ce525995b5980fc4dab24fb3985c"
-other = "RomMからプラットフォームを読み込めませんでした！\n接続を確認して再試行してください。"
+hash = "sha1-0312ebb4e268eed54feef24bdda148a22bfd8ed9"
+other = "プラットフォームの読み込みエラー！\n詳細はログを確認してください。"
+
+[fuzzy_match_confirm]
+hash = "sha1-77122a913a2f76501855b92dc1c35308cc729289"
+other = "同じゲームですか？"
+
+[fuzzy_match_local]
+hash = "sha1-94b9131801a4d2a854a3530eda7f576639300144"
+other = "ローカル: \"{{.Name}}\""
+
+[fuzzy_match_no]
+hash = "sha1-816c52fd2bdd94a63cd0944823a6c0aa9384c103"
+other = "いいえ"
+
+[fuzzy_match_remote]
+hash = "sha1-150d67dd65dc9d6a76eae518aa00a2c5681571f3"
+other = "一致: \"{{.Name}}\""
+
+[fuzzy_match_similarity]
+hash = "sha1-e6dc382e0ab0be3cc930a5fdb65fcf8ba40868c9"
+other = "類似度: {{.Percent}}%"
+
+[fuzzy_match_title]
+hash = "sha1-3fb05a93ec92a8adb27247563abc21953352f133"
+other = "一致候補が見つかりました"
+
+[fuzzy_match_yes]
+hash = "sha1-5397e0583f14f6c88de06b1ef28f460a1fb5b0ae"
+other = "はい"
 
 [game_details_average_rating]
 hash = "sha1-3843a4b5750d289e79e106bd3df7540a1a04a1fc"
@@ -235,6 +273,10 @@ other = "開発会社"
 [game_details_file_size]
 hash = "sha1-0fce4167b52045abc782cbeb524a9ba741979663"
 other = "ファイルサイズ"
+
+[game_details_file_version]
+hash = "sha1-2acb3a5112a48467b62c3f3410fdc82c8da28655"
+other = "ファイルバージョン"
 
 [game_details_game]
 hash = "sha1-e3e82846c32567811615378f30240185871e08e5"
@@ -289,19 +331,19 @@ hash = "sha1-211fbb3fb7df0619367d403f5cef6534484992d2"
 other = "{{.Name}}内のゲームはプラットフォームマッピングに一致しません"
 
 [games_list_help_body]
-hash = "sha1-8d39456a7cb78ea5968d93177012f4eb1b328ef6"
-other = "A - ゲームを選択\nB - 前の画面に戻る\nX - 名前でゲームを検索\nSelect - 複数選択モードを切替\n  複数選択モード中:\n  - 十字キーでナビゲート\n  - Aで選択を切替\n  - L1で全て選択解除\n  - R1で全て選択\n  - Startで選択を確定\nMenu - このヘルプ画面を表示\n十字キー - ゲームリストをナビゲート"
+hash = "sha1-57d918bd5c65068f774a2584e0eaa9989d5d9113"
+other = "A - ゲームを選択\nB - 前の画面に戻る\nX - ゲームを名前で検索\nSelect - 複数選択モードを切替\n  複数選択モード:\n  - D-Padでナビゲート\n  - Aで選択を切替\n  - L1で全て選択解除\n  - R1で全て選択\n  - Startで確定\nMenu - このヘルプを表示\nD-Pad - ゲームリストをナビゲート"
 
 [games_list_help_title]
 hash = "sha1-77fdd51f105473d648b8c22b6897d0f12d0dd360"
 other = "ゲームリストのヘルプ"
 
 [games_list_load_error]
-hash = "sha1-a1b2c3d4e5f6"
+hash = "sha1-bbcf22625a6f65a05bebab886c05c9ddc6b985da"
 other = "ゲームの読み込みに失敗しました。\n後でもう一度お試しください。"
 
 [games_list_load_timeout]
-hash = "sha1-a1b2c3d4e5f7"
+hash = "sha1-fdcd33dfddf149f57480930de7859c965c0e8d46"
 other = "接続がタイムアウトしました！\nネットワーク接続を確認してください。"
 
 [games_list_loading]
@@ -313,11 +355,11 @@ hash = "sha1-0fa32da01f61aa6d55050e2fbc69fdda1a5188a4"
 other = "{{.Name}}のゲームが見つかりません"
 
 [games_list_no_results]
-hash = "sha1-d6b79dc27aeaf5f940fa1af5834113549f8a19c8"
-other = "「{{.Query}}」の検索結果がありません"
+hash = "sha1-33b31728811c722cb2e1cdeee6018cfe4f30cabf"
+other = "\"{{.Query}}\"の結果がありません"
 
 [games_list_search_prefix]
-hash = "sha1-047722fea7e6f35823db2619de64d92643fd69f0"
+hash = "sha1-575fb9faf8f592f26ef5c5958439f9638f92c329"
 other = "[検索: \"{{.Query}}\"]"
 
 [help_exit_text]
@@ -353,17 +395,15 @@ hash = "sha1-bd604d99e75e45d38bc7ac8fc714cde0097d901f"
 other = "デバッグ"
 
 [log_level_error]
+hash = "sha1-abc123"
+other = "Error"
+
+[log_level_info]
 hash = "sha1-7f2f6a15cf8da2b27e5a4af47b58e7ad71c0b3d9"
 other = "エラー"
 
-[option_disabled]
-other = "無効"
-
-[option_enabled]
-other = "有効"
-
 [login_error_connection_refused]
-hash = "sha1-90890854b1679ae152ec1b4316cde81c1c7bdcff"
+hash = "sha1-23e5a20e58a1f065f556bbc99f20bb9037adbe70"
 other = "ホストに接続できませんでした！\nホスト名とポートが正しいか確認してください。"
 
 [login_error_credentials]
@@ -371,35 +411,35 @@ hash = "sha1-78649d0d74c900b26a3b9057e39001b900888517"
 other = "ユーザー名またはパスワードが無効です。"
 
 [login_error_forbidden]
-hash = "sha1-350737ac082a81d55a32ac76b2c7d62d0a1aec7a"
-other = "アクセスが拒否されました！\nユーザー名/パスワードを確認し、httpとhttpsを切り替えてみてください。"
+hash = "sha1-8ceb3996ff12ad79926d6f2d04195c69d7041778"
+other = "アクセス拒否！\nユーザー名/パスワードを確認し、httpとhttpsを切り替えてみてください。"
 
 [login_error_invalid_hostname]
-hash = "sha1-c9523f842eedab0b7e1673a73443a7cb706658b5"
+hash = "sha1-5b400e2f88225e333d6be2b1213d6bea077340d3"
 other = "ホスト名を解決できませんでした！\nホスト名が正しいか確認してください。"
 
 [login_error_server]
-hash = "sha1-5dcef0d13da2f4113b8d5daba708b5721974bd1c"
+hash = "sha1-1cda2ac7b6ff3b6e80528d50678fa0fcd2059bb5"
 other = "RomMサーバーエラー！\nRomMサーバーのログを確認してください。"
 
 [login_error_timeout]
-hash = "sha1-0b717f8ef1f390d2512a9c78d370477dc50ea685"
-other = "接続がタイムアウトしました！\nネットワーク接続とホストにアクセス可能か確認してください。"
+hash = "sha1-7d3c14a7c6fd87d206f7e67a8bcdf0e1f6aad9b8"
+other = "接続がタイムアウトしました！\nネットワーク接続とホストが到達可能か確認してください。"
 
 [login_error_unexpected]
-hash = "sha1-756cd066bad10bfb2e3bd18b325ab4d5f88557ea"
+hash = "sha1-ace03493e157dc23f826e53e42c88f314817969c"
 other = "予期しないエラーが発生しました！\n詳細はログを確認してください。"
 
 [login_error_use_http]
-hash = "sha1-4df7d0721bbfb8140817549c5368fae43071717e"
-other = "プロトコルエラー！\nHTTPSの代わりにHTTPを使用してください。"
+hash = "sha1-593a941bb52f07818d18c80753458f0098f8b127"
+other = "プロトコルエラー！\nHTTPSではなくHTTPを使用してください。"
 
 [login_error_use_https]
-hash = "sha1-3a409069c869572d6ebf56926347c99bae65f535"
-other = "プロトコルエラー！\nHTTPの代わりにHTTPSを使用してください。"
+hash = "sha1-ba5d2ee917a10fd2a4eb4cebc6cd8e2f51deb7ff"
+other = "プロトコルエラー！\nHTTPではなくHTTPSを使用してください。"
 
 [login_error_wrong_protocol]
-hash = "sha1-3ed933261b35ac3c855bec1f442251ff28f1c140"
+hash = "sha1-29077cfd4a67af5be709fcec73258057c2992e77"
 other = "プロトコルエラー！\nhttpとhttpsを切り替えてみてください。"
 
 [login_hostname]
@@ -426,6 +466,18 @@ other = "HTTP"
 hash = "sha1-f52698c28f0d2036450e02a85451ee4f5be02442"
 other = "HTTPS"
 
+[login_ssl_certificates]
+hash = "sha1-167bd6182100989e39aab5fcf981d035ea73dcc7"
+other = "SSL証明書"
+
+[login_ssl_skip]
+hash = "sha1-96e8ece94d9834d9594af5d4a7c8eebfdcc9dc19"
+other = "検証をスキップ"
+
+[login_ssl_verify]
+hash = "sha1-dda6ac27b9d3b234a68e8b2c412e90ab5a03a4e1"
+other = "検証する"
+
 [login_title]
 hash = "sha1-5fa984fa2afc3712f99f20f5947ada0de5d3044f"
 other = "RomMにログイン"
@@ -441,6 +493,14 @@ other = "接続を検証中..."
 [logout_confirm_message]
 hash = "sha1-fc8c20806e08254d4bddd38e5e7d60c1bd01e564"
 other = "ログアウトしますか？"
+
+[option_disabled]
+hash = "sha1-f4f4473df8cb59f0a369aebee3d1509adc0151c6"
+other = "無効"
+
+[option_enabled]
+hash = "sha1-df174a3f2faa31814e06540acda7af8825403fac"
+other = "有効"
 
 [platform_mapping_create]
 hash = "sha1-d4f6486d8141fda18c9d6fc9d7c7680c3c385efa"
@@ -461,6 +521,18 @@ other = "ROMディレクトリマッピング"
 [platform_selection_collections]
 hash = "sha1-4bbb632f02fd69807705c0179999c17d35c93b0f"
 other = "コレクション"
+
+[rebuild_cache_title]
+hash = "sha1-820f6b0deff7fdc081825ab624ce289175235630"
+other = "キャッシュを更新"
+
+[release_beta]
+hash = "sha1-f03b60f7e52b7ce49ed1e4f9fa511c452a2185bb"
+other = "ベータ"
+
+[release_stable]
+hash = "sha1-d96e5b2dd07c1733b2b013bd82922c22baade37d"
+other = "安定版"
 
 [save_sync_downloaded]
 hash = "sha1-c6197029254600e042230dbe5880e70c4b842e07"
@@ -483,14 +555,15 @@ hash = "sha1-e3de5ab0ca4c69dbf00e86d2558843e8d806bb49"
 other = "オフ"
 
 [save_sync_rom_not_found]
-hash = "sha1-521ae5ed1a41ca10426f850f1c029b77ba1e075d"
-other = "{{.Name}}（RomMでROMが見つかりません）"
+hash = "sha1-87d49e3909864beb606127edfc23062674d52829"
+other = "{{.Name}} (RomMに見つかりません)"
 
 [save_sync_scanning]
 hash = "sha1-6e0e349d1314bd7909fa32d8c46698b412601d19"
 other = "セーブファイルをスキャン中..."
 
 [save_sync_scanning_roms]
+hash = "sha1-d3cb8b33b33384904f67061d62a9e3c5e05a4580"
 other = "ROMをスキャン中..."
 
 [save_sync_settings_title]
@@ -509,6 +582,10 @@ other = "セーブ同期サマリー"
 hash = "sha1-12b71c3e0fe5f7c0b8d17cc03186e281412da4a8"
 other = "サマリー"
 
+[save_sync_syncing]
+hash = "sha1-cf3c39aa4d28234527fd8d9966cae4bbbccfacb3"
+other = "セーブデータを同期中..."
+
 [save_sync_total_processed]
 hash = "sha1-d5593d165ab03cc17bbadfc9f9d9ed9a93198cb5"
 other = "処理合計"
@@ -521,12 +598,9 @@ other = "不明なエラー"
 hash = "sha1-11ffd636fd7a3bf88d84e08f65c2a6cd05cfc2b2"
 other = "未マッチのセーブ"
 
-[save_sync_syncing]
-other = "セーブデータを同期中..."
-
 [save_sync_up_to_date]
-hash = "sha1-73e9f0f39987b22aebf571b4f039ecde681e9434"
-other = "すべて最新です！\nゲームを楽しんでください！"
+hash = "sha1-6959827aa1b48eb9297c4e5fca4133d1d8dd6970"
+other = "すべて最新です！\nゲームをプレイしましょう！"
 
 [save_sync_uploaded]
 hash = "sha1-80c494898ac90610a67c95502d2a56b4af4963f1"
@@ -552,6 +626,18 @@ other = "コレクション表示"
 hash = "sha1-2b9dc92af51847dda7770b3092771ac0f411e9b5"
 other = "コレクション"
 
+[settings_compressed_downloads]
+hash = "sha1-13030966c5d891077dff211ba72997bbdc1fc031"
+other = "圧縮ダウンロード"
+
+[settings_compressed_downloads_do_nothing]
+hash = "sha1-57e2785737374cab8197fe64ac4c90da88045788"
+other = "何もしない"
+
+[settings_compressed_downloads_uncompress]
+hash = "sha1-83c0d48976f5f137e5bdda9c79782802e08a1394"
+other = "解凍"
+
 [settings_download_art]
 hash = "sha1-8b7f3d97b75d86dad90186e811d3b01b05894107"
 other = "アートワークをダウンロード"
@@ -569,6 +655,7 @@ hash = "sha1-b03742e94a46dd9476e23dd8a3486b38dda3ae3c"
 other = "ディレクトリマッピング"
 
 [settings_general]
+hash = "sha1-9239ee2cda84eca4c3440e2a7b50148af67da3d4"
 other = "一般"
 
 [settings_info]
@@ -576,6 +663,7 @@ hash = "sha1-539fd998d1d49832e77eec5bf350485f054da400"
 other = "Grout情報"
 
 [settings_kid_mode]
+hash = "sha1-64340b431e79134fd3e4d328f76e4af2d51530c1"
 other = "キッズモード"
 
 [settings_language]
@@ -618,6 +706,14 @@ other = "Español"
 hash = "sha1-3831d4e3e5ace348ba6c68e683f7605e4e030a9f"
 other = "ログレベル"
 
+[settings_rebuild_cache]
+hash = "sha1-820f6b0deff7fdc081825ab624ce289175235630"
+other = "キャッシュを更新"
+
+[settings_release_channel]
+hash = "sha1-ddb05bbae80d35657c69e0ff93b186f6c7c92ce2"
+other = "リリースチャンネル"
+
 [settings_save_sync]
 hash = "sha1-3caa02c76bc2b97f136e706433de562fd060f48d"
 other = "セーブ同期"
@@ -639,24 +735,12 @@ hash = "sha1-e952af5b20cf922ecfcf9ce0ab42095e44133b65"
 other = "仮想コレクション"
 
 [settings_sync_artwork]
-hash = "sha1-447a12c1a94ffbcefafc528ff6de40d16b247a7d"
+hash = "sha1-20005772b1c3fee4aaff30697df5b4d236412f3a"
 other = "アートワークを先読み"
 
 [settings_title]
 hash = "sha1-c7f73bb54d928922c3838bb789ee9fb8a5b1eb37"
 other = "設定"
-
-[settings_compressed_downloads]
-hash = "sha1-03440dd031cbd7f822d6eea266c2d490f553f261"
-other = "ZIPダウンロード"
-
-[settings_compressed_downloads_do_nothing]
-hash = "sha1-03440dd031cbd7f822d6eea266c2d490f553f261"
-other = "何もしない"
-
-[settings_compressed_downloads_uncompress]
-hash = "sha1-03440dd031cbd7f822d6eea266c2d490f553f261"
-other = "解凍"
 
 [startup_error_action_exit]
 hash = "sha1-f83b6fe3aebf13744e866019556d9129cd7a55be"
@@ -667,65 +751,32 @@ hash = "sha1-27717695aebe5b809cebefc71a9e38b334c78dfe"
 other = "再接続"
 
 [startup_error_connection_refused]
-hash = "sha1-8b1147d5973a9174cd6bf1f04f773d59b82488c8"
-other = "サーバーに接続できませんでした！\nサーバーがオフラインか、ポートが間違っている可能性があります。"
+hash = "sha1-4ecbf8e5c1fc35f8fc7cf834141626caa1bc9313"
+other = "RomMに接続できませんでした！\nサーバーが実行中か確認してください。"
 
 [startup_error_credentials]
-hash = "sha1-290a896ba5652c3ed7283a0f5a47c0bb95029e48"
-other = "認証に失敗しました！\nサーバー上でユーザー名またはパスワードが変更された可能性があります。"
+hash = "sha1-d317b91a53c71f415dfc456ce167540ede7cf245"
+other = "認証情報が無効です！\nユーザー名とパスワードを確認してください。"
 
 [startup_error_forbidden]
-hash = "sha1-18fffabcfc272ab2426603159eac34f272da52ae"
-other = "アクセスが拒否されました！\n資格情報が変更されたか、サーバーが異なるプロトコル（http vs https）を必要としている可能性があります。"
+hash = "sha1-ef2ddf692a2c1fcddb8a521e58378ae5e1b4758a"
+other = "アクセス拒否！\nサーバーの権限を確認してください。"
 
 [startup_error_invalid_hostname]
-hash = "sha1-888a1bad67fbd3f52415762c23fe0fbe53dcfe9e"
-other = "ホスト名を解決できませんでした！\n設定されたサーバーアドレスが見つかりません。"
+hash = "sha1-81f43aeacb5093a191340a52b378c5bfa1229bf1"
+other = "ホスト名を解決できませんでした！\nサーバー設定を確認してください。"
 
 [startup_error_server]
-hash = "sha1-5dcef0d13da2f4113b8d5daba708b5721974bd1c"
-other = "RomMサーバーエラー！\nサーバーに問題が発生しています。サーバーログを確認してください。"
+hash = "sha1-1cda2ac7b6ff3b6e80528d50678fa0fcd2059bb5"
+other = "RomMサーバーエラー！\nRomMサーバーのログを確認してください。"
 
 [startup_error_timeout]
-hash = "sha1-e1f05aece6a0cfd92f1ecd8388f5b8edb248e08a"
-other = "接続がタイムアウトしました！\nサーバーが応答しません。ネットワーク接続を確認してください。"
+hash = "sha1-fdcd33dfddf149f57480930de7859c965c0e8d46"
+other = "接続がタイムアウトしました！\nネットワーク接続を確認してください。"
 
 [startup_error_wrong_protocol]
-hash = "sha1-b886665184599b10c9b185f86d5749418b473435"
-other = "プロトコルエラー！\nサーバーはhttpsの代わりにhttpを必要としているかもしれません（またはその逆）。"
-
-[update_available]
-other = "アップデートあり: {{.Version}}"
-
-[update_check_for_updates]
-other = "アップデートを確認"
-
-[update_checking]
-other = "アップデートを確認中..."
-
-[update_complete]
-other = "アップデート完了！Groutを終了します。"
-
-[update_current_version]
-other = "現在: {{.Version}}"
-
-[update_download]
-other = "ダウンロードして更新"
-
-[update_downloading]
-other = "アップデートをダウンロード中..."
-
-[update_failed]
-other = "アップデート失敗: {{.Error}}"
-
-[update_new_version]
-other = "最新: {{.Version}}"
-
-[update_size]
-other = "サイズ: {{.Size}}"
-
-[update_up_to_date]
-other = "最新バージョンです ({{.Version}})"
+hash = "sha1-7c33b76e305eaf2db987d02472b4e0f2e4d896f8"
+other = "プロトコルエラー！\nサーバー設定を確認してください。"
 
 [time_105_minutes]
 hash = "sha1-18bf92f611e5f677d486ce65e647fada44f076ae"
@@ -750,6 +801,18 @@ other = "15秒"
 [time_180_seconds]
 hash = "sha1-fed010e9d942a4069ccbe7da3d8830fb1f128aa9"
 other = "180秒"
+
+[time_1_day_ago]
+hash = "sha1-27bb80cd0b24b9f1ce4892b99f3bba9dadc76fa1"
+other = "1日前"
+
+[time_1_hour_ago]
+hash = "sha1-ce72763360d1bbd74d895d07c8d3d794cbdba110"
+other = "1時間前"
+
+[time_1_minute_ago]
+hash = "sha1-68bef516aa8fe6ddcef15a6f751e11384e9a959a"
+other = "1分前"
 
 [time_240_seconds]
 hash = "sha1-df9c666732305363d51ed546af164749de94605b"
@@ -798,3 +861,59 @@ other = "90分"
 [time_90_seconds]
 hash = "sha1-f7ed27e9fabe0615c1cc86f2b93d6b03a38d742e"
 other = "90秒"
+
+[time_days_ago]
+hash = "sha1-e642fccbcc07accdc3f64666fe7acfb9efd1bbb2"
+other = "{{.Count}}日前"
+
+[time_hours_ago]
+hash = "sha1-fe929018a0701062d0e65bb537551f899a82fb7f"
+other = "{{.Count}}時間前"
+
+[time_just_now]
+hash = "sha1-a7f8e7cc0d43d21e5d1a4d0a3b0d5ff66a5da1ed"
+other = "たった今"
+
+[time_minutes_ago]
+hash = "sha1-d97a317f8c80c1d51152cccd31c16dd30b48b3a6"
+other = "{{.Count}}分前"
+
+[update_available]
+hash = "sha1-678c7342e3859f9f76837180ff8b1901d504014d"
+other = "アップデートあり: {{.Version}}"
+
+[update_check_for_updates]
+hash = "sha1-8604ff8e6ae507998b6b132f2010e297ee238e72"
+other = "アップデートを確認"
+
+[update_checking]
+hash = "sha1-549981f05abc0a9dc84195462b13055e0b899db8"
+other = "アップデートを確認中..."
+
+[update_complete]
+hash = "sha1-1c182179f20a66c8b76fd697e9e728d5c70fb9d2"
+other = "アップデート完了！Groutを終了します。"
+
+[update_current_version]
+hash = "sha1-f0584df1dfde2a8f06dfc3175f1da67c25b3a8a4"
+other = "現在: {{.Version}}"
+
+[update_download]
+hash = "sha1-c48e28a8c4804bd9126fd92da26dcaffbefe3f06"
+other = "ダウンロードして更新"
+
+[update_downloading]
+hash = "sha1-097433a5c6393020b3ed7f568c2e5474c55e8a7c"
+other = "アップデートをダウンロード中..."
+
+[update_failed]
+hash = "sha1-3e484d86f29fb89d32950f3422012e397c10182d"
+other = "アップデート失敗: {{.Error}}"
+
+[update_size]
+hash = "sha1-a6e2b7a05400da2046c495c15a900a23bbb37cbc"
+other = "サイズ: {{.Size}}"
+
+[update_up_to_date]
+hash = "sha1-a534c74416c491ff56e75a3335ea2ee9b4e5b4ad"
+other = "最新バージョンです ({{.Version}})"

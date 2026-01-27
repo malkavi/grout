@@ -16,6 +16,42 @@ import (
 
 const backupTimestampFormat = "2006-01-02 15-04-05"
 
+// validSaveExtensions are file extensions recognized as save files
+var validSaveExtensions = map[string]bool{
+	// SRAM saves
+	".srm":  true,
+	".sram": true,
+	".sav":  true,
+	// Save states
+	".state": true,
+	".sta":   true,
+	".ss":    true,
+	".ss0":   true,
+	".ss1":   true,
+	".ss2":   true,
+	".ss3":   true,
+	".ss4":   true,
+	".ss5":   true,
+	".ss6":   true,
+	".ss7":   true,
+	".ss8":   true,
+	".ss9":   true,
+	// EEPROM/Flash/N64
+	".eep": true,
+	".fla": true,
+	".mpk": true,
+	// Memory cards
+	".mcr": true,
+	".mcd": true,
+	".gme": true,
+	".psv": true,
+	".vmp": true,
+	// Real-time clock
+	".rtc": true,
+	// RetroArch
+	".auto": true,
+}
+
 type LocalSave struct {
 	FSSlug       string
 	Path         string
@@ -48,7 +84,12 @@ func ResolveSavePath(fsSlug string, gameID int, config *internal.Config) (string
 	logger.Debug("ResolveSavePath called", "fsSlug", fsSlug, "gameID", gameID)
 	basePath := cfw.BaseSavePath()
 
-	emulatorFolders := cfw.EmulatorFoldersForFSSlug(fsSlug)
+	// Resolve fsSlug through platform binding for CFW lookup
+	effectiveFSSlug := fsSlug
+	if config != nil {
+		effectiveFSSlug = config.ResolveFSSlug(fsSlug)
+	}
+	emulatorFolders := cfw.EmulatorFoldersForFSSlug(effectiveFSSlug)
 
 	if len(emulatorFolders) == 0 {
 		return "", fmt.Errorf("no save folder mapping for fsSlug: %s", fsSlug)
@@ -98,11 +139,17 @@ createDir:
 	return saveDir, nil
 }
 
-func findSaveFiles(fsSlug string) []LocalSave {
+func findSaveFiles(fsSlug string, config *internal.Config) []LocalSave {
 	logger := gaba.GetLogger()
 
 	basePath := cfw.BaseSavePath()
-	emulatorFolders := cfw.EmulatorFoldersForFSSlug(fsSlug)
+
+	// Resolve fsSlug through platform binding for CFW lookup
+	effectiveFSSlug := fsSlug
+	if config != nil {
+		effectiveFSSlug = config.ResolveFSSlug(fsSlug)
+	}
+	emulatorFolders := cfw.EmulatorFoldersForFSSlug(effectiveFSSlug)
 
 	if len(emulatorFolders) == 0 {
 		logger.Debug("No save folder mapping for fsSlug", "fsSlug", fsSlug)
@@ -144,6 +191,12 @@ func findSaveFiles(fsSlug string) []LocalSave {
 			result.saves = make([]LocalSave, 0, len(visibleFiles))
 
 			for _, entry := range visibleFiles {
+				// Only include files with valid save extensions
+				ext := strings.ToLower(filepath.Ext(entry.Name()))
+				if !validSaveExtensions[ext] {
+					continue
+				}
+
 				savePath := filepath.Join(sd, entry.Name())
 
 				fileInfo, err := entry.Info()
