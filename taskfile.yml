@@ -34,7 +34,7 @@ tasks:
 
   package:
     desc: Package for all platforms
-    deps: [package-next, package-muos, package-knulli, package-spruce]
+    deps: [package-next, package-muos, package-knulli, package-spruce, package-rocknix]
     silent: true
 
   package-next:
@@ -74,6 +74,16 @@ tasks:
       - cp scripts/Spruce/* README.md LICENSE build/Spruce/Grout
       - cp build/grout build/Spruce/Grout/grout
       - cp -R build/lib/* build/Spruce/Grout/grout/lib/
+    silent: true
+
+  package-rocknix:
+    desc: Package for ROCKNIX
+    cmds:
+      - rm -rf build/ROCKNIX
+      - mkdir -p build/ROCKNIX/Grout/lib
+      - cp scripts/ROCKNIX/Grout.sh build/ROCKNIX/
+      - cp build/grout scripts/ROCKNIX/logo.png README.md LICENSE build/ROCKNIX/Grout/
+      - cp -R build/lib/* build/ROCKNIX/Grout/lib/
     silent: true
 
   all:

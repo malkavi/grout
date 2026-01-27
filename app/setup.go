@@ -6,6 +6,7 @@ import (
 	"grout/cfw"
 	"grout/cfw/knulli"
 	"grout/cfw/muos"
+	"grout/cfw/rocknix"
 	"grout/internal"
 	"grout/internal/environment"
 	"grout/internal/fileutil"
@@ -85,6 +86,10 @@ func setup() SetupResult {
 
 	if cfw.GetCFW() == cfw.Knulli {
 		knulli.AddToToolsGameList()
+	}
+
+	if cfw.GetCFW() == cfw.ROCKNIX {
+		rocknix.AddToPortsGameList()
 	}
 
 	config, err := internal.LoadConfig()
