@@ -53,7 +53,7 @@ func AddToPortsGameList() {
 		gamelist.PlayersElement:   "1",
 		gamelist.GenreElement:     "Rom Manager",
 		gamelist.PathElement:      "./Grout/Grout.sh",
-		gamelist.DeveloperElement: "Brandon Kowalski",
+		gamelist.DeveloperElement: "The RomM Community",
 	})
 
 	if err := gl.Save(path); err != nil {

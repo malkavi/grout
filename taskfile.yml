@@ -4,6 +4,7 @@ vars:
   IMAGE_NAME: grout-build
   CONTAINER_NAME: grout-extract
   LABEL: app.romm.grout.build=true
+  NO_CACHE: ""
 
 tasks:
 
@@ -11,14 +12,14 @@ tasks:
     desc: Build for ARM64
     cmds:
       - rm -rf build
-      - docker buildx build --platform=linux/arm64 --build-arg GITHUB_ACTIONS=false --label {{.LABEL}} -t {{.IMAGE_NAME}} -f Dockerfile .
+      - docker buildx build {{.NO_CACHE}} --platform=linux/arm64 --build-arg GITHUB_ACTIONS=false --label {{.LABEL}} -t {{.IMAGE_NAME}} -f Dockerfile .
     silent: true
 
   build-local:
     desc: Build for ARM64 using local gabagool workspace
     cmds:
       - rm -rf build
-      - cd .. && docker buildx build --platform=linux/arm64 --build-arg USE_LOCAL_GABAGOOL=true --build-arg GITHUB_ACTIONS=false --label {{.LABEL}} -f grout/Dockerfile -t {{.IMAGE_NAME}} .
+      - cd .. && docker buildx build {{.NO_CACHE}} --platform=linux/arm64 --build-arg USE_LOCAL_GABAGOOL=true --build-arg GITHUB_ACTIONS=false --label {{.LABEL}} -f grout/Dockerfile -t {{.IMAGE_NAME}} .
     silent: true
 
   extract:

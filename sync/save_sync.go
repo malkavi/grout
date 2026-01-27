@@ -184,13 +184,25 @@ func (s *SaveSync) download(host romm.Host, config *internal.Config) (string, er
 		return "", fmt.Errorf("failed to write save file: %w", err)
 	}
 
-	err = os.Chtimes(destPath, s.Remote.UpdatedAt, s.Remote.UpdatedAt)
+	// Use the timestamp embedded in the filename (original save time) for mtime,
+	// falling back to UpdatedAt if not available. This ensures consistency with
+	// the comparison logic which uses the filename timestamp.
+	mtimeToSet := s.Remote.UpdatedAt
+	mtimeSource := "UpdatedAt"
+	if filenameTime, ok := extractSaveTimestamp(s.Remote.FileNameNoExt); ok {
+		mtimeToSet = filenameTime
+		mtimeSource = "filename"
+	}
+
+	err = os.Chtimes(destPath, mtimeToSet, mtimeToSet)
 	if err != nil {
 		return "", fmt.Errorf("failed to update file timestamp: %w", err)
 	}
 
 	logger.Debug("Downloaded save and set timestamp",
 		"path", destPath,
+		"mtimeSet", mtimeToSet.Format(time.RFC3339),
+		"mtimeSource", mtimeSource,
 		"remoteUpdatedAt", s.Remote.UpdatedAt)
 
 	return destPath, nil
@@ -222,8 +234,8 @@ func (s *SaveSync) upload(host romm.Host, config *internal.Config) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("failed to get file info: %w", err)
 	}
-	modTime := fileInfo.ModTime()
-	timestamp := modTime.Format("[2006-01-02 15-04-05-000]")
+	modTime := fileInfo.ModTime().UTC()
+	timestamp := modTime.Format("[2006-01-02 15-04-05-000Z]")
 
 	filename := s.GameBase + " " + timestamp + ext
 	tmp := filepath.Join(fileutil.TempDir(), "uploads", filename)
@@ -250,10 +262,9 @@ func (s *SaveSync) upload(host romm.Host, config *internal.Config) (string, erro
 		"saveID", uploadedSave.ID,
 		"localPath", s.Local.Path)
 
-	err = os.Chtimes(s.Local.Path, uploadedSave.UpdatedAt, uploadedSave.UpdatedAt)
-	if err != nil {
-		return "", fmt.Errorf("failed to update file timestamp: %w", err)
-	}
+	// Don't modify local mtime after upload - the uploaded filename contains
+	// the original mtime, so keeping the local file unchanged ensures the
+	// next sync comparison will match and skip.
 
 	return s.Local.Path, nil
 }

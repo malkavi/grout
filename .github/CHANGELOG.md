@@ -31,6 +31,7 @@
 
 ## Bug Fixes
 
+- Fixed save sync timestamp comparison (#98)
 - Fixed muOS Drastic save directory mappings (#89)
 - Fixed save sync issues on Knulli with reverse platform mapping (#51)
 - Fixed Sega Master System/Mark III custom mapping (#27)
