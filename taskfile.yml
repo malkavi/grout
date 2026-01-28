@@ -4,6 +4,7 @@ vars:
   IMAGE_NAME: grout-build
   CONTAINER_NAME: grout-extract
   LABEL: app.romm.grout.build=true
+  NO_CACHE: ""
 
 tasks:
 
@@ -11,14 +12,14 @@ tasks:
     desc: Build for ARM64
     cmds:
       - rm -rf build
-      - docker buildx build --platform=linux/arm64 --build-arg GITHUB_ACTIONS=false --label {{.LABEL}} -t {{.IMAGE_NAME}} -f Dockerfile .
+      - docker buildx build {{.NO_CACHE}} --platform=linux/arm64 --build-arg GITHUB_ACTIONS=false --label {{.LABEL}} -t {{.IMAGE_NAME}} -f Dockerfile .
     silent: true
 
   build-local:
     desc: Build for ARM64 using local gabagool workspace
     cmds:
       - rm -rf build
-      - cd .. && docker buildx build --platform=linux/arm64 --build-arg USE_LOCAL_GABAGOOL=true --build-arg GITHUB_ACTIONS=false --label {{.LABEL}} -f grout/Dockerfile -t {{.IMAGE_NAME}} .
+      - cd .. && docker buildx build {{.NO_CACHE}} --platform=linux/arm64 --build-arg USE_LOCAL_GABAGOOL=true --build-arg GITHUB_ACTIONS=false --label {{.LABEL}} -f grout/Dockerfile -t {{.IMAGE_NAME}} .
     silent: true
 
   extract:
@@ -34,7 +35,7 @@ tasks:
 
   package:
     desc: Package for all platforms
-    deps: [package-next, package-muos, package-knulli, package-spruce]
+    deps: [package-next, package-muos, package-knulli, package-spruce, package-rocknix]
     silent: true
 
   package-next:
@@ -74,6 +75,16 @@ tasks:
       - cp scripts/Spruce/* README.md LICENSE build/Spruce/Grout
       - cp build/grout build/Spruce/Grout/grout
       - cp -R build/lib/* build/Spruce/Grout/grout/lib/
+    silent: true
+
+  package-rocknix:
+    desc: Package for ROCKNIX
+    cmds:
+      - rm -rf build/ROCKNIX
+      - mkdir -p build/ROCKNIX/Grout/lib
+      - cp scripts/ROCKNIX/Grout.sh build/ROCKNIX/
+      - cp build/grout scripts/ROCKNIX/logo.png README.md LICENSE build/ROCKNIX/Grout/
+      - cp -R build/lib/* build/ROCKNIX/Grout/lib/
     silent: true
 
   all:
@@ -190,6 +201,12 @@ tasks:
       - for img in *.png; do sips -Z 1024 "$img" --out "$img"; done
     silent: true
 
+  gen-platforms:
+    desc: Generate platforms.json from markdown docs
+    cmds:
+      - go run tools/gen-platforms/main.go
+    silent: true
+
   clean:
     desc: Remove build artifacts
     cmds:
@@ -207,4 +224,11 @@ tasks:
   clean-all:
     desc: Remove build artifacts and Docker images
     deps: [clean, docker-clean]
+    silent: true
+
+  hooks-setup:
+    desc: Install git hooks for development
+    cmds:
+      - git config core.hooksPath .githooks
+      - echo "Git hooks installed from .githooks/"
     silent: true

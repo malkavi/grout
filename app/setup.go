@@ -87,6 +87,11 @@ func setup() SetupResult {
 		knulli.AddToToolsGameList()
 	}
 
+	// TODO: Enable gamelist management for ROCKNIX once tested
+	// if cfw.GetCFW() == cfw.ROCKNIX {
+	// 	rocknix.AddToPortsGameList()
+	// }
+
 	config, err := internal.LoadConfig()
 	isFirstLaunch := err != nil || (len(config.Hosts) == 0 && config.Language == "")
 

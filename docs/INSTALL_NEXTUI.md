@@ -22,6 +22,10 @@ You can install Grout using one of these two methods:
 
 ### Method 1: Pak Store (Recommended)
 
+> [!NOTE]
+> Grout is temporarily unavailable in the Pak Store. The new version numbering scheme (v4.6.0.0) requires
+> non-standard semver support which is coming in the next Pak Store release. Please use manual installation for now.
+
 1. Launch the NextUI Pak Store from the `Tools` menu.
 2. Navigate to the `ROM Management` category.
 3. Select Grout and install.

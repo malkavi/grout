@@ -144,7 +144,12 @@ func (s *SaveSync) download(host romm.Host, config *internal.Config) (string, er
 	}
 	rc := romm.NewClientFromHost(host, config.ApiTimeout)
 
-	logger.Debug("Downloading save", "saveID", s.Remote.ID, "downloadPath", s.Remote.DownloadPath)
+	logger.Debug("Downloading save",
+		"saveID", s.Remote.ID,
+		"downloadPath", s.Remote.DownloadPath,
+		"romID", s.RomID,
+		"gameBase", s.GameBase,
+		"fsSlug", s.FSSlug)
 
 	saveData, err := rc.DownloadSave(s.Remote.DownloadPath)
 	if err != nil {
@@ -155,17 +160,20 @@ func (s *SaveSync) download(host romm.Host, config *internal.Config) (string, er
 	if s.Local != nil {
 		// If there's already a local save, use its directory
 		destDir = filepath.Dir(s.Local.Path)
+		logger.Debug("Using existing local save directory", "destDir", destDir)
 	} else {
 		var err error
 		destDir, err = ResolveSavePath(s.FSSlug, s.RomID, config)
 		if err != nil {
 			return "", fmt.Errorf("cannot determine save location: %w", err)
 		}
+		logger.Debug("Resolved save directory", "destDir", destDir, "fsSlug", s.FSSlug)
 	}
 
 	ext := normalizeExt(s.Remote.FileExtension)
 	filename := s.GameBase + ext
 	destPath := filepath.Join(destDir, filename)
+	logger.Debug("Save will be downloaded to", "destPath", destPath)
 
 	if s.Local != nil && s.Local.Path != destPath {
 		defer func() { _ = os.Remove(s.Local.Path) }()
@@ -176,19 +184,32 @@ func (s *SaveSync) download(host romm.Host, config *internal.Config) (string, er
 		return "", fmt.Errorf("failed to write save file: %w", err)
 	}
 
-	err = os.Chtimes(destPath, s.Remote.UpdatedAt, s.Remote.UpdatedAt)
+	// Use the timestamp embedded in the filename (original save time) for mtime,
+	// falling back to UpdatedAt if not available. This ensures consistency with
+	// the comparison logic which uses the filename timestamp.
+	mtimeToSet := s.Remote.UpdatedAt
+	mtimeSource := "UpdatedAt"
+	if filenameTime, ok := extractSaveTimestamp(s.Remote.FileNameNoExt); ok {
+		mtimeToSet = filenameTime
+		mtimeSource = "filename"
+	}
+
+	err = os.Chtimes(destPath, mtimeToSet, mtimeToSet)
 	if err != nil {
 		return "", fmt.Errorf("failed to update file timestamp: %w", err)
 	}
 
 	logger.Debug("Downloaded save and set timestamp",
 		"path", destPath,
+		"mtimeSet", mtimeToSet.Format(time.RFC3339),
+		"mtimeSource", mtimeSource,
 		"remoteUpdatedAt", s.Remote.UpdatedAt)
 
 	return destPath, nil
 }
 
 func (s *SaveSync) upload(host romm.Host, config *internal.Config) (string, error) {
+	logger := gaba.GetLogger()
 	if s.Local == nil {
 		return "", fmt.Errorf("cannot upload: no local save file")
 	}
@@ -199,6 +220,12 @@ func (s *SaveSync) upload(host romm.Host, config *internal.Config) (string, erro
 		return "", ErrOrphanRom
 	}
 
+	logger.Debug("Uploading save",
+		"localPath", s.Local.Path,
+		"romID", s.RomID,
+		"gameBase", s.GameBase,
+		"fsSlug", s.FSSlug)
+
 	rc := romm.NewClientFromHost(host, config.ApiTimeout)
 
 	ext := normalizeExt(filepath.Ext(s.Local.Path))
@@ -207,8 +234,8 @@ func (s *SaveSync) upload(host romm.Host, config *internal.Config) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("failed to get file info: %w", err)
 	}
-	modTime := fileInfo.ModTime()
-	timestamp := modTime.Format("[2006-01-02 15-04-05-000]")
+	modTime := fileInfo.ModTime().UTC()
+	timestamp := modTime.Format("[2006-01-02 15-04-05-000Z]")
 
 	filename := s.GameBase + " " + timestamp + ext
 	tmp := filepath.Join(fileutil.TempDir(), "uploads", filename)
@@ -221,15 +248,23 @@ func (s *SaveSync) upload(host romm.Host, config *internal.Config) (string, erro
 	// Get emulator from the save folder path
 	emulator := filepath.Base(filepath.Dir(s.Local.Path))
 
+	logger.Debug("Uploading save to RomM",
+		"tempFile", tmp,
+		"emulator", emulator,
+		"romID", s.RomID)
+
 	uploadedSave, err := rc.UploadSave(s.RomID, tmp, emulator)
 	if err != nil {
 		return "", err
 	}
 
-	err = os.Chtimes(s.Local.Path, uploadedSave.UpdatedAt, uploadedSave.UpdatedAt)
-	if err != nil {
-		return "", fmt.Errorf("failed to update file timestamp: %w", err)
-	}
+	logger.Debug("Save uploaded successfully",
+		"saveID", uploadedSave.ID,
+		"localPath", s.Local.Path)
+
+	// Don't modify local mtime after upload - the uploaded filename contains
+	// the original mtime, so keeping the local file unchanged ensures the
+	// next sync comparison will match and skip.
 
 	return s.Local.Path, nil
 }

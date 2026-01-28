@@ -16,6 +16,44 @@ import (
 
 const backupTimestampFormat = "2006-01-02 15-04-05"
 
+// validSaveExtensions are file extensions recognized as save files
+var validSaveExtensions = map[string]bool{
+	// SRAM saves
+	".srm":  true,
+	".sram": true,
+	".sav":  true,
+	// Nintendo DS
+	"dsv": true,
+	// Save states
+	".state": true,
+	".sta":   true,
+	".ss":    true,
+	".ss0":   true,
+	".ss1":   true,
+	".ss2":   true,
+	".ss3":   true,
+	".ss4":   true,
+	".ss5":   true,
+	".ss6":   true,
+	".ss7":   true,
+	".ss8":   true,
+	".ss9":   true,
+	// EEPROM/Flash/N64
+	".eep": true,
+	".fla": true,
+	".mpk": true,
+	// Memory cards
+	".mcr": true,
+	".mcd": true,
+	".gme": true,
+	".psv": true,
+	".vmp": true,
+	// Real-time clock
+	".rtc": true,
+	// RetroArch
+	".auto": true,
+}
+
 type LocalSave struct {
 	FSSlug       string
 	Path         string
@@ -155,6 +193,12 @@ func findSaveFiles(fsSlug string, config *internal.Config) []LocalSave {
 			result.saves = make([]LocalSave, 0, len(visibleFiles))
 
 			for _, entry := range visibleFiles {
+				// Only include files with valid save extensions, ROCKNIX specific due to store saves alongside games
+				ext := strings.ToLower(filepath.Ext(entry.Name()))
+				if cfw.GetCFW() == cfw.ROCKNIX && !validSaveExtensions[ext] {
+					continue
+				}
+
 				savePath := filepath.Join(sd, entry.Name())
 
 				fileInfo, err := entry.Info()

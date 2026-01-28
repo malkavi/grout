@@ -28,28 +28,34 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set version
+        id: version
+        run: |
+          VERSION=$(echo "${{ inputs.version }}" | xargs)
+          echo "value=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Update pak.json files
         run: |
           # Check current version
           CURRENT_VERSION=$(jq -r '.version' pak.json)
 
-          if [ "$CURRENT_VERSION" != "${{ inputs.version }}" ]; then
-            echo "Updating pak.json from $CURRENT_VERSION to ${{ inputs.version }}"
+          if [ "$CURRENT_VERSION" != "${{ steps.version.outputs.value }}" ]; then
+            echo "Updating pak.json from $CURRENT_VERSION to ${{ steps.version.outputs.value }}"
 
             # Update root pak.json
-            jq --arg version "${{ inputs.version }}" \
+            jq --arg version "${{ steps.version.outputs.value }}" \
                --arg changelog "${{ inputs.changelog }}" \
                '.version = $version | .changelog[$version] = $changelog' \
                pak.json > pak.json.tmp && mv pak.json.tmp pak.json
 
             # Update build pak.json (will be copied during build)
             mkdir -p build/Grout.pak
-            jq --arg version "${{ inputs.version }}" \
+            jq --arg version "${{ steps.version.outputs.value }}" \
                --arg changelog "${{ inputs.changelog }}" \
                '.version = $version | .changelog[$version] = $changelog' \
                pak.json > build/Grout.pak/pak.json
           else
-            echo "Version is already ${{ inputs.version }}, skipping pak.json update"
+            echo "Version is already ${{ steps.version.outputs.value }}, skipping pak.json update"
           fi
 
       - name: Commit pak.json changes
@@ -62,7 +68,7 @@ jobs:
             echo "No changes to commit"
           else
             git add pak.json
-            git commit -m "Update pak.json to ${{ inputs.version }}"
+            git commit -m "Update pak.json to ${{ steps.version.outputs.value }}"
             git push
           fi
 
@@ -73,7 +79,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Package
-        run: task build extract package-next package-muos package-knulli package-spruce
+        run: task build extract package-next package-muos package-knulli package-spruce package-rocknix
 
       - name: Create NextUI distribution
         run: |
@@ -97,11 +103,16 @@ jobs:
           zip -r Grout.spruce.zip Grout
           mv Grout.spruce.zip ../Grout.spruce.zip
 
+      - name: Create ROCKNIX distribution
+        run: |
+          cd build/ROCKNIX
+          zip -r ../Grout-ROCKNIX.zip Grout.sh Grout
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.version }}
-          name: ${{ inputs.version }}
+          tag_name: ${{ steps.version.outputs.value }}
+          name: ${{ steps.version.outputs.value }}
           body: |
             ${{ inputs.beta && '⚠️ **This is a beta release.** It may contain bugs or incomplete features.' || '' }}
 
@@ -113,6 +124,7 @@ jobs:
             build/Grout.muxapp
             build/Grout.spruce.zip
             build/Grout-Knulli.zip
+            build/Grout-ROCKNIX.zip
             build/grout
           draft: false
           prerelease: ${{ inputs.beta }}

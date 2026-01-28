@@ -18,14 +18,50 @@ import (
 )
 
 // timestampPattern matches the timestamp suffix appended to save files
-// Format: " [YYYY-MM-DD HH-MM-SS-mmm]" e.g., " [2024-01-02 15-04-05-000]"
-var timestampPattern = regexp.MustCompile(` \[\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}-\d{3}\]$`)
+// Format: " [YYYY-MM-DD HH-MM-SS-mmm]" or " [YYYY-MM-DD HH-MM-SS-mmmZ]" (UTC)
+var timestampPattern = regexp.MustCompile(` \[\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}-\d{3}Z?\]$`)
+
+// timestampExtractPattern captures the timestamp portion for parsing
+// Group 1: timestamp, Group 2: optional Z indicator
+var timestampExtractPattern = regexp.MustCompile(`\[(\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2})-\d{3}(Z?)\]$`)
 
 // extractSaveBaseName strips the timestamp suffix from a remote save's filename
 // to get the original base name for comparison with local saves.
 // e.g., "Pokemon Red [2024-01-02 15-04-05-000]" -> "Pokemon Red"
 func extractSaveBaseName(fileNameNoExt string) string {
 	return timestampPattern.ReplaceAllString(fileNameNoExt, "")
+}
+
+// extractSaveTimestamp extracts and parses the timestamp from a remote save's filename.
+// Returns the parsed time and true if successful, or zero time and false if no timestamp found.
+// New format with Z suffix is UTC, old format without Z is local time (for backwards compat).
+// e.g., "Pokemon Red [2024-01-02 15-04-05-000Z]" -> 2024-01-02 15:04:05 UTC
+// e.g., "Pokemon Red [2024-01-02 15-04-05-000]" -> 2024-01-02 15:04:05 local
+func extractSaveTimestamp(fileNameNoExt string) (time.Time, bool) {
+	matches := timestampExtractPattern.FindStringSubmatch(fileNameNoExt)
+	if len(matches) < 2 {
+		return time.Time{}, false
+	}
+	// Parse format: "2024-01-02 15-04-05" (note: dashes instead of colons for time)
+	// Convert to standard format for parsing
+	tsStr := strings.ReplaceAll(matches[1], "-", ":")
+	// Now it's "2024:01:02 15:04:05", need to fix the date part
+	tsStr = strings.Replace(tsStr, ":", "-", 2) // First two colons back to dashes for date
+	// Now it's "2024-01-02 15:04:05"
+
+	// Check if Z indicator is present (UTC) or not (local time for backwards compat)
+	isUTC := len(matches) >= 3 && matches[2] == "Z"
+	var t time.Time
+	var err error
+	if isUTC {
+		t, err = time.Parse("2006-01-02 15:04:05", tsStr)
+	} else {
+		t, err = time.ParseInLocation("2006-01-02 15:04:05", tsStr, time.Local)
+	}
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
 }
 
 type LocalRomFile struct {
@@ -44,6 +80,7 @@ func (lrf LocalRomFile) baseName() string {
 }
 
 func (lrf LocalRomFile) syncAction() Action {
+	logger := gaba.GetLogger()
 	hasLocal := lrf.SaveFile != nil
 	baseName := lrf.baseName()
 
@@ -59,20 +96,53 @@ func (lrf LocalRomFile) syncAction() Action {
 	}
 
 	// Both local and remote exist - compare timestamps
-	// Truncate to second precision to avoid timestamp precision issues
-	// API timestamps are typically second/millisecond precision, but filesystem is nanosecond
-	localTime := lrf.SaveFile.LastModified.Truncate(time.Second)
+	// Use the timestamp embedded in the remote save's filename (original save time)
+	// rather than UpdatedAt (when uploaded to RomM) to avoid precision issues
+	localTimeRaw := lrf.SaveFile.LastModified
+	localTime := localTimeRaw.Truncate(time.Second)
 	remoteSave := lrf.lastRemoteSaveForBaseName(baseName)
-	remoteTime := remoteSave.UpdatedAt.Truncate(time.Second)
 
-	switch localTime.Compare(remoteTime) {
-	case -1:
-		return Download
-	case 1:
-		return Upload
-	default:
-		return Skip
+	remoteTime, parsedFromFilename := extractSaveTimestamp(remoteSave.FileNameNoExt)
+	remoteTimeSource := "filename"
+	if !parsedFromFilename {
+		remoteTime = remoteSave.UpdatedAt
+		remoteTimeSource = "UpdatedAt"
 	}
+	remoteTime = remoteTime.Truncate(time.Second)
+
+	diff := localTime.Sub(remoteTime)
+	cmp := localTime.Compare(remoteTime)
+
+	var action Action
+	var reason string
+	switch cmp {
+	case -1:
+		action = Download
+		reason = "local older"
+	case 1:
+		action = Upload
+		reason = "local newer"
+	default:
+		action = Skip
+		reason = "equal"
+	}
+
+	logger.Debug("Comparing save timestamps",
+		"baseName", baseName,
+		"localPath", lrf.SaveFile.Path,
+		"localMtimeRaw", localTimeRaw.Format(time.RFC3339Nano),
+		"localTime", localTime.Format(time.RFC3339),
+		"localUnix", localTime.Unix(),
+		"remoteFileName", remoteSave.FileNameNoExt,
+		"remoteTimeSource", remoteTimeSource,
+		"remoteTime", remoteTime.Format(time.RFC3339),
+		"remoteUnix", remoteTime.Unix(),
+		"diffSeconds", diff.Seconds(),
+		"comparison", cmp,
+		"action", action,
+		"reason", reason)
+
+	return action
 }
 
 func (lrf LocalRomFile) lastRemoteSaveForBaseName(baseName string) romm.Save {
