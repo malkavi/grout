@@ -2,6 +2,34 @@
 
 This guide walks you through using Grout to download games from your RomM instance.
 
+## Table of Contents
+
+- [Button Reference](#button-reference)
+- [Status Bar Icons](#status-bar-icons)
+- [First Launch and Login](#first-launch-and-login)
+- [Platform Directory Mapping](#platform-directory-mapping)
+- [Background Cache Sync](#background-cache-sync)
+- [Main Menu - Platform Selection](#main-menu--platform-selection)
+- [Collections](#collections)
+- [Game List](#game-list)
+- [Search](#search)
+- [Game Details](#game-details)
+- [Downloading Games](#downloading-games)
+- [BIOS Files](#bios-files)
+- [Settings](#settings)
+- [Save Sync](#save-sync)
+- [Platform Mappings Reference](#platform-mappings-reference)
+- [Advanced Configuration](#advanced-configuration)
+
+**See Also:**
+
+- [Quick Start Guide](QUICK_START.md) - Get up and running in 5 steps
+- [Settings Reference](SETTINGS.md) - Complete settings documentation
+- [Save Sync Guide](SAVE_SYNC.md) - Detailed save synchronization guide
+- [Platform Mappings](#platform-mappings-reference) - CFW-specific folder names
+
+---
+
 ## Button Reference
 
 Grout attempts to be consistent with its controls. Here's a quick reference:
@@ -46,33 +74,6 @@ These icons appear during [Save Sync](#save-sync) operations:
 | ![Cloud Download](../.github/resources/user_guide/statusbar_icons/Cloud%20Download.png) | Downloading saves from RomM                                         |
 | ![Cloud Check](../.github/resources/user_guide/statusbar_icons/Cloud%20Check.png)       | Save sync completed successfully                                    |
 | ![Cloud Alert](../.github/resources/user_guide/statusbar_icons/Cloud%20Alert.png)       | Save sync encountered an error, go check the log file for more info |
-
----
-
-## Table of Contents
-
-- [Status Bar Icons](#status-bar-icons)
-- [First Launch and Login](#first-launch-and-login)
-- [Platform Directory Mapping](#platform-directory-mapping)
-- [Background Cache Sync](#background-cache-sync)
-- [Main Menu - Platform Selection](#main-menu--platform-selection)
-- [Collections](#collections)
-- [Game List](#game-list)
-- [Search](#search)
-- [Game Details](#game-details)
-- [Downloading Games](#downloading-games)
-- [BIOS Files](#bios-files)
-- [Settings](#settings)
-- [Save Sync](#save-sync)
-- [Platform Mappings Reference](#platform-mappings-reference)
-- [Advanced Configuration](#advanced-configuration)
-
-**See Also:**
-
-- [Quick Start Guide](QUICK_START.md) - Get up and running in 5 steps
-- [Settings Reference](SETTINGS.md) - Complete settings documentation
-- [Save Sync Guide](SAVE_SYNC.md) - Detailed save synchronization guide
-- [Platform Mappings](#platform-mappings-reference) - CFW-specific folder names
 
 ---
 
