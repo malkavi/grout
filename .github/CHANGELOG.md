@@ -7,7 +7,7 @@
 
 ## New Features
 
-- **ROCKNIX Support**: Preliminary support for ROCKNIX (#96)
+- **ROCKNIX Support**: Preliminary support for ROCKNIX (#96) - thanks to @sucmerep for the `platforms.json`
 - **7-Zip Support**: Download and extract 7z compressed ROM files (#77)
 - **Version Selection**: Choose which file version to download when multiple are available (#57)
 - **Beta Release Channel**: Option to receive beta updates (#62) - @pawndev

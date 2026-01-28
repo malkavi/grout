@@ -22,6 +22,8 @@ var validSaveExtensions = map[string]bool{
 	".srm":  true,
 	".sram": true,
 	".sav":  true,
+	// Nintendo DS
+	"dsv": true,
 	// Save states
 	".state": true,
 	".sta":   true,
@@ -191,9 +193,9 @@ func findSaveFiles(fsSlug string, config *internal.Config) []LocalSave {
 			result.saves = make([]LocalSave, 0, len(visibleFiles))
 
 			for _, entry := range visibleFiles {
-				// Only include files with valid save extensions
+				// Only include files with valid save extensions, ROCKNIX specific due to store saves alongside games
 				ext := strings.ToLower(filepath.Ext(entry.Name()))
-				if !validSaveExtensions[ext] {
+				if cfw.GetCFW() == cfw.ROCKNIX && !validSaveExtensions[ext] {
 					continue
 				}
 
