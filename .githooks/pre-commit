@@ -5,8 +5,7 @@ if [ -f "go.mod" ]; then
     # Check for replace directives pointing to local paths (starting with / or ./ or ../)
     if grep -qE '^replace .* => (/|\.\.?/)' go.mod; then
         echo "Removing local replace directive(s) from go.mod..."
-        sed -i.bak '/^replace .* => \/\|^replace .* => \.\.\?\//'d go.mod
-        rm -f go.mod.bak
+        grep -vE '^replace .* => (/|\.\.?/)' go.mod > go.mod.tmp && mv go.mod.tmp go.mod
         go mod tidy
         git add go.mod go.sum
     fi

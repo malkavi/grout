@@ -47,5 +47,3 @@ require (
 )
 
 tool github.com/nicksnyder/go-i18n/v2/goi18n
-
-replace github.com/BrandonKowalski/gabagool/v2 => /Users/btk/Developer/gabagool
