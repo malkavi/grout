@@ -143,12 +143,21 @@ You'll see a list of all platforms from your RomM instance. For each one, you ca
 - **Create {Directory Name}** – Create a new directory for this platform. Grout will automatically suggest directory
   names that match your custom firmware's expected structure.
 - **/{Existing Directory}** – Map to an existing directory on your device.
+- **Custom...** – Enter a custom folder name using the on-screen keyboard. Use this when your folder structure doesn't
+  match Grout's suggestions.
 
 Grout tries to be smart about this. If you already have a directory that matches the platform name, it'll be
 pre-selected. If not, it'll suggest creating one with the correct name for your firmware.
 
-Use left/right to cycle through the options for each platform. When you're happy with your mappings, press `Start` to
-save. Grout will create any new directories you selected.
+**Navigation:**
+
+- `Left/Right` to cycle through options for the selected platform
+- `A` to open a list picker showing all available options at once
+- `Up/Down` to move between platforms
+- `Start` to save your mappings
+
+When you select **Custom...**, an on-screen keyboard appears where you can type your desired folder name. If you return
+to this screen later, any custom folder names you entered will be remembered and shown in place of "Custom...".
 
 You can change these mappings later from [Settings](SETTINGS.md).
 
