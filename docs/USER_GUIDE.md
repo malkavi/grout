@@ -291,9 +291,6 @@ To clear a search and return to the full list, press `B`.
 
 ## Game Details
 
-> [!TIP]
-> This screen will only show if you've enabled "Game Details" in Settings.
-
 ![Grout preview, game details](../.github/resources/user_guide/game_details.png "Grout preview, game details")
 
 You'll see:
@@ -325,13 +322,13 @@ different revisions (Rev A, Rev B). When a game has multiple versions available:
 
 ### Game Options
 
-> [!IMPORTANT]
-> **Kids Mode Impact:** When Kids Mode is enabled, the Game Options screen is hidden.
-> See [Settings Reference](SETTINGS.md#kids-mode) to learn how to temporarily or permanently disable Kids Mode.
-
 - **Save Directory** – Choose which emulator's save folder this game should use. This overrides the platform-wide
   setting configured in Save Sync Mappings. When changed, Grout automatically moves existing save files to the new
   location. This is useful when you use different emulators for specific games within the same platform.
+
+> [!IMPORTANT]
+> **Kids Mode Impact:** When Kids Mode is enabled, the Game Options screen is hidden.
+> See [Settings Reference](SETTINGS.md#kids-mode) to learn how to temporarily or permanently disable Kids Mode.
 
 ---
 
