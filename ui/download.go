@@ -246,11 +246,18 @@ func (s *DownloadScreen) draw(input DownloadInput) (DownloadOutput, error) {
 						func() (interface{}, error) {
 							logger.Debug("Extracting single-file ROM", "game", g.Name, "file", archivePath)
 
+							var archiveFiles []string
 							var extractErr error
 							if ext == ".7z" {
-								extractErr = fileutil.Un7zip(archivePath, romDirectory, progress)
+								archiveFiles, extractErr = fileutil.SevenZipFileNames(archivePath)
+								if extractErr == nil {
+									extractErr = fileutil.Un7zip(archivePath, romDirectory, progress)
+								}
 							} else {
-								extractErr = fileutil.Unzip(archivePath, romDirectory, progress)
+								archiveFiles, extractErr = fileutil.ZipFileNames(archivePath)
+								if extractErr == nil {
+									extractErr = fileutil.Unzip(archivePath, romDirectory, progress)
+								}
 							}
 
 							if extractErr != nil {
@@ -262,13 +269,23 @@ func (s *DownloadScreen) draw(input DownloadInput) (DownloadOutput, error) {
 								logger.Warn("Failed to remove archive file after extraction", "path", archivePath, "error", err)
 							}
 
-							// TODO: Update gamelist entry to point to extracted file(s)
-							//for i, game := range gamelistEntries {
-							//	if game.Game.ID == g.ID {
-							//		gamelistEntries[i].GamePath = filepath.Join(romDirectory, g.Files[0].FileNameNoExt)
-							//		break
-							//	}
-							//}
+							if len(archiveFiles) > 0 {
+								gamePath := archiveFiles[0]
+								if len(archiveFiles) > 1 {
+									for _, f := range archiveFiles {
+										if strings.ToLower(filepath.Ext(f)) == ".m3u" {
+											gamePath = f
+											break
+										}
+									}
+								}
+								for i, entry := range gamelistEntries {
+									if entry.Game.ID == g.ID {
+										gamelistEntries[i].GamePath = filepath.Join(romDirectory, gamePath)
+										break
+									}
+								}
+							}
 
 							return nil, nil
 						},
