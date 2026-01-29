@@ -20,9 +20,10 @@ func AddGroutToGamelist(c CFW) {
 	switch c {
 	case Knulli:
 		gamelist.AddGroutEntry(knulli.GetGroutGamelist(), "./Grout/Grout.sh")
-		scheduleESRestart()
 	case ROCKNIX:
 		gamelist.AddGroutEntry(rocknix.GetGroutGamelist(), "./Grout.sh")
-		scheduleESRestart()
+	default:
+		return
 	}
+	scheduleESRestart()
 }
