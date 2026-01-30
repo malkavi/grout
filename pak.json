@@ -1,6 +1,6 @@
 {
   "name": "Grout",
-  "version": "v4.6.1.0",
+  "version": "v4.6.1.1",
   "type": "TOOL",
   "description": "A RomM client for NextUI, muOS, Knulli, and Spruce v4.",
   "author": "The RomM Team",
@@ -27,7 +27,8 @@
     "v1.4.2": "Fix for incorrect PICO-8 mapping.",
     "v4.6.0.0": "Bunch of great changes by even greater people <3",
     "v4.6.0.1": "Add missing NDS .dsv save file extension",
-    "v4.6.1.0": "Added custom platform mapping entry via keyboard"
+    "v4.6.1.0": "Added custom platform mapping entry via keyboard",
+    "v4.6.1.1": "Add game information to corresponding gamelist.xml for ROCKNIX and Knulli - @pawndev"
   },
   "screenshots": [],
   "platforms": [
