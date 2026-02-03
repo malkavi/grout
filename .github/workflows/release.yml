@@ -79,7 +79,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Package
-        run: task build extract package-next package-muos package-knulli package-spruce package-rocknix
+        run: task build extract package-next package-muos package-knulli package-spruce package-rocknix package-trimui
 
       - name: Create NextUI distribution
         run: |
@@ -107,6 +107,11 @@ jobs:
         run: |
           cd build/ROCKNIX
           zip -r ../Grout-ROCKNIX.zip Grout.sh Grout
+
+      - name: Create Trimui distribution
+        run: |
+          cd build/Trimui
+          zip -r ../Grout-Trimui.zip Grout
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
