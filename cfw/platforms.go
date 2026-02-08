@@ -6,6 +6,7 @@ import (
 	"grout/cfw/nextui"
 	"grout/cfw/rocknix"
 	"grout/cfw/spruce"
+	"grout/cfw/trimui"
 	"strings"
 )
 
@@ -21,6 +22,7 @@ func buildPlatformAliasMap() map[string][]string {
 		nextui.Platforms,
 		rocknix.Platforms,
 		spruce.Platforms,
+		trimui.Platforms,
 	}
 
 	// Build reverse map: primary folder -> list of RomM slugs that use it as primary
@@ -114,6 +116,8 @@ func GetPlatformMap(c CFW) map[string][]string {
 		return spruce.Platforms
 	case ROCKNIX:
 		return rocknix.Platforms
+	case Trimui:
+		return trimui.Platforms
 	default:
 		return nil
 	}

@@ -6,6 +6,7 @@ import (
 	"grout/cfw/nextui"
 	"grout/cfw/rocknix"
 	"grout/cfw/spruce"
+	"grout/cfw/trimui"
 	"path/filepath"
 )
 
@@ -22,6 +23,8 @@ func GetRomDirectory() string {
 		return spruce.GetRomDirectory()
 	case ROCKNIX:
 		return rocknix.GetRomDirectory()
+	case Trimui:
+		return trimui.GetRomDirectory()
 	}
 	return ""
 }
@@ -48,6 +51,8 @@ func GetBIOSDirectory() string {
 		return spruce.GetBIOSDirectory()
 	case ROCKNIX:
 		return rocknix.GetBIOSDirectory()
+	case Trimui:
+		return trimui.GetBIOSDirectory()
 	}
 	return ""
 }
@@ -84,6 +89,8 @@ func GetArtDirectory(romDir string, platformFSSlug, platformName string) string 
 		return muos.GetArtDirectory(platformFSSlug, platformName)
 	case ROCKNIX:
 		return rocknix.GetArtDirectory(romDir)
+	case Trimui:
+		return trimui.GetArtDirectory(platformFSSlug, platformName)
 	default:
 		return ""
 	}
@@ -102,6 +109,8 @@ func BaseSavePath() string {
 		return spruce.GetBaseSavePath()
 	case ROCKNIX:
 		return rocknix.GetBaseSavePath()
+	case Trimui:
+		return trimui.GetBaseSavePath()
 	}
 	return ""
 }
