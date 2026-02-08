@@ -6,13 +6,17 @@ import (
 	"grout/internal"
 	"grout/internal/imageutil"
 	"grout/romm"
-	"strings"
 	"sync"
 	"sync/atomic"
 
 	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
 	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/i18n"
 	goi18n "github.com/nicksnyder/go-i18n/v2/i18n"
+)
+
+const (
+	SyncMissingOnlyOption = "missing_only"
+	SyncAllOption         = "all"
 )
 
 type ArtworkSyncInput struct {
@@ -79,6 +83,23 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 	var allMissingArtwork []romm.Rom
 	platformCount := len(mappedPlatforms)
 
+	artForceRes, err := gaba.SelectionMessage(
+		fmt.Sprintf(i18n.Localize(&goi18n.Message{ID: "artwork_sync_preload_choice", Other: "Do you want to preload all or missing artwork ?"}, nil)),
+		[]gaba.SelectionOption{
+			{DisplayName: i18n.Localize(&goi18n.Message{ID: "artwork_sync_preload_missing", Other: "Missing Only"}, nil), Value: SyncMissingOnlyOption},
+			{DisplayName: i18n.Localize(&goi18n.Message{ID: "artwork_sync_preload_all", Other: "All"}, nil), Value: SyncAllOption},
+		},
+		[]gaba.FooterHelpItem{
+			FooterContinue(),
+			FooterCancel(),
+		},
+		gaba.SelectionMessageSettings{},
+	)
+
+	if err != nil {
+		return
+	}
+
 	cm := cache.GetCacheManager()
 	for i, platform := range mappedPlatforms {
 		gaba.ProcessMessage(
@@ -106,8 +127,12 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 					return nil, nil
 				}
 
-				missingArtwork := cache.GetMissingArtwork(roms)
-				allMissingArtwork = append(allMissingArtwork, missingArtwork...)
+				if artForceRes.SelectedValue == SyncMissingOnlyOption {
+					missingArtwork := cache.GetMissingArtwork(roms)
+					allMissingArtwork = append(allMissingArtwork, missingArtwork...)
+				} else {
+					allMissingArtwork = append(allMissingArtwork, roms...)
+				}
 				return nil, nil
 			},
 		)
@@ -125,14 +150,12 @@ func (s *ArtworkSyncScreen) draw(input ArtworkSyncInput) {
 	var downloads []gaba.Download
 	romsByLocation := make(map[string]romm.Rom)
 
-	baseURL := input.Host.URL()
 	for _, rom := range allMissingArtwork {
-		coverPath := cache.GetArtworkCoverPath(rom)
-		if coverPath == "" {
+		downloadURL := cache.GetArtworkCoverPath(rom, input.Config.ArtKind, input.Host)
+		if downloadURL == "" {
 			continue
 		}
 
-		downloadURL := strings.ReplaceAll(baseURL+coverPath, " ", "%20")
 		cachePath := cache.GetArtworkCachePath(rom.PlatformFSSlug, rom.ID)
 
 		cache.EnsureArtworkCacheDir(rom.PlatformFSSlug)
