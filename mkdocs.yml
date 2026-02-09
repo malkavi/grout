@@ -70,13 +70,13 @@ nav:
       - Overview: guide/user-guide.md
       - Settings: guide/settings.md
       - Save Sync: guide/save-sync.md
-  - Platforms:
-      - muOS: platforms/muos.md
-      - Knulli: platforms/knulli.md
-      - ROCKNIX: platforms/rocknix.md
-      - Spruce: platforms/spruce.md
-      - NextUI: platforms/nextui.md
-      - TrimUI: platforms/trimui.md
+      - Platform Specific Info:
+          - muOS: platforms/MUOS.md
+          - Knulli: platforms/KNULLI.md
+          - ROCKNIX: platforms/ROCKNIX.md
+          - Spruce: platforms/SPRUCE.md
+          - NextUI: platforms/NEXTUI.md
+          - TrimUI: platforms/TRIMUI.md
   - Development & Contributing:
       - Development Guide: development/development.md
       - Contributing Guide: development/contributing.md
