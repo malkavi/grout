@@ -70,7 +70,7 @@ nav:
       - Overview: guide/user-guide.md
       - Settings: guide/settings.md
       - Save Sync: guide/save-sync.md
-      - Platform Specific Info:
+      - CFW Specific Info:
           - muOS: platforms/MUOS.md
           - Knulli: platforms/KNULLI.md
           - ROCKNIX: platforms/ROCKNIX.md
