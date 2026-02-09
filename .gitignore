@@ -33,3 +33,6 @@ translations_todo/
 # python cache
 __pycache__/
 .venv
+
+# MkDocs build output
+site/

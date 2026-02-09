@@ -48,10 +48,10 @@ A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.o
 
 | Guide                                  | Description                            |
 |----------------------------------------|----------------------------------------|
-| [Quick Start](docs/QUICK_START.md)     | Get up and running in 5 steps          |
-| [User Guide](docs/USER_GUIDE.md)       | Complete feature documentation         |
-| [Settings Reference](docs/SETTINGS.md) | All settings explained                 |
-| [Save Sync Guide](docs/SAVE_SYNC.md)   | Keep saves synchronized across devices |
+| [Quick Start](old_docs/QUICK_START.md)     | Get up and running in 5 steps          |
+| [User Guide](old_docs/USER_GUIDE.md)       | Complete feature documentation         |
+| [Settings Reference](old_docs/SETTINGS.md) | All settings explained                 |
+| [Save Sync Guide](old_docs/SAVE_SYNC.md)   | Keep saves synchronized across devices |
 
 ---
 
@@ -61,7 +61,7 @@ Interested in contributing? We'd love your help!
 
 | Guide                                              | Description                                      |
 |----------------------------------------------------|--------------------------------------------------|
-| [Development Guide](docs/DEVELOPMENT.md)           | Set up your local environment and build Grout    |
+| [Development Guide](old_docs/DEVELOPMENT.md)           | Set up your local environment and build Grout    |
 | [Contributing Guide](.github/CONTRIBUTING.md)      | How to contribute code, translations, and more   |
 
 ---

@@ -1,6 +1,6 @@
-# Trimui Platform Mappings
+# TrimUI Platform Mappings
 
-This table shows the mappings of RomM Fs Slug to Trimui's platform folders.
+This table shows the mappings of RomM Fs Slug to TrimUI's platform folders.
 
 | Platform Name                 | RomM Fs Slug               | Folder(s)           |
 |-------------------------------|----------------------------|---------------------|

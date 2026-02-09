@@ -56,7 +56,7 @@ This table shows the mappings of RomM Fs Slug to NextUI's platform folders.
 | PlayStation                   | psx                        | Sony PlayStation (PS)                           |
 | PlayStation 2                 | ps2                        | Sony PlayStation 2 (PS2)                        |
 | PlayStation Portable          | psp                        | Sony PlayStation Portable (PSP)                 |
-| Pokemon Mini                  | pokemon-mini               | Pokémon mini (PKM)                              |
+| Pokemon Mini                  | pokemon-mini               | Pokemon mini (PKM)                              |
 | Sega 32X                      | sega32                     | Sega 32X (32X)                                  |
 | Sega CD                       | segacd                     | Sega CD (SEGACD)                                |
 | Sega Game Gear                | gamegear                   | Sega Game Gear (GG)                             |
