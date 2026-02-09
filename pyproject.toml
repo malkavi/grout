@@ -1,0 +1,12 @@
+[project]
+name = "grout"
+version = "0.1.0"
+description = "Grout documentation site"
+requires-python = ">=3.12"
+dependencies = [
+    "cairosvg>=2.8.2",
+    "mkdocs>=1.6.1",
+    "mkdocs-glightbox>=0.5.2",
+    "mkdocs-material>=9.7.1",
+    "pillow>=12.1.0",
+]

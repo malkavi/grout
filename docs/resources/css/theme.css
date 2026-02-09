@@ -1,0 +1,28 @@
+[data-md-color-scheme="slate"] {
+    --md-primary-fg-color: #371f69;
+    --md-primary-fg-color--light: #553e98;
+    --md-primary-fg-color--dark: #371f69;
+    --md-accent-fg-color: #bea4e1;
+    --md-accent-fg-color--transparent: #bea4e133;
+    --md-accent-bg-color: #ede5f8;
+    --md-accent-bg-color--light: #e1a38d;
+
+    --md-typeset-a-color: #bea4e1;
+    --md-nav-link-color--active: #ede5f8;
+
+    /* Sidebar nav contrast */
+    --md-default-fg-color--light: rgba(255, 255, 255, 0.7);
+    --md-default-fg-color--lighter: rgba(255, 255, 255, 0.5);
+}
+
+/* Secondary button styling */
+[data-md-color-scheme="slate"] .md-typeset .md-button:not(.md-button--primary) {
+    color: #ede5f8;
+    border-color: #ede5f8;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .md-button:not(.md-button--primary):hover {
+    color: #ffffff;
+    border-color: #bea4e1;
+    background-color: rgba(190, 164, 225, 0.1);
+}
