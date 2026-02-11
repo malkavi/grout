@@ -63,8 +63,8 @@ Interested in contributing? We'd love your help!
 
 | Guide | Description |
 |-------|-------------|
-| [Contributing Guide](https://grout.romm.app/development/) | How to contribute code, translations, and more |
-| [Development Guide](https://grout.romm.app/development/development/) | Set up your local environment and build Grout |
+| [Contributing Guide](https://grout.romm.app/contributing/) | How to contribute code, translations, and more |
+| [Development Guide](https://grout.romm.app/contributing/development/) | Set up your local environment and build Grout |
 
 ---
 

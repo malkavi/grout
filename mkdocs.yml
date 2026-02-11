@@ -82,11 +82,11 @@ nav:
           - Spruce: platforms/spruce.md
           - NextUI: platforms/nextui.md
           - TrimUI: platforms/trimui.md
-  - Development & Contributing:
-      - development/index.md
-      - Development Guide: development/development.md
-      - State Machine Reference: development/state-machine.md
-      - Kudos: development/kudos.md
+  - Contributing:
+      - contributing/index.md
+      - Development Guide: contributing/development.md
+      - State Machine Reference: contributing/state-machine.md
+      - Kudos: contributing/kudos.md
 
 copyright: Copyright &copy; 2025 RomM Team
 
