@@ -184,5 +184,5 @@ Saves are tied to your RomM user account. If you share your RomM account with ot
 ## Related
 
 - [Settings Reference](settings.md) - Configure Save Sync options
-- [User Guide](user-guide.md) - Complete feature documentation
+- [User Guide](guide.md) - Complete feature documentation
 - [Quick Start Guide](../getting-started/index.md) - Get up and running quickly

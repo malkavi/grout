@@ -21,6 +21,11 @@
     border-color: #ede5f8;
 }
 
+/* Bold active TOC item */
+[data-md-color-scheme="slate"] .md-nav__link--active {
+    font-weight: 700;
+}
+
 [data-md-color-scheme="slate"] .md-typeset .md-button:not(.md-button--primary):hover {
     color: #ffffff;
     border-color: #bea4e1;

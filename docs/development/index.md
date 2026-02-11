@@ -1,6 +1,6 @@
 # Contributing to Grout
 
-First off, thank you for considering contributing to Grout! We appreciate your time and effort.
+Thank you for considering contributing to Grout! We appreciate your time and effort.
 
 Before implementing major features, please open an issue or discuss it in the
 [Grout Development Channel](https://discord.com/channels/1138838206532554853/1456747141518069906) on the
@@ -8,10 +8,11 @@ Before implementing major features, please open an issue or discuss it in the
 
 ## Code of Conduct
 
-By contributing, you agree to uphold our Code of Conduct. Be respectful, constructive, and
-welcoming to all contributors regardless of experience level.
+By contributing, you agree to uphold our [Code of Conduct](https://github.com/rommapp/grout/blob/main/.github/CODE_OF_CONDUCT.md).
 
-## Ways to Contribute (No Coding Required)
+Be respectful, constructive, and welcoming to all contributors regardless of experience level.
+
+## Ways to Contribute
 
 Not a developer? There are many ways to help improve Grout!
 
@@ -47,8 +48,6 @@ Help keep CFW platform directory mappings current:
 - Help answer questions in the [RomM Discord](https://discord.gg/P5HtHnhUDH)
 - Share tips and workflows with other users
 - Welcome new community members
-
----
 
 ## Getting Started (Developers)
 

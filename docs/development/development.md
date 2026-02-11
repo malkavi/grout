@@ -4,11 +4,7 @@
     These instructions were written with macOS in mind. It should work elsewhere, but we have
     not personally verified this.
 
-We hang out over in
-the [Grout Development Channel](https://discord.com/channels/1138838206532554853/1456747141518069906) on
-the [RomM Discord](https://discord.gg/P5HtHnhUDH). Come join us!
-
----
+We hang out over in the [Grout Development Channel](https://discord.com/channels/1138838206532554853/1456747141518069906) on the [RomM Discord](https://discord.gg/P5HtHnhUDH). Come join us!
 
 ## Prerequisites
 
@@ -27,8 +23,6 @@ brew install sdl2 sdl2_image sdl2_ttf sdl2_gfx
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) or equivalent
     - We love [OrbStack](https://orbstack.dev) (not a sponsor)
 
----
-
 ## Getting Started
 
 1. Clone the [Grout](https://github.com/rommapp/grout) repository.
@@ -43,8 +37,6 @@ brew install sdl2 sdl2_image sdl2_ttf sdl2_gfx
     - `BASE_PATH` (mandatory), this acts as the root path like you would have on a handheld (e.g. `/mmc/sdcard` on
       muOS). Have the subdirectory structure of this path match the CFW you are working on.
 5. Run / Debug `app/grout.go`, making sure to reference the `.env` file in your run configuration.
-
----
 
 ## Project Structure
 
@@ -66,8 +58,6 @@ The codebase is laid out fairly well. It attempts to keep everything grouped by 
 - `update` handles the in-app updater functionality, excluding the UI
 - `version` exposes the version information that is injected at build time. Having it as its own package made the script
   cleaner.
-
----
 
 ## Packaging
 
@@ -110,7 +100,7 @@ into the appropriate directory structure for that CFW.
 
 ### Deployment via ADB
 
-For rapid testing, you can deploy directly to a connected device:
+For rapid testing, you can deploy directly to a connected device, assuming that the device has ADB available:
 
 ```shell
 # NextUI (TrimUI devices)
@@ -152,8 +142,6 @@ build/
 ├── Knulli/Grout/      # Knulli package
 └── Spruce/Grout/      # Spruce package
 ```
-
----
 
 ## Helper Tools
 

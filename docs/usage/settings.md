@@ -175,6 +175,6 @@ Use `Left/Right` to cycle through options. Press `Start` to save your changes, o
 
 ## Related
 
-- [User Guide](user-guide.md) - Complete feature documentation
+- [User Guide](guide.md) - Complete feature documentation
 - [Save Sync Guide](save-sync.md) - Detailed save synchronization documentation
 - [Quick Start Guide](../getting-started/index.md) - Get up and running quickly

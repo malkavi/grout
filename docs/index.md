@@ -18,7 +18,7 @@ Download and manage games from your [RomM](https://romm.app) instance directly o
 [muOS](getting-started/install-muos.md) · [Knulli](getting-started/install-knulli.md) · [ROCKNIX](getting-started/install-rocknix.md) · [Spruce](getting-started/install-spruce.md) · [NextUI](getting-started/install-nextui.md)
 
 [:octicons-rocket-16: Get Started](getting-started/index.md){ .md-button .md-button--primary }
-[:octicons-book-16: User Guide](guide/user-guide.md){ .md-button }
+[:octicons-book-16: User Guide](usage/guide.md){ .md-button }
 
 </div>
 

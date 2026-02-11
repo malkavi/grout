@@ -2,7 +2,7 @@
 
 Thank you to everyone who has contributed to Grout!
 
-## ~~Fearful Leader~~ Maintainer
+## ~~Fearful Leader~~ Lead Maintainer { data-toc-label="Lead Maintainer" }
 
 - **Brandon T. Kowalski** ([@BrandonKowalski](https://github.com/BrandonKowalski))
 
@@ -13,11 +13,3 @@ Thank you to everyone who has contributed to Grout!
 - **Huynh Duc Dung** ([@jellydn](https://github.com/jellydn))
 - **Sargun Vohra** ([@sargunv](https://github.com/sargunv))
 - **Zach Keatings** ([@zkeatings](https://github.com/zkeatings))
-
----
-
-### Spread Joy!
-
-A significant amount of time has been spent building Grout.
-
-If you enjoy using Grout and feel inclined to pay it forward, go do something nice for someone!

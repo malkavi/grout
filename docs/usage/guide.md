@@ -2,18 +2,9 @@
 
 This guide walks you through using Grout to download games from your RomM instance.
 
-**See Also:**
-
-- [Quick Start Guide](../getting-started/index.md) - Get up and running in 5 steps
-- [Settings Reference](settings.md) - Complete settings documentation
-- [Save Sync Guide](save-sync.md) - Detailed save synchronization guide
-
----
-
 !!! important
     Grout aggressively adopts new RomM features. The required RomM version matches the first three components of Grout's version number. The fourth component is for Grout-specific patches.
 
----
 
 ## Button Reference
 
@@ -32,7 +23,6 @@ Grout attempts to be consistent with its controls. Here's a quick reference:
 | `Up/Down`    | Navigate lists                            |
 | `Left/Right` | Cycle options / Jump pages in list        |
 
----
 
 ## Status Bar Icons
 
@@ -42,25 +32,24 @@ The status bar displays icons to indicate background activity. Here's what each 
 
 These icons appear during the [background cache sync](#background-cache-sync) process:
 
-| Icon | Description |
-|---|---|
-| ![Database Sync](../resources/img/user_guide/statusbar_icons/Database%20Sync.png){ width="24" } | Cache sync in progress |
-| ![Database Check](../resources/img/user_guide/statusbar_icons/Database%20Check.png){ width="24" } | Cache sync completed successfully |
-| ![Database Alert](../resources/img/user_guide/statusbar_icons/Database%20Alert.png){ width="24" } | Cache sync encountered an error |
+| Icon                                                                                              | Description |
+|---------------------------------------------------------------------------------------------------|---|
+| ![Database Sync](../resources/img/user_guide/statusbar_icons/Database%20Sync.png){ width="50" }   | Cache sync in progress |
+| ![Database Check](../resources/img/user_guide/statusbar_icons/Database%20Check.png){ width="50" } | Cache sync completed successfully |
+| ![Database Alert](../resources/img/user_guide/statusbar_icons/Database%20Alert.png){ width="50" } | Cache sync encountered an error |
 
 ### Save Sync Icons
 
-These icons appear during [Save Sync](#save-sync) operations:
+These icons appear during [Save Sync](save-sync.md) operations:
 
 | Icon | Description |
 |---|---|
-| ![Cloud Sync](../resources/img/user_guide/statusbar_icons/Cloud%20Sync.png){ width="24" } | Save sync in progress |
-| ![Cloud Upload](../resources/img/user_guide/statusbar_icons/Cloud%20Upload.png){ width="24" } | Uploading saves to RomM |
-| ![Cloud Download](../resources/img/user_guide/statusbar_icons/Cloud%20Download.png){ width="24" } | Downloading saves from RomM |
-| ![Cloud Check](../resources/img/user_guide/statusbar_icons/Cloud%20Check.png){ width="24" } | Save sync completed successfully |
-| ![Cloud Alert](../resources/img/user_guide/statusbar_icons/Cloud%20Alert.png){ width="24" } | Save sync encountered an error, check the log file |
+| ![Cloud Sync](../resources/img/user_guide/statusbar_icons/Cloud%20Sync.png){ width="50" } | Save sync in progress |
+| ![Cloud Upload](../resources/img/user_guide/statusbar_icons/Cloud%20Upload.png){ width="50" } | Uploading saves to RomM |
+| ![Cloud Download](../resources/img/user_guide/statusbar_icons/Cloud%20Download.png){ width="50" } | Downloading saves from RomM |
+| ![Cloud Check](../resources/img/user_guide/statusbar_icons/Cloud%20Check.png){ width="50" } | Save sync completed successfully |
+| ![Cloud Alert](../resources/img/user_guide/statusbar_icons/Cloud%20Alert.png){ width="50" } | Save sync encountered an error, check the log file |
 
----
 
 ## First Launch and Login
 
@@ -83,7 +72,6 @@ Use `Left/Right` to cycle through the available languages. Press `A` to confirm 
 
 You can change your language later from the [Settings](settings.md#language).
 
----
 
 ### Login
 
@@ -113,7 +101,6 @@ to the next step. If something goes wrong, you'll get a message telling you what
     user account. Grout will support API Keys once they are available in RomM. For more details,
     see [this GitHub issue](https://github.com/rommapp/romm/issues/1767#issuecomment-2744215262).
 
----
 
 ## Platform Directory Mapping
 
@@ -146,7 +133,17 @@ to this screen later, any custom folder names you entered will be remembered and
 
 You can change these mappings later from [Settings](settings.md).
 
----
+### Platform Mappings Reference
+
+Grout uses platform mappings to determine where to save downloaded games on your device. Each Custom Firmware (CFW) uses
+different folder naming conventions. Use these references to see the exact folder names used by your CFW:
+
+- [KNULLI](../platforms/knulli.md) - ES-DE style folder names (e.g., `gb`, `snes`, `psx`)
+- [muOS](../platforms/muos.md) - Mixed short codes and descriptive names (e.g., `gb`, `Nintendo Game Boy`)
+- [NextUI](../platforms/nextui.md) - Descriptive names with tags (e.g., `Game Boy (GB)`)
+- [ROCKNIX](../platforms/rocknix.md) - ES-DE style folder names (e.g., `gb`, `snes`, `psx`)
+- [Spruce](../platforms/spruce.md) - Uppercase short codes (e.g., `GB`, `SFC`, `PS`)
+
 
 ## Background Cache Sync
 
@@ -171,16 +168,18 @@ responsive browsing experience. This cache syncs automatically in the background
 
 **First launch:**
 
-On your very first launch (after platform mapping), Grout builds the initial cache. This may take a moment
-depending on the size of your library.
+On your very first launch (after platform mapping), Grout builds the initial cache.
+
+This may take a moment depending on the size of your library.
 
 !!! tip
     If you need to completely rebuild the cache from scratch, use **Rebuild Cache** in
     [Advanced Settings](settings.md#rebuild-cache).
 
----
 
-## Main Menu - Platform Selection
+## Browsing Games
+
+### Main Menu
 
 ![Grout preview, main menu (platforms)](../resources/img/user_guide/platforms.png "Grout preview, main menu (platforms)")
 
@@ -210,9 +209,8 @@ While in this mode:
 
 Your custom platform order is automatically saved to the config and will persist across sessions.
 
----
 
-## Collections
+### Collections
 
 ![Grout preview, collections list](../resources/img/user_guide/collections.png "Grout preview, collections list")
 
@@ -235,9 +233,8 @@ shown as prefixes (e.g., `[nes] Tetris`, `[snes] Tetris Battle Gaiden`)
     Regular collections, smart collections, and virtual collections can be toggled on/off
     in [Settings](settings.md#collections-settings).
 
----
 
-## Game List
+### Game List
 
 ![Grout preview, games list](../resources/img/user_guide/games_list.png "Grout preview, games list")
 
@@ -269,9 +266,8 @@ Check all the ones you want, then press `Start` to confirm your selections.
 !!! tip
     Box art must be enabled in [Settings](settings.md#box-art) for it to appear.
 
----
 
-## Search
+### Search
 
 Press `X` from any game list to search.
 
@@ -282,7 +278,6 @@ The search is case-insensitive and matches anywhere in the game name.
 
 To clear a search and return to the full list, press `B`.
 
----
 
 ## Game Details
 
@@ -325,7 +320,6 @@ different revisions (Rev A, Rev B). When a game has multiple versions available:
     **Kids Mode Impact:** When Kids Mode is enabled, the Game Options screen is hidden.
     See [Settings Reference](settings.md#kids-mode) to learn how to temporarily or permanently disable Kids Mode.
 
----
 
 ## Downloading Games
 
@@ -354,7 +348,6 @@ If a download fails, Grout will show you which games had problems and clean up a
 When everything's done, you're dropped back to the game list. The games you just downloaded are now on your device and
 ready to play.
 
----
 
 ## BIOS Files
 
@@ -372,62 +365,9 @@ the correct location on your device.
 From the main menu, press `A` on a platform that requires BIOS files. If BIOS files are available for that
 platform in your RomM library, you'll see a "BIOS" option in the platform submenu.
 
----
 
-## Settings
+## Spread Joy!
 
-Press `X` from the main menu to access Settings.
+A significant amount of time has been spent building Grout.
 
-!!! important
-    **Kids Mode Impact:** When Kids Mode is enabled, the Settings screen is hidden entirely. To access settings
-    temporarily, press `L1` + `R1` + `Menu` during the Grout splash screen.
-
-![Grout preview, settings](../resources/img/user_guide/settings.png "Grout preview, settings")
-
-Settings are organized into several categories:
-
-- **General** - Display options (box art, game details), download behavior, artwork, language
-- **Collections** - Toggle collection types, choose unified vs. platform view
-- **Directory Mappings** - Remap platforms to different folders
-- **Save Sync** - Off, Manual, or Automatic sync modes
-- **Advanced** - Cache management, timeouts, Kids Mode, logging
-
-Use `Left/Right` to cycle through options. Press `Start` to save your changes, or `B` to cancel.
-
-For complete documentation on all settings, see the **[Settings Reference](settings.md)**.
-
----
-
-## Save Sync
-
-Save Sync keeps your game saves synchronized between your RomM server and your handheld device.
-
-![Grout preview, sync summary](../resources/img/user_guide/sync_summary.png "Grout preview, sync summary")
-
-**Quick Overview:**
-
-- **Manual Mode** - Press `Y` from the main menu to sync on demand
-- **Automatic Mode** - Syncs in the background when Grout launches
-
-Save Sync compares your local saves with RomM and transfers whichever version is newer. Local saves are backed up before
-being overwritten.
-
-!!! warning
-    Save Sync works with save files only, **NOT** save states. If you use save states with autoload, the emulator may load
-    the state instead of your synced save.
-
-For complete documentation including sync logic, per-game settings, and troubleshooting, see the
-**[Save Sync Guide](save-sync.md)**.
-
----
-
-## Platform Mappings Reference
-
-Grout uses platform mappings to determine where to save downloaded games on your device. Each Custom Firmware (CFW) uses
-different folder naming conventions. Use these references to see the exact folder names used by your CFW:
-
-- [KNULLI](../platforms/knulli.md) - ES-DE style folder names (e.g., `gb`, `snes`, `psx`)
-- [muOS](../platforms/muos.md) - Mixed short codes and descriptive names (e.g., `gb`, `Nintendo Game Boy`)
-- [NextUI](../platforms/nextui.md) - Descriptive names with tags (e.g., `Game Boy (GB)`)
-- [ROCKNIX](../platforms/rocknix.md) - ES-DE style folder names (e.g., `gb`, `snes`, `psx`)
-- [Spruce](../platforms/spruce.md) - Uppercase short codes (e.g., `GB`, `SFC`, `PS`)
+If you enjoy using Grout and feel inclined to pay it forward, go do something nice for someone!
