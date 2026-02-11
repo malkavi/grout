@@ -1,4 +1,4 @@
-# State Machine
+# State Machine Reference
 
 This document shows the navigation flow between screens in Grout.
 
@@ -147,33 +147,3 @@ flowchart TD
 | Logout Confirmation           | Confirm logout action                          |
 | Save Sync                     | Manual save synchronization                    |
 | BIOS Download                 | Download BIOS files                            |
-
----
-
-## Navigation State
-
-The FSM maintains state in a `NavState` struct:
-
-```go
-type NavState struct {
-    CurrentGames []romm.Rom
-    FullGames    []romm.Rom
-    SearchFilter string
-    HasBIOS      bool
-    GameListPos  ListPosition
-
-    CollectionSearchFilter string
-    CollectionGames        []romm.Rom
-    CollectionListPos      ListPosition
-    CollectionPlatformPos  ListPosition
-
-    PlatformListPos ListPosition
-
-    SettingsPos            ListPosition
-    CollectionsSettingsPos ListPosition
-    AdvancedSettingsPos    ListPosition
-
-    QuitOnBack      bool
-    ShowCollections bool
-}
-```

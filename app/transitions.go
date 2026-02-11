@@ -1,12 +1,16 @@
 package main
 
 import (
+	"grout/cache"
 	"grout/cfw"
 	"grout/internal"
 	"grout/ui"
 	"os"
 
+	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
+	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/i18n"
 	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/router"
+	goi18n "github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 type transitionContext struct {
@@ -16,7 +20,8 @@ type transitionContext struct {
 	showCollections bool
 }
 
-func buildTransitionFunc(state *AppState, quitOnBack bool, showCollections bool) router.TransitionFunc {
+func buildTransitionFunc(state *AppState, quitOnBack bool, initialShowCollections bool) router.TransitionFunc {
+	showCollections := initialShowCollections
 	return func(from router.Screen, result any, stack *router.Stack) (router.Screen, any) {
 		ctx := &transitionContext{
 			state:           state,
@@ -24,6 +29,7 @@ func buildTransitionFunc(state *AppState, quitOnBack bool, showCollections bool)
 			quitOnBack:      quitOnBack,
 			showCollections: showCollections,
 		}
+		defer func() { showCollections = ctx.showCollections }()
 
 		switch from {
 		case ScreenPlatformSelection:
@@ -432,7 +438,7 @@ func transitionSettings(ctx *transitionContext, result any) (router.Screen, any)
 		}
 
 	case ui.SettingsActionSaved, ui.SettingsActionBack:
-		return popOrExit(ctx.stack)
+		return popOrExitWithCollections(ctx.stack, ctx.showCollections)
 	}
 
 	return router.ScreenExit, nil
@@ -448,10 +454,24 @@ func transitionGeneralSettings(ctx *transitionContext, result any) (router.Scree
 
 func transitionCollectionsSettings(ctx *transitionContext, result any) (router.Screen, any) {
 	r := result.(ui.CollectionsSettingsOutput)
-	if r.SyncNeeded && ctx.state.CacheSync != nil {
-		ctx.state.CacheSync.SyncCollections()
+	if r.SyncNeeded {
+		if cm := cache.GetCacheManager(); cm != nil {
+			cm.ClearCollections()
+			cm.SetMetadata(cache.MetaKeyCollectionsRefreshedAt, "")
+
+			gaba.ProcessMessage(
+				i18n.Localize(&goi18n.Message{ID: "collections_syncing", Other: "Syncing collections..."}, nil),
+				gaba.ProcessMessageOptions{ShowThemeBackground: true},
+				func() (any, error) {
+					cm.SyncCollectionsOnly()
+					return nil, nil
+				},
+			)
+		}
+		ctx.showCollections = true
+	} else {
+		ctx.showCollections = ctx.state.Config.ShowCollections(ctx.state.Host)
 	}
-	ctx.showCollections = ctx.state.Config.ShowCollections(ctx.state.Host)
 	return popOrExit(ctx.stack)
 }
 
@@ -538,6 +558,15 @@ func transitionUpdateCheck(ctx *transitionContext, result any) (router.Screen, a
 		os.Exit(0)
 	}
 	return popOrExit(ctx.stack)
+}
+
+func popOrExitWithCollections(stack *router.Stack, showCollections bool) (router.Screen, any) {
+	screen, input := popOrExit(stack)
+	if psInput, ok := input.(ui.PlatformSelectionInput); ok {
+		psInput.ShowCollections = showCollections
+		return screen, psInput
+	}
+	return screen, input
 }
 
 func popOrExit(stack *router.Stack) (router.Screen, any) {

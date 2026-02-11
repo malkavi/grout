@@ -43,4 +43,4 @@ sure to keep the `config.json` file if you do not want to authenticate again, an
 
 ## Next Steps
 
-After installation is complete, check out the [User Guide](../guide/user-guide.md) to learn how to use Grout.
+After installation is complete, check out the [User Guide](../usage/guide.md) to learn how to use Grout.

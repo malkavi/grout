@@ -241,6 +241,7 @@ dependencies = [
     { name = "mkdocs-glightbox" },
     { name = "mkdocs-material" },
     { name = "pillow" },
+    { name = "pymdown-extensions" },
 ]
 
 [package.metadata]
@@ -250,6 +251,7 @@ requires-dist = [
     { name = "mkdocs-glightbox", specifier = ">=0.5.2" },
     { name = "mkdocs-material", specifier = ">=9.7.1" },
     { name = "pillow", specifier = ">=12.1.0" },
+    { name = "pymdown-extensions", specifier = ">=10.20.1" },
 ]
 
 [[package]]

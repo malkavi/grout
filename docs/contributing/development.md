@@ -1,14 +1,10 @@
-# Grout Development Guide
+# Development Guide
 
-> [!NOTE]
-> These instructions were written with macOS in mind. It should work elsewhere, but we have
-> not personally verified this.
+!!! note
+    These instructions were written with macOS in mind. It should work elsewhere, but we have
+    not personally verified this.
 
-We hang out over in
-the [Grout Development Channel](https://discord.com/channels/1138838206532554853/1456747141518069906) on
-the [RomM Discord](https://discord.gg/P5HtHnhUDH). Come join us!
-
----
+We hang out over in the [Grout Development Channel](https://discord.com/channels/1138838206532554853/1456747141518069906) on the [RomM Discord](https://discord.gg/P5HtHnhUDH). Come join us!
 
 ## Prerequisites
 
@@ -27,8 +23,6 @@ brew install sdl2 sdl2_image sdl2_ttf sdl2_gfx
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) or equivalent
     - We love [OrbStack](https://orbstack.dev) (not a sponsor)
 
----
-
 ## Getting Started
 
 1. Clone the [Grout](https://github.com/rommapp/grout) repository.
@@ -44,8 +38,6 @@ brew install sdl2 sdl2_image sdl2_ttf sdl2_gfx
       muOS). Have the subdirectory structure of this path match the CFW you are working on.
 5. Run / Debug `app/grout.go`, making sure to reference the `.env` file in your run configuration.
 
----
-
 ## Project Structure
 
 The codebase is laid out fairly well. It attempts to keep everything grouped by feature / function / domain.
@@ -53,7 +45,7 @@ The codebase is laid out fairly well. It attempts to keep everything grouped by 
 - `app` contains the glue, the main function, finite state machine for screen transitions, and the setup / cleanup code.
 - `bios` handles BIOS file operations
 - `cache` contains the logic for the SQLite database that powers the local cache
-- `cfw` contains all the ~~magic~~ logic for adapting Grout to the various CFWs that are supported
+- `cfw` contains all the logic for adapting Grout to the various CFWs that are supported
 - `docs` for the user guide and other repo housekeeping, including this document!
 - `internal` the college educated utils package. App-wide / stateless utilities live here
 - `resources` the splash screen image and localization files live here, along with the go file that embeds them
@@ -66,8 +58,6 @@ The codebase is laid out fairly well. It attempts to keep everything grouped by 
 - `update` handles the in-app updater functionality, excluding the UI
 - `version` exposes the version information that is injected at build time. Having it as its own package made the script
   cleaner.
-
----
 
 ## Packaging
 
@@ -110,7 +100,7 @@ into the appropriate directory structure for that CFW.
 
 ### Deployment via ADB
 
-For rapid testing, you can deploy directly to a connected device:
+For rapid testing, you can deploy directly to a connected device, assuming that the device has ADB available:
 
 ```shell
 # NextUI (TrimUI devices)
@@ -152,8 +142,6 @@ build/
 ├── Knulli/Grout/      # Knulli package
 └── Spruce/Grout/      # Spruce package
 ```
-
----
 
 ## Helper Tools
 
@@ -204,7 +192,3 @@ task resize-user-guide-images
 The `mp4-to-webp` task is useful for creating animated preview images for documentation.
 
 The `resize-user-guide-images` makes sure all the user guide screenshots are the same size.
-
----
-
-Happy Developing ❤️

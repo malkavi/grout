@@ -40,7 +40,7 @@ Enter your connection details:
 Press `Start` to connect.
 
 !!! tip
-    Using a self-signed certificate? Set **SSL Certificates** to **Skip Verification**.
+Using a self-signed certificate? Set **SSL Certificates** to **Skip Verification**.
 
 ### Step 4: Map Your Platforms
 
@@ -49,6 +49,7 @@ Tell Grout where to save games for each platform:
 - **Skip** - Don't download games for this platform
 - **Create {Directory}** - Let Grout create a new folder
 - **/{Existing Directory}** - Use an existing folder
+- **Custom** - Specify a custom path
 
 Press `Start` when done.
 
@@ -64,6 +65,6 @@ That's it! Your game is now on your device.
 
 ## What's Next?
 
-- [Full User Guide](../guide/user-guide.md) - Complete feature documentation
-- [Settings Reference](../guide/settings.md) - Configure Grout to your preferences
-- [Save Sync Guide](../guide/save-sync.md) - Keep saves synchronized across devices
+- [Full User Guide](../usage/guide.md) - Complete feature documentation
+- [Settings Reference](../usage/settings.md) - Configure Grout to your preferences
+- [Save Sync Guide](../usage/save-sync.md) - Keep saves synchronized across devices

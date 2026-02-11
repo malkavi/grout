@@ -130,6 +130,7 @@ jobs:
             build/Grout.spruce.zip
             build/Grout-Knulli.zip
             build/Grout-ROCKNIX.zip
+            build/Grout-Trimui.zip
             build/grout
           draft: false
           prerelease: ${{ inputs.beta }}

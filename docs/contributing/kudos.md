@@ -1,19 +1,16 @@
-# Contributors
+# Kudos
 
 Thank you to everyone who has contributed to Grout!
 
-## ~~Fearful Leader~~ Maintainer
+## ~~Fearful Leader~~ Lead Maintainer { data-toc-label="Lead Maintainer" }
 
 - **Brandon T. Kowalski** ([@BrandonKowalski](https://github.com/BrandonKowalski))
 
 ## Contributors
 
 - **Christophe Coquelet** ([@pawndev](https://github.com/pawndev))
+- **Ivan** ([@malkavi](https://github.com/malkavi))
 - **Georges-Antoine Assi** ([@gantoine](https://github.com/gantoine))
 - **Huynh Duc Dung** ([@jellydn](https://github.com/jellydn))
 - **Sargun Vohra** ([@sargunv](https://github.com/sargunv))
-- **Zach Keatings** ([@zkeatings](https://github.com/zkeatings))
-
----
-
-Want to contribute? Check out the [Contributing Guide](CONTRIBUTING.md) to get started!
+- **Zach Keatings** ([@ZacharyKeatings](https://github.com/ZacharyKeatings))

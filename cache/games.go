@@ -451,15 +451,28 @@ func (cm *Manager) GetGamesByIDs(gameIDs []int) ([]romm.Rom, error) {
 	return games, nil
 }
 
-func (cm *Manager) GetCachedGameIDs() map[int]bool {
-	if cm == nil || !cm.initialized {
+func (cm *Manager) GetCachedGameIDsForPlatforms(fsSlugs []string) map[int]bool {
+	if cm == nil || !cm.initialized || len(fsSlugs) == 0 {
 		return nil
 	}
 
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 
-	rows, err := cm.db.Query(`SELECT id FROM games`)
+	placeholders := make([]byte, 0, len(fsSlugs)*2-1)
+	args := make([]any, len(fsSlugs))
+	for i, slug := range fsSlugs {
+		if i > 0 {
+			placeholders = append(placeholders, ',')
+		}
+		placeholders = append(placeholders, '?')
+		args[i] = slug
+	}
+
+	rows, err := cm.db.Query(
+		`SELECT id FROM games WHERE platform_fs_slug IN (`+string(placeholders)+`)`,
+		args...,
+	)
 	if err != nil {
 		return nil
 	}

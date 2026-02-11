@@ -6,7 +6,7 @@
   <br />
   <img src=".github/resources/logotipo.png" height="45px" width="auto" alt="romm grout logotype">
     <h3 style="font-size: 25px;">
-A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.org">Knulli</a>, <a href="https://rocknix.org">ROCKNIX</a>, <a href="https://spruceui.github.io/">Spruce (v4)</a> and <a href="https://nextui.loveretro.games">NextUI</a>.
+A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.org">Knulli</a>, <a href="https://rocknix.org">ROCKNIX</a>, <a href="https://spruceui.github.io/">Spruce (v4)</a>, <a href="https://nextui.loveretro.games">NextUI</a> and <a href="https://trimui.com">TrimUI</a>.
     </h3>
 
 <br>
@@ -46,12 +46,14 @@ A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.o
 
 ## Documentation
 
-| Guide                                  | Description                            |
-|----------------------------------------|----------------------------------------|
-| [Quick Start](old_docs/QUICK_START.md)     | Get up and running in 5 steps          |
-| [User Guide](old_docs/USER_GUIDE.md)       | Complete feature documentation         |
-| [Settings Reference](old_docs/SETTINGS.md) | All settings explained                 |
-| [Save Sync Guide](old_docs/SAVE_SYNC.md)   | Keep saves synchronized across devices |
+Full documentation is available at **[grout.romm.app](https://grout.romm.app)**.
+
+| Guide | Description |
+|-------|-------------|
+| [Quick Start](https://grout.romm.app/getting-started/) | Get up and running in 5 steps |
+| [User Guide](https://grout.romm.app/usage/guide/) | Complete feature documentation |
+| [Settings Reference](https://grout.romm.app/usage/settings/) | All settings explained |
+| [Save Sync Guide](https://grout.romm.app/usage/save-sync/) | Keep saves synchronized across devices |
 
 ---
 
@@ -59,10 +61,10 @@ A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.o
 
 Interested in contributing? We'd love your help!
 
-| Guide                                              | Description                                      |
-|----------------------------------------------------|--------------------------------------------------|
-| [Development Guide](old_docs/DEVELOPMENT.md)           | Set up your local environment and build Grout    |
-| [Contributing Guide](.github/CONTRIBUTING.md)      | How to contribute code, translations, and more   |
+| Guide | Description |
+|-------|-------------|
+| [Contributing Guide](https://grout.romm.app/contributing/) | How to contribute code, translations, and more |
+| [Development Guide](https://grout.romm.app/contributing/development/) | Set up your local environment and build Grout |
 
 ---
 
@@ -78,7 +80,7 @@ Grout is built by the community for the community.
 
 Thank you to everyone who has helped make this project better!
 
-See the full list of [Contributors](.github/CONTRIBUTORS.md).
+See the full list of [Contributors](https://grout.romm.app/contributing/kudos/).
 
 ---
 
