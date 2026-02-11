@@ -46,12 +46,14 @@ A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.o
 
 ## Documentation
 
-| Guide                                  | Description                            |
-|----------------------------------------|----------------------------------------|
-| [Quick Start](old_docs/QUICK_START.md)     | Get up and running in 5 steps          |
-| [User Guide](old_docs/USER_GUIDE.md)       | Complete feature documentation         |
-| [Settings Reference](old_docs/SETTINGS.md) | All settings explained                 |
-| [Save Sync Guide](old_docs/SAVE_SYNC.md)   | Keep saves synchronized across devices |
+Full documentation is available at **[grout.romm.app](https://grout.romm.app)**.
+
+| Guide | Description |
+|-------|-------------|
+| [Quick Start](https://grout.romm.app/getting-started/) | Get up and running in 5 steps |
+| [User Guide](https://grout.romm.app/usage/guide/) | Complete feature documentation |
+| [Settings Reference](https://grout.romm.app/usage/settings/) | All settings explained |
+| [Save Sync Guide](https://grout.romm.app/usage/save-sync/) | Keep saves synchronized across devices |
 
 ---
 
@@ -59,10 +61,10 @@ A RomM Client for <a href="https://muos.dev">muOS</a>, <a href="https://knulli.o
 
 Interested in contributing? We'd love your help!
 
-| Guide                                              | Description                                      |
-|----------------------------------------------------|--------------------------------------------------|
-| [Development Guide](old_docs/DEVELOPMENT.md)           | Set up your local environment and build Grout    |
-| [Contributing Guide](.github/CONTRIBUTING.md)      | How to contribute code, translations, and more   |
+| Guide | Description |
+|-------|-------------|
+| [Contributing Guide](https://grout.romm.app/development/) | How to contribute code, translations, and more |
+| [Development Guide](https://grout.romm.app/development/development/) | Set up your local environment and build Grout |
 
 ---
 
