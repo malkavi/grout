@@ -68,7 +68,11 @@ func (s *CollectionSelectionScreen) Draw(input CollectionSelectionInput) (Collec
 		}
 
 		// Filter collections to only show those with games from mapped platforms
-		cachedGameIDs := cm.GetCachedGameIDs()
+		var mappedSlugs []string
+		for slug := range input.Config.DirectoryMappings {
+			mappedSlugs = append(mappedSlugs, slug)
+		}
+		cachedGameIDs := cm.GetCachedGameIDsForPlatforms(mappedSlugs)
 		if len(cachedGameIDs) > 0 {
 			filteredCollections := make([]romm.Collection, 0, len(collections))
 			for _, coll := range collections {
