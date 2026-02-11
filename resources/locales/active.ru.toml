@@ -30,6 +30,15 @@ other = "Сканирование платформы %d/%d: %s..."
 hash = "sha1-ef880c0f2577f0a9fb8ca21f2ed3710e5aef1376"
 other = "Все обложки уже в кэше!"
 
+[artwork_sync_preload_all]
+other = "Все"
+
+[artwork_sync_preload_choice]
+other = "Вы хотите загрузить все обложки или только отсутствующие?"
+
+[artwork_sync_preload_missing]
+other = "Только отсутствующие"
+
 [auto_sync_waiting]
 hash = "sha1-c005f14e70da37982e2152d3af9d29a58ea8f01c"
 other = "Ожидание завершения синхронизации..."
@@ -129,6 +138,9 @@ other = "Выход"
 [button_redownload]
 hash = "sha1-3d0a3c6e0fd5672b0e3e33bbef33dff73a5f0a8c"
 other = "Скачать заново"
+
+[button_save]
+other = "Сохранить"
 
 [button_save_sync]
 hash = "sha1-905f63092ff26517a7aa8083857b3c8af9707002"
@@ -645,6 +657,21 @@ other = "Распаковать"
 [settings_download_art]
 hash = "sha1-8b7f3d97b75d86dad90186e811d3b01b05894107"
 other = "Скачать обложки"
+
+[settings_download_art_kind]
+other = "Тип обложки"
+
+[settings_download_art_kind_box2d]
+other = "Box2D"
+
+[settings_download_art_kind_box3d]
+other = "Box3D"
+
+[settings_download_art_kind_default]
+other = "По умолчанию"
+
+[settings_download_art_kind_miximage]
+other = "MixImage"
 
 [settings_download_timeout]
 hash = "sha1-86406d85cd2216df4f871ce0119581019810fd67"
