@@ -658,6 +658,9 @@ func popOrExit(stack *router.Stack) (router.Screen, any) {
 			input.LastSelectedIndex = output.LastSelectedIndex
 			input.LastSelectedPosition = output.LastSelectedPosition
 		}
+		if currentAppState != nil {
+			input.ShowSaveSync = computeShowSaveSync(currentAppState)
+		}
 		return entry.Screen, input
 
 	case ui.GameListInput:
