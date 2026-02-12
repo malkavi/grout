@@ -105,12 +105,27 @@ func (s *GameListScreen) Draw(input GameListInput) (GameListOutput, error) {
 
 	displayGames := stringutil.PrepareRomNames(games)
 
-	if input.GameFilter.HasActiveFilters() && !isCollectionSet(input.Collection) {
+	if input.GameFilter.HasActiveFilters() {
 		if cm := cache.GetCacheManager(); cm != nil {
 			filter := input.GameFilter
 			filter.PlatformID = input.Platform.ID
 			if filtered, err := cm.GetFilteredGames(filter); err == nil {
-				displayGames = stringutil.PrepareRomNames(filtered)
+				if isCollectionSet(input.Collection) {
+					// Intersect: keep only collection games that match the filter
+					allowed := make(map[int]struct{}, len(filtered))
+					for _, g := range filtered {
+						allowed[g.ID] = struct{}{}
+					}
+					kept := make([]romm.Rom, 0, len(displayGames))
+					for _, g := range displayGames {
+						if _, ok := allowed[g.ID]; ok {
+							kept = append(kept, g)
+						}
+					}
+					displayGames = kept
+				} else {
+					displayGames = stringutil.PrepareRomNames(filtered)
+				}
 			}
 		}
 	}

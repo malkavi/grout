@@ -437,6 +437,15 @@ func (cm *Manager) getCollectionInternalIDLocked(collection romm.Collection) (in
 	return cm.getCollectionInternalID(collection)
 }
 
+func (cm *Manager) ResolveCollectionID(collection romm.Collection) (int64, error) {
+	if cm == nil || !cm.initialized {
+		return 0, ErrNotInitialized
+	}
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	return cm.getCollectionInternalID(collection)
+}
+
 func (cm *Manager) SaveAllCollectionMappings(collections []romm.Collection) error {
 	if cm == nil || !cm.initialized {
 		return ErrNotInitialized
@@ -955,33 +964,34 @@ func GetGamesForPlatform(fsSlug string) ([]romm.Rom, error) {
 // All non-zero/non-empty fields are ANDed together.
 // Slice fields (e.g., Genres) use OR within the slice (match any of the given values).
 type GameFilter struct {
-	PlatformID     int
-	SearchQuery    string
-	Genres         []string
-	Franchises     []string
-	Companies      []string
-	GameModes      []string
-	AgeRatings     []string
-	Regions        []string
-	Languages      []string
-	Tags           []string
-	IsIdentified   *bool
-	IsUnidentified *bool
-	MissingFromFs  *bool
-	HasManual      *bool
-	HasMultiple    *bool
-	MinRating      float64
-	MaxRating      float64
-	MinReleaseDate int64
-	MaxReleaseDate int64
-	MinSizeBytes   int64
-	MaxSizeBytes   int64
-	NameSearch     string
+	PlatformID           int
+	PlatformSlugs        []string
+	CollectionInternalID int64
+	Genres               []string
+	Franchises           []string
+	Companies            []string
+	GameModes            []string
+	AgeRatings           []string
+	Regions              []string
+	Languages            []string
+	Tags                 []string
+	IsIdentified         *bool
+	IsUnidentified       *bool
+	MissingFromFs        *bool
+	HasManual            *bool
+	HasMultiple          *bool
+	MinRating            float64
+	MaxRating            float64
+	MinReleaseDate       int64
+	MaxReleaseDate       int64
+	MinSizeBytes         int64
+	MaxSizeBytes         int64
+	NameSearch           string
 }
 
 // HasActiveFilters returns true if any filter criteria are set.
 func (f GameFilter) HasActiveFilters() bool {
-	return len(f.Genres) > 0 || len(f.Franchises) > 0 || len(f.Companies) > 0 ||
+	return len(f.PlatformSlugs) > 0 || len(f.Genres) > 0 || len(f.Franchises) > 0 || len(f.Companies) > 0 ||
 		len(f.GameModes) > 0 || len(f.AgeRatings) > 0 || len(f.Regions) > 0 ||
 		len(f.Languages) > 0 || len(f.Tags) > 0 ||
 		f.IsIdentified != nil || f.IsUnidentified != nil || f.MissingFromFs != nil ||
@@ -1004,9 +1014,23 @@ func (cm *Manager) GetFilteredGames(filter GameFilter) ([]romm.Rom, error) {
 	query := "SELECT g.data_json FROM games g WHERE 1=1"
 	var args []interface{}
 
+	if filter.CollectionInternalID != 0 {
+		query += " AND EXISTS (SELECT 1 FROM game_collections gc WHERE gc.game_id = g.id AND gc.collection_id = ?)"
+		args = append(args, filter.CollectionInternalID)
+	}
+
 	if filter.PlatformID != 0 {
 		query += " AND g.platform_id = ?"
 		args = append(args, filter.PlatformID)
+	}
+
+	if len(filter.PlatformSlugs) > 0 {
+		placeholders := make([]string, len(filter.PlatformSlugs))
+		for i, s := range filter.PlatformSlugs {
+			placeholders[i] = "?"
+			args = append(args, s)
+		}
+		query += " AND g.platform_fs_slug IN (" + strings.Join(placeholders, ",") + ")"
 	}
 
 	if filter.NameSearch != "" {
@@ -1178,14 +1202,28 @@ func (cm *Manager) GetDistinctValuesWithFilter(lookupTable, junctionTable, fkCol
 	query := "SELECT DISTINCT lt.name FROM " + lookupTable + " lt INNER JOIN " + junctionTable + " jt ON jt." + fkCol + " = lt.id INNER JOIN games g ON g.id = jt.game_id WHERE 1=1"
 	var args []any
 
+	if filter.CollectionInternalID != 0 {
+		query += " AND EXISTS (SELECT 1 FROM game_collections gc WHERE gc.game_id = g.id AND gc.collection_id = ?)"
+		args = append(args, filter.CollectionInternalID)
+	}
+
 	if platformID != 0 {
 		query += " AND g.platform_id = ?"
 		args = append(args, platformID)
 	}
 
-	if filter.SearchQuery != "" {
-		query += " AND LOWER(g.name) LIKE '%' || LOWER(?) || '%'"
-		args = append(args, filter.SearchQuery)
+	if len(filter.PlatformSlugs) > 0 {
+		placeholders := make([]string, len(filter.PlatformSlugs))
+		for i, s := range filter.PlatformSlugs {
+			placeholders[i] = "?"
+			args = append(args, s)
+		}
+		query += " AND g.platform_fs_slug IN (" + strings.Join(placeholders, ",") + ")"
+	}
+
+	if filter.NameSearch != "" {
+		query += " AND g.name LIKE ?"
+		args = append(args, "%"+filter.NameSearch+"%")
 	}
 
 	type junctionFilter struct {
@@ -1233,6 +1271,86 @@ func (cm *Manager) GetDistinctValuesWithFilter(lookupTable, junctionTable, fkCol
 	}
 
 	return values, rows.Err()
+}
+
+type PlatformOption struct {
+	Slug        string
+	DisplayName string
+}
+
+func (cm *Manager) GetCollectionPlatforms(collection romm.Collection, filter GameFilter) ([]PlatformOption, error) {
+	if cm == nil || !cm.initialized {
+		return nil, ErrNotInitialized
+	}
+
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	collectionID, err := cm.getCollectionInternalID(collection)
+	if err != nil {
+		return nil, err
+	}
+
+	query := `SELECT DISTINCT p.fs_slug, p.name, p.custom_name FROM games g
+		INNER JOIN game_collections gc ON g.id = gc.game_id
+		INNER JOIN platforms p ON p.id = g.platform_id
+		WHERE gc.collection_id = ?`
+	args := []any{collectionID}
+
+	if filter.NameSearch != "" {
+		query += " AND g.name LIKE ?"
+		args = append(args, "%"+filter.NameSearch+"%")
+	}
+
+	type junctionFilter struct {
+		junctionTable, fkCol, lookupTable string
+		values                            []string
+	}
+	junctions := []junctionFilter{
+		{"game_genres", "genre_id", "genres", filter.Genres},
+		{"game_franchises", "franchise_id", "franchises", filter.Franchises},
+		{"game_companies", "company_id", "companies", filter.Companies},
+		{"game_game_modes", "game_mode_id", "game_modes", filter.GameModes},
+		{"game_age_ratings", "age_rating_id", "age_ratings", filter.AgeRatings},
+		{"game_regions", "region_id", "regions", filter.Regions},
+		{"game_languages", "language_id", "languages", filter.Languages},
+		{"game_tags", "tag_id", "tags", filter.Tags},
+	}
+
+	for _, jf := range junctions {
+		if len(jf.values) == 0 {
+			continue
+		}
+		placeholders := make([]string, len(jf.values))
+		for i, v := range jf.values {
+			placeholders[i] = "?"
+			args = append(args, v)
+		}
+		query += " AND EXISTS (SELECT 1 FROM " + jf.junctionTable + " jt INNER JOIN " + jf.lookupTable + " lt ON lt.id = jt." + jf.fkCol + " WHERE jt.game_id = g.id AND lt.name IN (" + strings.Join(placeholders, ",") + "))"
+	}
+
+	query += " ORDER BY p.name"
+
+	rows, err := cm.db.Query(query, args...)
+	if err != nil {
+		return nil, newCacheError("get", "games", "collection-platforms", err)
+	}
+	defer rows.Close()
+
+	var platforms []PlatformOption
+	for rows.Next() {
+		var slug, name, customName string
+		if err := rows.Scan(&slug, &name, &customName); err != nil {
+			return nil, newCacheError("get", "games", "collection-platforms", err)
+		}
+		displayName := name
+		if customName != "" {
+			displayName = customName
+		}
+		platforms = append(platforms, PlatformOption{Slug: slug, DisplayName: displayName})
+	}
+
+	return platforms, rows.Err()
 }
 
 func (cm *Manager) GetDistinctGenres(platformID int) ([]string, error) {

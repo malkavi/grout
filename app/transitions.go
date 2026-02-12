@@ -200,6 +200,7 @@ func transitionGameList(ctx *transitionContext, result any) (router.Screen, any)
 		ctx.stack.Push(ScreenGameList, pushInput, r)
 		return ScreenGameFilters, ui.GameFiltersInput{
 			Platform:       r.Platform,
+			Collection:     r.Collection,
 			CurrentFilters: r.GameFilter,
 			SearchQuery:    r.SearchFilter,
 		}

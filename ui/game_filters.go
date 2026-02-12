@@ -13,6 +13,7 @@ import (
 
 type GameFiltersInput struct {
 	Platform       romm.Platform
+	Collection     romm.Collection
 	CurrentFilters cache.GameFilter
 	SearchQuery    string
 }
@@ -48,6 +49,16 @@ var filterCategories = []filterCategory{
 	{"filter_tag", "Tag", "tags", "game_tags", "tag_id"},
 }
 
+const platformCatIdx = -1
+
+func isCollection(input GameFiltersInput) bool {
+	return input.Collection.ID != 0 || input.Collection.VirtualID != ""
+}
+
+func isUnifiedCollection(input GameFiltersInput) bool {
+	return isCollection(input) && input.Platform.ID == 0
+}
+
 func (s *GameFiltersScreen) Draw(input GameFiltersInput) (GameFiltersOutput, error) {
 	output := GameFiltersOutput{
 		Action:   GameFiltersActionCancel,
@@ -61,7 +72,7 @@ func (s *GameFiltersScreen) Draw(input GameFiltersInput) (GameFiltersOutput, err
 	}
 
 	platformID := input.Platform.ID
-	items := s.buildMenuItems(cm, platformID, input.CurrentFilters, input.SearchQuery)
+	items := s.buildMenuItems(cm, platformID, input)
 
 	if len(items) == 0 {
 		return output, nil
@@ -91,18 +102,49 @@ func (s *GameFiltersScreen) Draw(input GameFiltersInput) (GameFiltersOutput, err
 	return output, nil
 }
 
-func (s *GameFiltersScreen) buildMenuItems(cm *cache.Manager, platformID int, current cache.GameFilter, searchQuery string) []gaba.ItemWithOptions {
+func (s *GameFiltersScreen) buildMenuItems(cm *cache.Manager, platformID int, input GameFiltersInput) []gaba.ItemWithOptions {
+	current := input.CurrentFilters
 	currentValues := [8][]string{
 		current.Genres, current.Franchises, current.Companies, current.GameModes,
 		current.Regions, current.Languages, current.AgeRatings, current.Tags,
 	}
 
 	allLabel := i18n.Localize(&goi18n.Message{ID: "filter_all", Other: "All"}, nil)
+	searchFilter := cache.GameFilter{NameSearch: input.SearchQuery}
+
+	if isCollection(input) {
+		if collID, err := cm.ResolveCollectionID(input.Collection); err == nil {
+			searchFilter.CollectionInternalID = collID
+		}
+	}
 
 	var items []gaba.ItemWithOptions
 	var activeCats []int
 
-	searchFilter := cache.GameFilter{SearchQuery: searchQuery}
+	if isUnifiedCollection(input) {
+		platforms, err := cm.GetCollectionPlatforms(input.Collection, searchFilter)
+		if err == nil && len(platforms) > 0 {
+			options := buildPlatformOptions(allLabel, platforms, nil)
+
+			selected := 0
+			if len(current.PlatformSlugs) == 1 {
+				for i, opt := range options {
+					if v, ok := opt.Value.(string); ok && v == current.PlatformSlugs[0] {
+						selected = i
+						break
+					}
+				}
+			}
+
+			items = append(items, gaba.ItemWithOptions{
+				Item:           gaba.MenuItem{Text: i18n.Localize(&goi18n.Message{ID: "filter_platform", Other: "Platform"}, nil)},
+				Options:        options,
+				SelectedOption: selected,
+			})
+			activeCats = append(activeCats, platformCatIdx)
+		}
+	}
+
 	for catIdx, cat := range filterCategories {
 		available := safeDistinct(cm.GetDistinctValuesWithFilter(cat.lookupTable, cat.junctionTable, cat.fkCol, platformID, searchFilter))
 		if len(available) == 0 {
@@ -129,7 +171,7 @@ func (s *GameFiltersScreen) buildMenuItems(cm *cache.Manager, platformID int, cu
 		activeCats = append(activeCats, catIdx)
 	}
 
-	wireFilterCallbacks(cm, platformID, items, activeCats, allLabel, searchQuery)
+	wireFilterCallbacks(cm, platformID, input.Collection, searchFilter.CollectionInternalID, items, activeCats, allLabel, input.SearchQuery)
 
 	return items
 }
@@ -143,7 +185,16 @@ func buildFilterOptionsList(allLabel string, available []string, onUpdate func(a
 	return options
 }
 
-func wireFilterCallbacks(cm *cache.Manager, platformID int, items []gaba.ItemWithOptions, activeCats []int, allLabel string, searchQuery string) {
+func buildPlatformOptions(allLabel string, platforms []cache.PlatformOption, onUpdate func(any)) []gaba.Option {
+	options := make([]gaba.Option, 0, len(platforms)+1)
+	options = append(options, gaba.Option{DisplayName: allLabel, Value: "", OnUpdate: onUpdate})
+	for _, p := range platforms {
+		options = append(options, gaba.Option{DisplayName: p.DisplayName, Value: p.Slug, OnUpdate: onUpdate})
+	}
+	return options
+}
+
+func wireFilterCallbacks(cm *cache.Manager, platformID int, collection romm.Collection, collectionInternalID int64, items []gaba.ItemWithOptions, activeCats []int, allLabel string, searchQuery string) {
 	if len(items) <= 1 {
 		return
 	}
@@ -152,42 +203,34 @@ func wireFilterCallbacks(cm *cache.Manager, platformID int, items []gaba.ItemWit
 	makeCallback = func(itemIdx int) func(any) {
 		return func(_ any) {
 			filter := buildGameFilterFromSelections(items, activeCats)
-			filter.SearchQuery = searchQuery
+			filter.NameSearch = searchQuery
+			filter.CollectionInternalID = collectionInternalID
 
 			for j := range items {
 				if j == itemIdx {
 					continue
 				}
 
-				cat := filterCategories[activeCats[j]]
+				catIdx := activeCats[j]
+				partialFilter := clearFilter(filter, catIdx)
 
-				partialFilter := clearFilter(filter, activeCats[j])
-				available := safeDistinct(cm.GetDistinctValuesWithFilter(
-					cat.lookupTable, cat.junctionTable, cat.fkCol, platformID, partialFilter,
-				))
-
-				currentVal := ""
-				if items[j].SelectedOption < len(items[j].Options) {
-					if v, ok := items[j].Options[items[j].SelectedOption].Value.(string); ok {
-						currentVal = v
+				if catIdx == platformCatIdx {
+					platforms, err := cm.GetCollectionPlatforms(collection, partialFilter)
+					if err != nil {
+						continue
 					}
+					cb := makeCallback(j)
+					options := buildPlatformOptions(allLabel, platforms, cb)
+					preserveSelection(items, j, options)
+				} else {
+					cat := filterCategories[catIdx]
+					available := safeDistinct(cm.GetDistinctValuesWithFilter(
+						cat.lookupTable, cat.junctionTable, cat.fkCol, platformID, partialFilter,
+					))
+					cb := makeCallback(j)
+					options := buildFilterOptionsList(allLabel, available, cb)
+					preserveSelection(items, j, options)
 				}
-
-				cb := makeCallback(j)
-				options := buildFilterOptionsList(allLabel, available, cb)
-
-				newSelected := 0
-				if currentVal != "" {
-					for i, opt := range options {
-						if v, ok := opt.Value.(string); ok && v == currentVal {
-							newSelected = i
-							break
-						}
-					}
-				}
-
-				items[j].Options = options
-				items[j].SelectedOption = newSelected
 			}
 		}
 	}
@@ -198,6 +241,28 @@ func wireFilterCallbacks(cm *cache.Manager, platformID int, items []gaba.ItemWit
 			items[i].Options[j].OnUpdate = cb
 		}
 	}
+}
+
+func preserveSelection(items []gaba.ItemWithOptions, idx int, options []gaba.Option) {
+	currentVal := ""
+	if items[idx].SelectedOption < len(items[idx].Options) {
+		if v, ok := items[idx].Options[items[idx].SelectedOption].Value.(string); ok {
+			currentVal = v
+		}
+	}
+
+	newSelected := 0
+	if currentVal != "" {
+		for i, opt := range options {
+			if v, ok := opt.Value.(string); ok && v == currentVal {
+				newSelected = i
+				break
+			}
+		}
+	}
+
+	items[idx].Options = options
+	items[idx].SelectedOption = newSelected
 }
 
 func buildGameFilterFromSelections(items []gaba.ItemWithOptions, activeCats []int) cache.GameFilter {
@@ -217,6 +282,8 @@ func buildGameFilterFromSelections(items []gaba.ItemWithOptions, activeCats []in
 
 func clearFilter(f cache.GameFilter, catIdx int) cache.GameFilter {
 	switch catIdx {
+	case platformCatIdx:
+		f.PlatformSlugs = nil
 	case 0:
 		f.Genres = nil
 	case 1:
@@ -239,6 +306,8 @@ func clearFilter(f cache.GameFilter, catIdx int) cache.GameFilter {
 
 func setGameFilter(f *cache.GameFilter, catIdx int, val string) {
 	switch catIdx {
+	case platformCatIdx:
+		f.PlatformSlugs = []string{val}
 	case 0:
 		f.Genres = []string{val}
 	case 1:
@@ -270,6 +339,8 @@ func (s *GameFiltersScreen) applyFilters(items []gaba.ItemWithOptions) cache.Gam
 
 		text := item.Item.Text
 		switch text {
+		case i18n.Localize(&goi18n.Message{ID: "filter_platform", Other: "Platform"}, nil):
+			f.PlatformSlugs = values
 		case i18n.Localize(&goi18n.Message{ID: "filter_genre", Other: "Genre"}, nil):
 			f.Genres = values
 		case i18n.Localize(&goi18n.Message{ID: "filter_franchise", Other: "Franchise"}, nil):
