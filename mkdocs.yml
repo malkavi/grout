@@ -90,7 +90,7 @@ nav:
       - Kudos: contributing/kudos.md
   - FAQ: usage/faq.md
 
-copyright: Copyright &copy; 2025 RomM Team
+copyright: "&copy; 2025 RomM Team"
 
 extra:
   generator: false
