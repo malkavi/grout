@@ -61,19 +61,11 @@ other = "Cette plateforme ne nécessite aucun fichier BIOS."
 
 [bios_status_not_installed]
 hash = "sha1-5cc41c2d9eefe7c246cac37b27f70b3ebc24575e"
-other = "Non Installé"
+other = "Manquant"
 
 [bios_status_ready]
 hash = "sha1-20c7c5522fc28c5817550dd82bc3272eb6a991c7"
 other = "Prêt"
-
-[bios_status_unverified]
-hash = "sha1-9a7ab23357427e1471442fad2feebd70186bc882"
-other = "Installé (Non Vérifié)"
-
-[bios_status_wrong_version]
-hash = "sha1-4b3acf8ba6563daaf56aa48ac9ecc7661ba7fdcf"
-other = "Mauvaise Version"
 
 [button_back]
 hash = "sha1-b52b36b7269fbfc58ec24bb724691951a3decbe8"
