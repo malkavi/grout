@@ -271,6 +271,8 @@ Check all the ones you want, then press `Start` to confirm your selections.
 
 ### Filters
 
+![Grout preview, filters](../resources/img/user_guide/filters.png "Grout preview, filters")
+
 Press `Y` from any game list to open the filters screen. You can filter games by:
 
 - Genre

@@ -199,12 +199,17 @@ func wireFilterCallbacks(cm *cache.Manager, platformID int, collection romm.Coll
 		return
 	}
 
+	rebuildFilter := func() cache.GameFilter {
+		f := buildGameFilterFromSelections(items, activeCats)
+		f.NameSearch = searchQuery
+		f.CollectionInternalID = collectionInternalID
+		return f
+	}
+
 	var makeCallback func(itemIdx int) func(any)
 	makeCallback = func(itemIdx int) func(any) {
 		return func(_ any) {
-			filter := buildGameFilterFromSelections(items, activeCats)
-			filter.NameSearch = searchQuery
-			filter.CollectionInternalID = collectionInternalID
+			filter := rebuildFilter()
 
 			for j := range items {
 				if j == itemIdx {
@@ -231,6 +236,9 @@ func wireFilterCallbacks(cm *cache.Manager, platformID int, collection romm.Coll
 					options := buildFilterOptionsList(allLabel, available, cb)
 					preserveSelection(items, j, options)
 				}
+
+				// Rebuild filter so subsequent iterations reflect any cleared selections
+				filter = rebuildFilter()
 			}
 		}
 	}
