@@ -4,36 +4,48 @@ This document shows the navigation flow between screens in Grout.
 
 ---
 
-## Main Flow
+## Overview
 
 ```mermaid
-flowchart TD
-    PS[Platform Selection]
-    GL[Game List]
-    GD[Game Details]
+flowchart LR
+    PS[Platform Selection] -->|"Select Platform"| GL[Game List] -->|"Select Game"| GD[Game Details]
+```
 
-    PS -->|"Select Platform"| GL
+## Platform Selection
+
+```mermaid
+flowchart LR
+    PS[Platform Selection]
+    PS -->|"Select Platform"| GL[Game List]
     PS -->|"Collections"| COLL[["Collections Flow"]]
     PS -->|"Settings"| SETT[["Settings Flow"]]
     PS -->|"Save Sync"| SS[Save Sync]
     PS -->|"Quit"| EXIT((Exit))
+    SS --> PS
+```
 
-    GL -->|"Select Game"| GD
-    GL -->|"Search"| S[Search]
+## Game List
+
+```mermaid
+flowchart LR
+    GL[Game List]
+    GL -->|"Select Game"| GD[Game Details]
+    GL -->|"Search"| S[Search] --> GL
     GL -->|"Filters"| GF[Game Filters]
-    GL -->|"BIOS"| BIOS[BIOS Download]
-    GL -->|"Back"| PS
-
-    GD -->|"Download"| GL
-    GD -->|"Options"| GO[Game Options]
-    GD -->|"Back"| GL
-
-    GO --> GD
-    S --> GL
     GF -->|"Apply"| GL
     GF -->|"Cancel/Clear"| GL
-    SS --> PS
-    BIOS --> GL
+    GL -->|"BIOS"| BIOS[BIOS Download] --> GL
+    GL -->|"Back"| PS[Platform Selection]
+```
+
+## Game Details
+
+```mermaid
+flowchart LR
+    GD[Game Details]
+    GD -->|"Download"| GL[Game List]
+    GD -->|"Options"| GO[Game Options] --> GD
+    GD -->|"Back"| GL
 ```
 
 ---
