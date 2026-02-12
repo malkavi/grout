@@ -88,6 +88,7 @@ nav:
       - Development Guide: contributing/development.md
       - State Machine Reference: contributing/state-machine.md
       - Kudos: contributing/kudos.md
+  - FAQ: usage/faq.md
 
 copyright: Copyright &copy; 2025 RomM Team
 

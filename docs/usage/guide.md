@@ -338,7 +338,7 @@ appropriate directory on your device. Press `Y` to cancel the download.
    file, extracts it, and creates an M3U playlist file so your emulator can handle disc switching.
 
 3. **Artwork is downloaded** - If "Download Art" is enabled in Settings, Grout downloads box art for each game to your
-   artwork directory after the ROMs finish.
+   artwork directory after the ROMs finish. This artwork is only displayed within Grout — it does not affect artwork shown in your CFW's game list.
 
 4. **Archived files are extracted automatically** - If "Archived Downloads" is set to "Uncompress" in Settings, Grout
    will extract zip and 7z files to the configured ROM directory and then delete the archive.
