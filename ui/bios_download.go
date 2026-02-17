@@ -148,7 +148,7 @@ func (s *BIOSDownloadScreen) draw(input BIOSDownloadInput) (BIOSDownloadOutput, 
 		if fileExists {
 			statusText = i18n.Localize(&goi18n.Message{ID: "bios_status_ready", Other: "Ready"}, nil)
 		} else {
-			statusText = i18n.Localize(&goi18n.Message{ID: "bios_status_not_installed", Other: "Not Installed"}, nil)
+			statusText = i18n.Localize(&goi18n.Message{ID: "bios_status_not_installed", Other: "Missing"}, nil)
 			shouldSelect = true
 		}
 
