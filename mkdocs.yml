@@ -2,7 +2,7 @@ site_name: Grout
 docs_dir: docs
 site_url: https://grout.romm.app/
 site_author: RomM Team
-site_description: A RomM client for muOS, Knulli, ROCKNIX, Spruce and NextUI
+site_description: A RomM client for your retro doo-dad.
 repo_url: https://github.com/rommapp/grout
 repo_name: rommapp/grout
 edit_uri: edit/main/docs/
@@ -12,20 +12,20 @@ theme:
   logo: resources/img/isotipo.png
   favicon: resources/img/isotipo.png
   features:
-    - navigation.instant
-    - navigation.footer
-    - navigation.indexes
-    - navigation.tracking
-    - navigation.top
-    - navigation.tabs
-    - navigation.tabs.sticky
-    - navigation.sections
-    - navigation.integrate
-    - search.suggest
-    - search.highlight
-    - content.tabs.link
     - content.code.annotation
     - content.code.copy
+    - content.tabs.link
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.integrate
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.suggest
     - toc.follow
     - toc.integrate
   language: en
@@ -48,8 +48,13 @@ markdown_extensions:
   - pymdownx.snippets
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.mark
+  - pymdownx.tilde
   - md_in_html
   - attr_list
   - tables
@@ -66,26 +71,29 @@ nav:
       - ROCKNIX: getting-started/install-rocknix.md
       - Spruce: getting-started/install-spruce.md
       - NextUI: getting-started/install-nextui.md
-  - User Guide:
-      - Overview: guide/user-guide.md
-      - Settings: guide/settings.md
-      - Save Sync: guide/save-sync.md
-  - Platforms:
-      - muOS: platforms/muos.md
-      - Knulli: platforms/knulli.md
-      - ROCKNIX: platforms/rocknix.md
-      - Spruce: platforms/spruce.md
-      - NextUI: platforms/nextui.md
-      - TrimUI: platforms/trimui.md
-  - Development & Contributing:
-      - Development Guide: development/development.md
-      - Contributing Guide: development/contributing.md
-      - State Machine: development/state-machine.md
-      - Kudos: development/kudos.md
+      - TrimUI: getting-started/install-trimui.md
+  - Usage:
+      - User Guide: usage/guide.md
+      - Settings Reference: usage/settings.md
+      - Save Sync: usage/save-sync.md
+      - CFW Specific Info:
+          - muOS: platforms/muos.md
+          - Knulli: platforms/knulli.md
+          - ROCKNIX: platforms/rocknix.md
+          - Spruce: platforms/spruce.md
+          - NextUI: platforms/nextui.md
+          - TrimUI: platforms/trimui.md
+  - Contributing:
+      - contributing/index.md
+      - Development Guide: contributing/development.md
+      - State Machine Reference: contributing/state-machine.md
+      - Kudos: contributing/kudos.md
+  - FAQ: usage/faq.md
 
-copyright: Copyright &copy; 2025 RomM Team
+copyright: "&copy; 2025 RomM Team"
 
 extra:
+  generator: false
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/rommapp/grout

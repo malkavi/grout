@@ -1,12 +1,16 @@
 package main
 
 import (
+	"grout/cache"
 	"grout/cfw"
 	"grout/internal"
 	"grout/ui"
 	"os"
 
+	gaba "github.com/BrandonKowalski/gabagool/v2/pkg/gabagool"
+	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/i18n"
 	"github.com/BrandonKowalski/gabagool/v2/pkg/gabagool/router"
+	goi18n "github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 type transitionContext struct {
@@ -16,7 +20,8 @@ type transitionContext struct {
 	showCollections bool
 }
 
-func buildTransitionFunc(state *AppState, quitOnBack bool, showCollections bool) router.TransitionFunc {
+func buildTransitionFunc(state *AppState, quitOnBack bool, initialShowCollections bool) router.TransitionFunc {
+	showCollections := initialShowCollections
 	return func(from router.Screen, result any, stack *router.Stack) (router.Screen, any) {
 		ctx := &transitionContext{
 			state:           state,
@@ -24,6 +29,7 @@ func buildTransitionFunc(state *AppState, quitOnBack bool, showCollections bool)
 			quitOnBack:      quitOnBack,
 			showCollections: showCollections,
 		}
+		defer func() { showCollections = ctx.showCollections }()
 
 		switch from {
 		case ScreenPlatformSelection:
@@ -68,6 +74,8 @@ func buildTransitionFunc(state *AppState, quitOnBack bool, showCollections bool)
 			return popOrExit(stack)
 		case ScreenUpdateCheck:
 			return transitionUpdateCheck(ctx, result)
+		case ScreenGameFilters:
+			return transitionGameFilters(ctx, result)
 		}
 
 		return router.ScreenExit, nil
@@ -137,6 +145,8 @@ func transitionGameList(ctx *transitionContext, result any) (router.Screen, any)
 		Games:        r.AllGames,
 		HasBIOS:      r.HasBIOS,
 		SearchFilter: r.SearchFilter,
+		GameFilter:   r.GameFilter,
+		LastApplied:  r.LastApplied,
 	}
 
 	switch r.Action {
@@ -152,6 +162,8 @@ func transitionGameList(ctx *transitionContext, result any) (router.Screen, any)
 				Games:                r.AllGames,
 				HasBIOS:              r.HasBIOS,
 				SearchFilter:         r.SearchFilter,
+				GameFilter:           r.GameFilter,
+				LastApplied:          r.LastApplied,
 				LastSelectedIndex:    r.LastSelectedIndex,
 				LastSelectedPosition: r.LastSelectedPosition,
 			}
@@ -173,12 +185,24 @@ func transitionGameList(ctx *transitionContext, result any) (router.Screen, any)
 
 	case ui.GameListActionClearSearch:
 		return ScreenGameList, ui.GameListInput{
-			Config:     ctx.state.Config,
-			Host:       ctx.state.Host,
-			Platform:   r.Platform,
-			Collection: r.Collection,
-			Games:      r.AllGames,
-			HasBIOS:    r.HasBIOS,
+			Config:       ctx.state.Config,
+			Host:         ctx.state.Host,
+			Platform:     r.Platform,
+			Collection:   r.Collection,
+			Games:        r.AllGames,
+			HasBIOS:      r.HasBIOS,
+			SearchFilter: r.SearchFilter,
+			GameFilter:   r.GameFilter,
+			LastApplied:  r.LastApplied,
+		}
+
+	case ui.GameListActionFilters:
+		ctx.stack.Push(ScreenGameList, pushInput, r)
+		return ScreenGameFilters, ui.GameFiltersInput{
+			Platform:       r.Platform,
+			Collection:     r.Collection,
+			CurrentFilters: r.GameFilter,
+			SearchQuery:    r.SearchFilter,
 		}
 
 	case ui.GameListActionBIOS:
@@ -216,6 +240,8 @@ func transitionSearch(ctx *transitionContext, result any) (router.Screen, any) {
 				Games:        prevInput.Games,
 				HasBIOS:      prevInput.HasBIOS,
 				SearchFilter: r.Query,
+				GameFilter:   prevInput.GameFilter,
+				LastApplied:  ui.GameListAppliedSearch,
 			}
 		}
 		if entry.Screen == ScreenCollectionList {
@@ -239,6 +265,8 @@ func transitionSearch(ctx *transitionContext, result any) (router.Screen, any) {
 				Games:                prevInput.Games,
 				HasBIOS:              prevInput.HasBIOS,
 				SearchFilter:         prevInput.SearchFilter,
+				GameFilter:           prevInput.GameFilter,
+				LastApplied:          prevInput.LastApplied,
 				LastSelectedIndex:    prevResume.LastSelectedIndex,
 				LastSelectedPosition: prevResume.LastSelectedPosition,
 			}
@@ -421,7 +449,7 @@ func transitionSettings(ctx *transitionContext, result any) (router.Screen, any)
 
 	case ui.SettingsActionInfo:
 		ctx.stack.Push(ScreenSettings, pushInput, r)
-		return ScreenInfo, ui.InfoInput{Host: ctx.state.Host}
+		return ScreenInfo, buildInfoInput(ctx.state)
 
 	case ui.SettingsActionCheckUpdate:
 		ctx.stack.Push(ScreenSettings, pushInput, r)
@@ -432,7 +460,7 @@ func transitionSettings(ctx *transitionContext, result any) (router.Screen, any)
 		}
 
 	case ui.SettingsActionSaved, ui.SettingsActionBack:
-		return popOrExit(ctx.stack)
+		return popOrExitWithCollections(ctx.stack, ctx.showCollections)
 	}
 
 	return router.ScreenExit, nil
@@ -448,10 +476,24 @@ func transitionGeneralSettings(ctx *transitionContext, result any) (router.Scree
 
 func transitionCollectionsSettings(ctx *transitionContext, result any) (router.Screen, any) {
 	r := result.(ui.CollectionsSettingsOutput)
-	if r.SyncNeeded && ctx.state.CacheSync != nil {
-		ctx.state.CacheSync.SyncCollections()
+	if r.SyncNeeded {
+		if cm := cache.GetCacheManager(); cm != nil {
+			cm.ClearCollections()
+			cm.SetMetadata(cache.MetaKeyCollectionsRefreshedAt, "")
+
+			gaba.ProcessMessage(
+				i18n.Localize(&goi18n.Message{ID: "collections_syncing", Other: "Syncing collections..."}, nil),
+				gaba.ProcessMessageOptions{ShowThemeBackground: true},
+				func() (any, error) {
+					cm.SyncCollectionsOnly()
+					return nil, nil
+				},
+			)
+		}
+		ctx.showCollections = true
+	} else {
+		ctx.showCollections = ctx.state.Config.ShowCollections(ctx.state.Host)
 	}
-	ctx.showCollections = ctx.state.Config.ShowCollections(ctx.state.Host)
 	return popOrExit(ctx.stack)
 }
 
@@ -500,10 +542,22 @@ func transitionSaveSyncSettings(ctx *transitionContext, result any) (router.Scre
 	return popOrExit(ctx.stack)
 }
 
+func buildInfoInput(state *AppState) ui.InfoInput {
+	var rommVersion string
+	if v, ok := state.RommVersion.Load().(string); ok {
+		rommVersion = v
+	}
+	return ui.InfoInput{
+		Host:        state.Host,
+		CFW:         state.CFW,
+		RommVersion: rommVersion,
+	}
+}
+
 func transitionInfo(ctx *transitionContext, result any) (router.Screen, any) {
 	r := result.(ui.InfoOutput)
 	if r.Action == ui.InfoActionLogout {
-		ctx.stack.Push(ScreenInfo, ui.InfoInput{Host: ctx.state.Host}, nil)
+		ctx.stack.Push(ScreenInfo, buildInfoInput(ctx.state), nil)
 		return ScreenLogoutConfirmation, nil
 	}
 	return popOrExit(ctx.stack)
@@ -540,6 +594,57 @@ func transitionUpdateCheck(ctx *transitionContext, result any) (router.Screen, a
 	return popOrExit(ctx.stack)
 }
 
+func transitionGameFilters(ctx *transitionContext, result any) (router.Screen, any) {
+	r := result.(ui.GameFiltersOutput)
+
+	entry := ctx.stack.Pop()
+	if entry == nil {
+		return router.ScreenExit, nil
+	}
+
+	prevInput := entry.Input.(ui.GameListInput)
+
+	switch r.Action {
+	case ui.GameFiltersActionApply:
+		return ScreenGameList, ui.GameListInput{
+			Config:       prevInput.Config,
+			Host:         prevInput.Host,
+			Platform:     r.Platform,
+			Collection:   prevInput.Collection,
+			Games:        prevInput.Games,
+			HasBIOS:      prevInput.HasBIOS,
+			SearchFilter: prevInput.SearchFilter,
+			GameFilter:   r.Filters,
+			LastApplied:  ui.GameListAppliedFilters,
+		}
+
+	case ui.GameFiltersActionCancel:
+		prevInput.GameFilter = cache.GameFilter{}
+		if prevInput.SearchFilter != "" {
+			prevInput.LastApplied = ui.GameListAppliedSearch
+		} else {
+			prevInput.LastApplied = ui.GameListAppliedNone
+		}
+		if entry.Resume != nil {
+			prevResume := entry.Resume.(ui.GameListOutput)
+			prevInput.LastSelectedIndex = prevResume.LastSelectedIndex
+			prevInput.LastSelectedPosition = prevResume.LastSelectedPosition
+		}
+		return entry.Screen, prevInput
+	}
+
+	return popOrExit(ctx.stack)
+}
+
+func popOrExitWithCollections(stack *router.Stack, showCollections bool) (router.Screen, any) {
+	screen, input := popOrExit(stack)
+	if psInput, ok := input.(ui.PlatformSelectionInput); ok {
+		psInput.ShowCollections = showCollections
+		return screen, psInput
+	}
+	return screen, input
+}
+
 func popOrExit(stack *router.Stack) (router.Screen, any) {
 	entry := stack.Pop()
 	if entry == nil {
@@ -552,6 +657,9 @@ func popOrExit(stack *router.Stack) (router.Screen, any) {
 			output := entry.Resume.(ui.PlatformSelectionOutput)
 			input.LastSelectedIndex = output.LastSelectedIndex
 			input.LastSelectedPosition = output.LastSelectedPosition
+		}
+		if currentAppState != nil {
+			input.ShowSaveSync = computeShowSaveSync(currentAppState)
 		}
 		return entry.Screen, input
 

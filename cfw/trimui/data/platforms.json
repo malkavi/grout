@@ -4,15 +4,7 @@
   "acpc": [],
   "amiga": [],
   "arcade": [
-    "ARCADE",
-    "CPS1",
-    "CPS2",
-    "CPS3",
-    "MAME",
-    "MAME2003PLUS",
-    "MAME2010",
-    "FBNEO",
-    "NEOGEO"
+    "ARCADE"
   ],
   "arduboy": [],
   "atari-st": [],
@@ -74,9 +66,7 @@
   "neo-geo-pocket": [
     "NGP"
   ],
-  "neo-geo-pocket-color": [
-    "NGPC"
-  ],
+  "neo-geo-pocket-color": [],
   "neogeoaes": [],
   "neogeomvs": [],
   "nes": [
@@ -113,7 +103,9 @@
     "SFC"
   ],
   "sg1000": [],
-  "sharp-x68000": [],
+  "sharp-x68000": [
+    "X68000"
+  ],
   "sms": [
     "MS"
   ],
@@ -126,9 +118,7 @@
     "PCE"
   ],
   "tic-80": [],
-  "turbografx-cd": [
-    "PCE"
-  ],
+  "turbografx-cd": [],
   "vectrex": [],
   "vic-20": [],
   "virtualboy": [],
