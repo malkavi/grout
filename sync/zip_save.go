@@ -115,3 +115,67 @@ func UnzipToDirectory(zipPath, targetDir string) error {
 
 	return nil
 }
+
+// ZipDirectories creates a zip file from multiple directories, preserving each
+// directory as a top-level entry in the zip. Used for multi-directory saves
+// (e.g., PSP games with UCES00995_DATA00 and UCES00995_DATA01).
+// Returns the path to the temporary zip file. Caller is responsible for cleanup.
+func ZipDirectories(dirPaths []string) (string, error) {
+	if len(dirPaths) == 1 {
+		return ZipDirectory(dirPaths[0])
+	}
+
+	tmpFile, err := os.CreateTemp("", "grout-save-*.zip")
+	if err != nil {
+		return "", err
+	}
+	defer tmpFile.Close()
+
+	w := zip.NewWriter(tmpFile)
+	defer w.Close()
+
+	for _, dirPath := range dirPaths {
+		err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			rel, err := filepath.Rel(filepath.Dir(dirPath), path)
+			if err != nil {
+				return err
+			}
+
+			if strings.HasPrefix(filepath.Base(rel), ".") {
+				if info.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+
+			if info.IsDir() {
+				_, err := w.Create(rel + "/")
+				return err
+			}
+
+			fw, err := w.Create(rel)
+			if err != nil {
+				return err
+			}
+
+			f, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			_, err = io.Copy(fw, f)
+			return err
+		})
+		if err != nil {
+			os.Remove(tmpFile.Name())
+			return "", err
+		}
+	}
+
+	return tmpFile.Name(), nil
+}

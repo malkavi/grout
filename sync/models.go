@@ -3,13 +3,14 @@ package sync
 import "grout/romm"
 
 type LocalSave struct {
-	RomID          int
-	RomName        string
-	FSSlug         string
-	FileName       string
-	FilePath       string
-	EmulatorDir    string
-	RomFileName    string
+	RomID           int
+	RomName         string
+	FSSlug          string
+	FileName        string
+	FilePath        string
+	DirPaths        []string // All directory paths when multiple dirs belong to one save (e.g., PSP multi-dir saves)
+	EmulatorDir     string
+	RomFileName     string
 	IsDirectorySave bool // True for platforms like PSP where saves are directories
 }
 

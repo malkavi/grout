@@ -538,3 +538,170 @@ func TestNewSaveUploadActions(t *testing.T) {
 		}
 	}
 }
+
+// --- extractGameIDPrefix tests ---
+
+func TestExtractGameIDPrefix_MultiDir(t *testing.T) {
+	result := extractGameIDPrefix([]string{"UCES00995_DATA00", "UCES00995_DATA01"})
+	if result != "UCES00995" {
+		t.Errorf("expected 'UCES00995', got %q", result)
+	}
+}
+
+func TestExtractGameIDPrefix_SingleDir(t *testing.T) {
+	result := extractGameIDPrefix([]string{"ULUS10391"})
+	if result != "ULUS10391" {
+		t.Errorf("expected 'ULUS10391', got %q", result)
+	}
+}
+
+func TestExtractGameIDPrefix_Empty(t *testing.T) {
+	result := extractGameIDPrefix(nil)
+	if result != "" {
+		t.Errorf("expected empty string, got %q", result)
+	}
+}
+
+func TestExtractGameIDPrefix_ThreeDirs(t *testing.T) {
+	result := extractGameIDPrefix([]string{"UCES00995_DATA00", "UCES00995_DATA01", "UCES00995_DATA02"})
+	if result != "UCES00995" {
+		t.Errorf("expected 'UCES00995', got %q", result)
+	}
+}
+
+func TestExtractGameIDPrefix_NoCommonPrefix(t *testing.T) {
+	result := extractGameIDPrefix([]string{"AAAA", "BBBB"})
+	// Falls back to first name when no common prefix after trimming
+	if result != "AAAA" {
+		t.Errorf("expected 'AAAA' (fallback), got %q", result)
+	}
+}
+
+func TestExtractGameIDPrefix_NoUnderscore(t *testing.T) {
+	// God of War: UCUS98653DATA00 + UCUS98653PROFILE00 (no underscore separator)
+	result := extractGameIDPrefix([]string{"UCUS98653DATA00", "UCUS98653PROFILE00"})
+	if result != "UCUS98653" {
+		t.Errorf("expected 'UCUS98653', got %q", result)
+	}
+}
+
+func TestExtractGameIDPrefix_MixedSuffixes(t *testing.T) {
+	// Patapon 3: DATA00, DATA01, INSDIR (different suffix types)
+	result := extractGameIDPrefix([]string{"UCUS98751_DATA00", "UCUS98751_DATA01", "UCUS98751_INSDIR"})
+	if result != "UCUS98751" {
+		t.Errorf("expected 'UCUS98751', got %q", result)
+	}
+}
+
+// --- DetermineAction with DirPaths tests ---
+
+func TestDetermineAction_MultiDirSave_LatestMtime(t *testing.T) {
+	remoteUpdated := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	dir := t.TempDir()
+	dir1 := filepath.Join(dir, "UCES00995_DATA00")
+	dir2 := filepath.Join(dir, "UCES00995_DATA01")
+	os.MkdirAll(dir1, 0755)
+	os.MkdirAll(dir2, 0755)
+
+	// dir1 is older, dir2 is newer than remote
+	olderMtime := remoteUpdated.Add(-1 * time.Hour)
+	newerMtime := remoteUpdated.Add(1 * time.Hour)
+	os.Chtimes(dir1, olderMtime, olderMtime)
+	os.Chtimes(dir2, newerMtime, newerMtime)
+
+	ls := &LocalSave{
+		RomID:    1,
+		FilePath: dir1,
+		DirPaths: []string{dir1, dir2},
+	}
+	remote := &romm.Save{
+		ID:          10,
+		UpdatedAt:   remoteUpdated,
+		DeviceSyncs: []romm.DeviceSaveSync{},
+	}
+
+	action := determineAction(remote, ls, "device-1")
+	// Latest mtime is dir2 (newer than remote) → upload
+	if action != ActionUpload {
+		t.Errorf("expected ActionUpload (latest dir mtime newer), got %s", action)
+	}
+}
+
+func TestDetermineAction_MultiDirSave_AllDirsGone(t *testing.T) {
+	ls := &LocalSave{
+		RomID:    1,
+		FilePath: "/nonexistent/path",
+		DirPaths: []string{"/nonexistent/path1", "/nonexistent/path2"},
+	}
+	remote := &romm.Save{ID: 10, UpdatedAt: time.Now()}
+
+	action := determineAction(remote, ls, "device-1")
+	if action != ActionDownload {
+		t.Errorf("expected ActionDownload when all dirs gone, got %s", action)
+	}
+}
+
+// --- ZipDirectories tests ---
+
+func TestZipDirectories_MultipleDirectories(t *testing.T) {
+	base := t.TempDir()
+
+	// Create two directories with files
+	dir1 := filepath.Join(base, "UCES00995_DATA00")
+	dir2 := filepath.Join(base, "UCES00995_DATA01")
+	os.MkdirAll(dir1, 0755)
+	os.MkdirAll(dir2, 0755)
+	os.WriteFile(filepath.Join(dir1, "PARAM.SFO"), []byte("sfo1"), 0644)
+	os.WriteFile(filepath.Join(dir1, "DATA.BIN"), []byte("data1"), 0644)
+	os.WriteFile(filepath.Join(dir2, "PARAM.SFO"), []byte("sfo2"), 0644)
+	os.WriteFile(filepath.Join(dir2, "DATA.BIN"), []byte("data2"), 0644)
+
+	zipPath, err := ZipDirectories([]string{dir1, dir2})
+	if err != nil {
+		t.Fatalf("ZipDirectories failed: %v", err)
+	}
+	defer os.Remove(zipPath)
+
+	// Extract and verify both directories are present
+	extractDir := t.TempDir()
+	if err := UnzipToDirectory(zipPath, extractDir); err != nil {
+		t.Fatalf("UnzipToDirectory failed: %v", err)
+	}
+
+	for _, name := range []string{"UCES00995_DATA00", "UCES00995_DATA01"} {
+		dirPath := filepath.Join(extractDir, name)
+		if info, err := os.Stat(dirPath); err != nil || !info.IsDir() {
+			t.Errorf("expected directory %s to exist after extraction", name)
+		}
+		for _, file := range []string{"PARAM.SFO", "DATA.BIN"} {
+			fpath := filepath.Join(dirPath, file)
+			if _, err := os.Stat(fpath); err != nil {
+				t.Errorf("expected file %s/%s to exist after extraction", name, file)
+			}
+		}
+	}
+}
+
+func TestZipDirectories_SingleDirectory(t *testing.T) {
+	base := t.TempDir()
+	dir1 := filepath.Join(base, "ULUS10391")
+	os.MkdirAll(dir1, 0755)
+	os.WriteFile(filepath.Join(dir1, "save.bin"), []byte("data"), 0644)
+
+	zipPath, err := ZipDirectories([]string{dir1})
+	if err != nil {
+		t.Fatalf("ZipDirectories failed: %v", err)
+	}
+	defer os.Remove(zipPath)
+
+	extractDir := t.TempDir()
+	if err := UnzipToDirectory(zipPath, extractDir); err != nil {
+		t.Fatalf("UnzipToDirectory failed: %v", err)
+	}
+
+	fpath := filepath.Join(extractDir, "ULUS10391", "save.bin")
+	if _, err := os.Stat(fpath); err != nil {
+		t.Errorf("expected file ULUS10391/save.bin to exist after extraction")
+	}
+}

@@ -135,7 +135,18 @@ func ScanSaves(config *internal.Config) []LocalSave {
 			}
 
 			if IsDirectorySavePlatform(fsSlug) {
-				// Directory-based saves (e.g., PPSSPP): each subdirectory is a save
+				// Directory-based saves (e.g., PPSSPP): each subdirectory is a save.
+				// Multiple directories may belong to the same game (e.g., UCES00995_DATA00
+				// and UCES00995_DATA01), so we group by matched ROM ID.
+				type dirMatch struct {
+					dirName string
+					dirPath string
+				}
+				grouped := make(map[int][]dirMatch) // romID → matched directories
+				romInfo := make(map[int]struct {
+					name string
+				})
+
 				for _, entry := range entries {
 					if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
 						continue
@@ -154,16 +165,50 @@ func ScanSaves(config *internal.Config) []LocalSave {
 					}
 
 					logger.Debug("Matched directory save to ROM", "dir", entry.Name(), "romID", rom.ID, "romName", rom.Name)
-
-					saves = append(saves, LocalSave{
-						RomID:           rom.ID,
-						RomName:         rom.Name,
-						FSSlug:          rommFSSlug,
-						FileName:        entry.Name() + ".zip",
-						FilePath:        filepath.Join(saveDir, entry.Name()),
-						EmulatorDir:     emuDir,
-						IsDirectorySave: true,
+					grouped[rom.ID] = append(grouped[rom.ID], dirMatch{
+						dirName: entry.Name(),
+						dirPath: filepath.Join(saveDir, entry.Name()),
 					})
+					romInfo[rom.ID] = struct{ name string }{name: rom.Name}
+				}
+
+				for romID, dirs := range grouped {
+					info := romInfo[romID]
+					if len(dirs) == 1 {
+						// Single directory — same as before
+						saves = append(saves, LocalSave{
+							RomID:           romID,
+							RomName:         info.name,
+							FSSlug:          rommFSSlug,
+							FileName:        dirs[0].dirName + ".zip",
+							FilePath:        dirs[0].dirPath,
+							EmulatorDir:     emuDir,
+							IsDirectorySave: true,
+						})
+					} else {
+						// Multiple directories for the same game — group into one save
+						dirNames := make([]string, len(dirs))
+						dirPaths := make([]string, len(dirs))
+						for i, d := range dirs {
+							dirNames[i] = d.dirName
+							dirPaths[i] = d.dirPath
+						}
+						sort.Strings(dirPaths)
+
+						prefix := extractGameIDPrefix(dirNames)
+						logger.Debug("Grouped multi-directory save", "romID", romID, "romName", info.name, "dirs", len(dirs), "prefix", prefix)
+
+						saves = append(saves, LocalSave{
+							RomID:           romID,
+							RomName:         info.name,
+							FSSlug:          rommFSSlug,
+							FileName:        prefix + ".zip",
+							FilePath:        dirPaths[0],
+							DirPaths:        dirPaths,
+							EmulatorDir:     emuDir,
+							IsDirectorySave: true,
+						})
+					}
 				}
 			} else {
 				// File-based saves: scan for individual save files
@@ -354,14 +399,26 @@ func determineAction(remoteSave *romm.Save, localSave *LocalSave, deviceID strin
 		return ActionUpload
 	}
 
-	localInfo, err := os.Stat(localSave.FilePath)
-	if err != nil {
-		logger.Debug("Cannot stat local save, will download", "path", localSave.FilePath, "error", err)
-		return ActionDownload
+	// For multi-directory saves, use the latest mtime across all directories.
+	var localMtime time.Time
+	if len(localSave.DirPaths) > 1 {
+		localMtime = latestMtime(localSave.DirPaths)
+		if localMtime.IsZero() {
+			logger.Debug("Cannot stat any directory save path, will download", "romID", localSave.RomID)
+			return ActionDownload
+		}
+	} else {
+		localInfo, err := os.Stat(localSave.FilePath)
+		if err != nil {
+			logger.Debug("Cannot stat local save, will download", "path", localSave.FilePath, "error", err)
+			return ActionDownload
+		}
+		localMtime = localInfo.ModTime()
 	}
+
 	// Truncate all times to second precision — the server may drop sub-second
 	// precision between the upload response and subsequent fetches.
-	localMtime := localInfo.ModTime().Truncate(time.Second)
+	localMtime = localMtime.Truncate(time.Second)
 	remoteUpdatedAt := remoteSave.UpdatedAt.Truncate(time.Second)
 
 	for _, ds := range remoteSave.DeviceSyncs {
@@ -530,7 +587,13 @@ func upload(client *romm.Client, deviceID string, item *SyncItem) bool {
 
 	uploadPath := item.LocalSave.FilePath
 	if item.LocalSave.IsDirectorySave {
-		zipPath, zipErr := ZipDirectory(item.LocalSave.FilePath)
+		var zipPath string
+		var zipErr error
+		if len(item.LocalSave.DirPaths) > 1 {
+			zipPath, zipErr = ZipDirectories(item.LocalSave.DirPaths)
+		} else {
+			zipPath, zipErr = ZipDirectory(item.LocalSave.FilePath)
+		}
 		if zipErr != nil {
 			logger.Error("Failed to zip directory save", "path", item.LocalSave.FilePath, "error", zipErr)
 			return false
@@ -548,8 +611,16 @@ func upload(client *romm.Client, deviceID string, item *SyncItem) bool {
 	// Truncate to second precision — the server returns UpdatedAt without
 	// sub-second precision on subsequent fetches, so local mtime must match.
 	t := uploadedSave.UpdatedAt.Truncate(time.Second)
-	if err := os.Chtimes(item.LocalSave.FilePath, t, t); err != nil {
-		logger.Warn("Failed to set save file mtime after upload", "path", item.LocalSave.FilePath, "error", err)
+	if len(item.LocalSave.DirPaths) > 1 {
+		for _, dp := range item.LocalSave.DirPaths {
+			if err := os.Chtimes(dp, t, t); err != nil {
+				logger.Warn("Failed to set directory save mtime after upload", "path", dp, "error", err)
+			}
+		}
+	} else {
+		if err := os.Chtimes(item.LocalSave.FilePath, t, t); err != nil {
+			logger.Warn("Failed to set save file mtime after upload", "path", item.LocalSave.FilePath, "error", err)
+		}
 	}
 
 	if err := client.MarkDeviceSynced(uploadedSave.ID, deviceID); err != nil {
@@ -575,10 +646,38 @@ func download(client *romm.Client, config *internal.Config, deviceID string, ite
 	}
 
 	if item.LocalSave.FilePath != "" {
-		if info, err := os.Stat(item.LocalSave.FilePath); err == nil {
-			backupDir := filepath.Join(filepath.Dir(item.LocalSave.FilePath), ".backup")
-			ext := filepath.Ext(item.LocalSave.FileName)
-			base := strings.TrimSuffix(item.LocalSave.FileName, ext)
+		// Backup existing save(s) before overwriting
+		backupDir := filepath.Join(filepath.Dir(item.LocalSave.FilePath), ".backup")
+		ext := filepath.Ext(item.LocalSave.FileName)
+		base := strings.TrimSuffix(item.LocalSave.FileName, ext)
+
+		if len(item.LocalSave.DirPaths) > 1 {
+			// Multi-directory save: zip each directory as a backup
+			for _, dp := range item.LocalSave.DirPaths {
+				if info, err := os.Stat(dp); err == nil {
+					timestamp := info.ModTime().Format("2006-01-02 15-04-05")
+					backupPath := filepath.Join(backupDir, fmt.Sprintf("%s [%s].zip", filepath.Base(dp), timestamp))
+					if err := os.MkdirAll(backupDir, 0755); err != nil {
+						logger.Error("Failed to create backup directory, aborting download", "path", backupDir, "error", err)
+						return false
+					}
+					zipPath, err := ZipDirectory(dp)
+					if err != nil {
+						logger.Error("Failed to backup directory save, aborting download", "path", dp, "error", err)
+						return false
+					}
+					if err := os.Rename(zipPath, backupPath); err != nil {
+						os.Remove(zipPath)
+						logger.Error("Failed to move backup zip, aborting download", "path", dp, "error", err)
+						return false
+					}
+					logger.Debug("Backed up directory save before download", "backup", backupPath)
+				}
+			}
+			if config != nil && config.SaveBackupLimit > 0 {
+				cleanupBackups(backupDir, base, config.SaveBackupLimit)
+			}
+		} else if info, err := os.Stat(item.LocalSave.FilePath); err == nil {
 			timestamp := info.ModTime().Format("2006-01-02 15-04-05")
 			backupPath := filepath.Join(backupDir, fmt.Sprintf("%s [%s]%s", base, timestamp, ext))
 
@@ -637,8 +736,14 @@ func download(client *romm.Client, config *internal.Config, deviceID string, ite
 		}
 		tmpZip.Close()
 
-		// Remove existing save directory before extracting
-		os.RemoveAll(savePath)
+		// Remove existing save directories before extracting
+		if len(item.LocalSave.DirPaths) > 1 {
+			for _, dp := range item.LocalSave.DirPaths {
+				os.RemoveAll(dp)
+			}
+		} else {
+			os.RemoveAll(savePath)
+		}
 
 		if err := UnzipToDirectory(tmpZipPath, filepath.Dir(savePath)); err != nil {
 			logger.Error("Failed to extract directory save", "path", savePath, "error", err)
