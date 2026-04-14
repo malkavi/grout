@@ -666,7 +666,7 @@ func download(client *romm.Client, config *internal.Config, deviceID string, ite
 						logger.Error("Failed to backup directory save, aborting download", "path", dp, "error", err)
 						return false
 					}
-					if err := os.Rename(zipPath, backupPath); err != nil {
+					if err := fileutil.MoveFile(zipPath, backupPath); err != nil {
 						os.Remove(zipPath)
 						logger.Error("Failed to move backup zip, aborting download", "path", dp, "error", err)
 						return false
@@ -679,15 +679,32 @@ func download(client *romm.Client, config *internal.Config, deviceID string, ite
 			}
 		} else if info, err := os.Stat(item.LocalSave.FilePath); err == nil {
 			timestamp := info.ModTime().Format("2006-01-02 15-04-05")
-			backupPath := filepath.Join(backupDir, fmt.Sprintf("%s [%s]%s", base, timestamp, ext))
 
 			if err := os.MkdirAll(backupDir, 0755); err != nil {
 				logger.Error("Failed to create backup directory, aborting download", "path", backupDir, "error", err)
 				return false
-			} else if err := fileutil.CopyFile(item.LocalSave.FilePath, backupPath); err != nil {
-				logger.Error("Failed to backup save before download, aborting download", "path", item.LocalSave.FilePath, "error", err)
-				return false
+			} else if info.IsDir() {
+				backupPath := filepath.Join(backupDir, fmt.Sprintf("%s [%s].zip", base, timestamp))
+				zipPath, err := ZipDirectory(item.LocalSave.FilePath)
+				if err != nil {
+					logger.Error("Failed to backup directory save, aborting download", "path", item.LocalSave.FilePath, "error", err)
+					return false
+				}
+				if err := fileutil.MoveFile(zipPath, backupPath); err != nil {
+					os.Remove(zipPath)
+					logger.Error("Failed to move backup zip, aborting download", "path", item.LocalSave.FilePath, "error", err)
+					return false
+				}
+				logger.Debug("Backed up directory save before download", "backup", backupPath)
+				if config != nil && config.SaveBackupLimit > 0 {
+					cleanupBackups(backupDir, base, config.SaveBackupLimit)
+				}
 			} else {
+				backupPath := filepath.Join(backupDir, fmt.Sprintf("%s [%s]%s", base, timestamp, ext))
+				if err := fileutil.CopyFile(item.LocalSave.FilePath, backupPath); err != nil {
+					logger.Error("Failed to backup save before download, aborting download", "path", item.LocalSave.FilePath, "error", err)
+					return false
+				}
 				logger.Debug("Backed up save before download", "backup", backupPath)
 				if config != nil && config.SaveBackupLimit > 0 {
 					cleanupBackups(backupDir, base, config.SaveBackupLimit)

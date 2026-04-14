@@ -4,12 +4,14 @@ import (
 	"archive/zip"
 	"bufio"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/bodgit/sevenzip"
 	"go.uber.org/atomic"
@@ -76,6 +78,21 @@ func CopyFile(src, dest string) error {
 
 func DeleteFile(path string) error {
 	return os.Remove(path)
+}
+
+// MoveFile moves src to dest. It tries os.Rename first; if that fails with a
+// cross-device link error (e.g. /tmp → another filesystem) it falls back to
+// copy-then-delete.
+func MoveFile(src, dest string) error {
+	if err := os.Rename(src, dest); err == nil {
+		return nil
+	} else if !errors.Is(err, syscall.EXDEV) {
+		return err
+	}
+	if err := CopyFile(src, dest); err != nil {
+		return err
+	}
+	return os.Remove(src)
 }
 
 func Unzip(zipPath string, destDir string, progress *atomic.Float64) error {
